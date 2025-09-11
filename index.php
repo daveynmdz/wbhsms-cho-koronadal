@@ -98,6 +98,8 @@ try {
         </div>
         <div class="text-center">
             <a href="pages/auth/patient_login.php"><button type="button">Get Started</button></a>
+            <a href="testdb.php"><button type="button">Test Connection</button></a>
+
         </div>
     </div>
 </body>
