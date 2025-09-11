@@ -18,3 +18,6 @@ RUN docker-php-ext-install mysqli
 
 # Expose port 80 for web traffic
 EXPOSE 80
+
+# Install additional PHP extensions
+RUN docker-php-ext-install mysqli pdo pdo_mysql
