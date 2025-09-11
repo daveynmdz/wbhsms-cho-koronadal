@@ -14,10 +14,7 @@ WORKDIR /var/www/html
 RUN chown -R www-data:www-data /var/www/html
 
 # Install PHP extensions if you need them (example: mysqli, pdo, gd, etc.)
-RUN docker-php-ext-install mysqli
+RUN docker-php-ext-install mysqli pdo pdo_mysql
 
 # Expose port 80 for web traffic
 EXPOSE 80
-
-# Install additional PHP extensions
-RUN docker-php-ext-install mysqli pdo pdo_mysql
