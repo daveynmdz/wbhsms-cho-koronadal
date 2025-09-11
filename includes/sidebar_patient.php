@@ -391,7 +391,7 @@
 
 <body>
     <nav class="nav" id="sidebar">
-        <a href="patientHomepage.php">
+        <a href="../pages/dashboard/dashboard_patient.php">
             <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="Sidebar Logo" />
         </a>
         <div class="menu">
