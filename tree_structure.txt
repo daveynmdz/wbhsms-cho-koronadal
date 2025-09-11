@@ -1,0 +1,60 @@
+Folder PATH listing
+Volume serial number is 7EEC-01AB
+C:.
+³   .env
+³   .gitattributes
+³   .gitignore
+³   env.php
+³   README.md
+³   testdb.php
+³   tree_structure.txt
+³   
+ÃÄÄÄassets
+³   ÃÄÄÄcss
+³   ³       login.css
+³   ³       main-style.css
+³   ³       
+³   ÃÄÄÄimages
+³   ³       main-bg.png
+³   ³       Nav_Logo.png
+³   ³       Nav_LogoClosed.png
+³   ³       user-default.png
+³   ³       
+³   ÀÄÄÄjs
+ÃÄÄÄconfig
+³       db.php
+³       
+ÃÄÄÄincludes
+³       sidebar_employee.php
+³       sidebar_patient.php
+³       
+ÃÄÄÄpages
+³   ³   index.php
+³   ³   
+³   ÃÄÄÄappointment
+³   ÃÄÄÄauth
+³   ³       forgot_password.php
+³   ³       otp_verification.php
+³   ³       password_changed.php
+³   ³       patient_login.php
+³   ³       reset_password.php
+³   ³       
+³   ÃÄÄÄbilling
+³   ÃÄÄÄclinical
+³   ÃÄÄÄdashboard
+³   ³       dashboard_patient.php
+³   ³       
+³   ÃÄÄÄlaboratory
+³   ÃÄÄÄnotifications
+³   ÃÄÄÄpatient
+³   ÃÄÄÄprescription
+³   ÃÄÄÄqueueing
+³   ÃÄÄÄreferral
+³   ÃÄÄÄregistration
+³   ³       patient_registration.php
+³   ³       registration_otp.php
+³   ³       registration_success.php
+³   ³       
+³   ÃÄÄÄreports
+³   ÀÄÄÄuser
+ÀÄÄÄuploads
