@@ -1,6 +1,6 @@
 <?php
-session_start();
-require_once '../../../config/db.php';
+// Main entry point for the website
+include_once __DIR__ . '/config/db.php';
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

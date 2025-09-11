@@ -1,6 +1,6 @@
 <?php
 // Main entry point for the website
-include_once '../config/db.php';
+include_once __DIR__ . '/config/db.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
