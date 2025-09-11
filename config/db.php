@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/env.php';
-loadEnv(__DIR__ . '/.env');
+
+if (file_exists(__DIR__ . '/.env.local')) {
+    loadEnv(__DIR__ . '/.env.local');
+} elseif (file_exists(__DIR__ . '/.env')) {
+    loadEnv(__DIR__ . '/.env');
+}
 
 $host = $_ENV['DB_HOST'];
 $db   = $_ENV['DB_NAME'];
