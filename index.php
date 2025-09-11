@@ -58,7 +58,7 @@ include_once __DIR__ . '/config/db.php';
             <strong>CHO Main District:</strong> Modern facilities, accessible healthcare, and a wide range of essential services for Koronadal City.
         </div>
         <div class="text-center">
-            <a href="auth/patient_login.php"><button type="button">Get Started</button></a>
+            <a href="pages/auth/patient_login.php"><button type="button">Get Started</button></a>
         </div>
     </div>
 </body>
