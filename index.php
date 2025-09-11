@@ -30,11 +30,12 @@ $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
 
+$connectionStatus = '';
 try {
     $pdo = new PDO($dsn, $user, $pass);
-    echo "Connection successful!";
+    $connectionStatus = 'success';
 } catch (PDOException $e) {
-    echo "Connection failed: " . $e->getMessage();
+    $connectionStatus = 'failed: ' . $e->getMessage();
 }
 // --- End Database Connection Section ---
 ?>
@@ -44,7 +45,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Koronadal City Health Office</title>
+    <title>City Health Office - Koronadal</title>
     <link rel="stylesheet" href="assets/css/index.css">
 </head>
 
@@ -102,5 +103,40 @@ try {
         </div>
     </div>
 </body>
-
+<div id="snackbar"></div>
+<script>
+  var status = "<?php echo $connectionStatus; ?>";
+  if (status) {
+    var snackbar = document.getElementById("snackbar");
+    snackbar.textContent = status === "success" ? "Connection successful!" : "Connection failed: " + status;
+    snackbar.className = "show";
+    setTimeout(function(){ snackbar.className = snackbar.className.replace("show", ""); }, 3000);
+  }
+</script>
+<style>
+  #snackbar {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 2px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1;
+    left: 50%;
+    bottom: 30px;
+    font-size: 17px;
+    transform: translateX(-50%);
+  }
+  #snackbar.show {
+    visibility: visible;
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  }
+  @-webkit-keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+  @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+  @-webkit-keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+  @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+</style>
 </html>
