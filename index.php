@@ -5,13 +5,12 @@
 // This block checks for .env.local first, then .env.
 // Put your database credentials in .env.local for local dev, .env for production.
 
-
+include_once __DIR__ . '/config/env.php';
+// ...existing code...
 // Try to load .env.local first; if not, load .env
 if (file_exists(__DIR__ . '/config/.env.local')) {
-    // LOCALHOST ENVIRONMENT
     loadEnv(__DIR__ . '/config/.env.local');
 } elseif (file_exists(__DIR__ . '/config/.env')) {
-    // PRODUCTION/DEPLOYED ENVIRONMENT
     loadEnv(__DIR__ . '/config/.env');
 }
 
