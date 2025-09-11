@@ -8,7 +8,7 @@ include_once __DIR__ . '/config/db.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Koronadal City Health Office</title>
-    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="assets/css/index.css">
 </head>
 <body>
     <div class="max-w-600 card mt-1">
