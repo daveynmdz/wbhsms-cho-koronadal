@@ -1,0 +1,9 @@
+*.local*
+.cache
+.husky
+.temp
+cache
+coverage
+dist
+docs/public
+node_modules

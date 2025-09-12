@@ -1,0 +1,25 @@
+:root {
+  --vp-c-brand-1: #39f;
+  --vp-c-brand-2: #47a3ff;
+  --vp-c-brand-3: #39f;
+}
+
+.playground-container {
+  .theme-default-content {
+    max-width: none;
+  }
+
+  .page-meta {
+    display: none;
+  }
+}
+
+.theme-default-content:not(.custom) td {
+  > a {
+    white-space: nowrap;
+
+    > img {
+      max-width: none;
+    }
+  }
+}

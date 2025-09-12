@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/vendor/autoload.php';
+
 // Main entry point for the website
 
 // --- ENV Loader Section ---
@@ -6,7 +8,6 @@
 // Put your database credentials in .env.local for local dev, .env for production.
 
 include_once __DIR__ . '/config/env.php';
-// ...existing code...
 // Try to load .env.local first; if not, load .env
 if (file_exists(__DIR__ . '/config/.env.local')) {
     loadEnv(__DIR__ . '/config/.env.local');
@@ -105,38 +106,86 @@ try {
 </body>
 <div id="snackbar"></div>
 <script>
-  var status = "<?php echo $connectionStatus; ?>";
-  if (status) {
-    var snackbar = document.getElementById("snackbar");
-    snackbar.textContent = status === "success" ? "Connection successful!" : "Connection failed: " + status;
-    snackbar.className = "show";
-    setTimeout(function(){ snackbar.className = snackbar.className.replace("show", ""); }, 3000);
-  }
+    var status = "<?php echo $connectionStatus; ?>";
+    if (status) {
+        var snackbar = document.getElementById("snackbar");
+        snackbar.textContent = status === "success" ? "Connection successful!" : "Connection failed: " + status;
+        snackbar.className = "show";
+        setTimeout(function() {
+            snackbar.className = snackbar.className.replace("show", "");
+        }, 3000);
+    }
 </script>
 <style>
-  #snackbar {
-    visibility: hidden;
-    min-width: 250px;
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 2px;
-    padding: 16px;
-    position: fixed;
-    z-index: 1;
-    left: 50%;
-    bottom: 30px;
-    font-size: 17px;
-    transform: translateX(-50%);
-  }
-  #snackbar.show {
-    visibility: visible;
-    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
-    animation: fadein 0.5s, fadeout 0.5s 2.5s;
-  }
-  @-webkit-keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-  @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-  @-webkit-keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-  @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    #snackbar {
+        visibility: hidden;
+        min-width: 250px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 2px;
+        padding: 16px;
+        position: fixed;
+        z-index: 1;
+        left: 50%;
+        bottom: 30px;
+        font-size: 17px;
+        transform: translateX(-50%);
+    }
+
+    #snackbar.show {
+        visibility: visible;
+        -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    }
+
+    @-webkit-keyframes fadein {
+        from {
+            bottom: 0;
+            opacity: 0;
+        }
+
+        to {
+            bottom: 30px;
+            opacity: 1;
+        }
+    }
+
+    @keyframes fadein {
+        from {
+            bottom: 0;
+            opacity: 0;
+        }
+
+        to {
+            bottom: 30px;
+            opacity: 1;
+        }
+    }
+
+    @-webkit-keyframes fadeout {
+        from {
+            bottom: 30px;
+            opacity: 1;
+        }
+
+        to {
+            bottom: 0;
+            opacity: 0;
+        }
+    }
+
+    @keyframes fadeout {
+        from {
+            bottom: 30px;
+            opacity: 1;
+        }
+
+        to {
+            bottom: 0;
+            opacity: 0;
+        }
+    }
 </style>
+
 </html>

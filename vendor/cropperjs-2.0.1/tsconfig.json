@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "target": "es2016",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": [
+      "dom",
+      "esnext"
+    ],
+    "paths": {
+      "@cropper/*": [
+        "packages/*/src"
+      ],
+      "cropperjs": [
+        "packages/cropperjs/src"
+      ]
+    },
+    "types": [
+      "jest",
+      "vite/client"
+    ]
+  },
+  "include": [
+    "*.js",
+    ".*.js",
+    "docs/.vitepress/**/*",
+    "packages/*/src/*",
+    "packages/*/tests/*",
+    "types/*"
+  ]
+}

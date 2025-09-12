@@ -1,0 +1,6 @@
+{
+    "require": {
+        "psr/log": "^3.0",
+        "phpmailer/phpmailer": "^6.10"
+    }
+}

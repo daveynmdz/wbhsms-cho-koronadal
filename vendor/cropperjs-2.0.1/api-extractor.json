@@ -1,0 +1,31 @@
+{
+  "compiler": {
+    "overrideTsconfig": {
+      "compilerOptions": {
+        "paths": {
+          "@cropper/*": ["packages/*"],
+          "cropperjs": ["packages/cropperjs"]
+        }
+      }
+    }
+  },
+  "apiReport": {
+    "enabled": false
+  },
+  "docModel": {
+    "enabled": false
+  },
+  "dtsRollup": {
+    "enabled": true
+  },
+  "tsdocMetadata": {
+    "enabled": false
+  },
+  "messages": {
+    "tsdocMessageReporting": {
+      "default": {
+        "logLevel": "none"
+      }
+    }
+  }
+}

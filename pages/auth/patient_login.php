@@ -1,6 +1,6 @@
 <?php
 // Main entry point for the website
-include_once __DIR__ . '/config/db.php';
+include_once __DIR__ . '/../../config/db.php';
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="form-footer">
-                    <a href="forgotPassword.html" class="forgot">Forgot Password?</a>
+                    <a href="forgot_password.php" class="forgot">Forgot Password?</a>
                 </div>
 
                 <button type="submit" class="btn">Login</button>
