@@ -1,79 +1,115 @@
 <?php
 // registration_otp.php
 session_start();
-require_once '../../config/db.php';
+require_once '../../config/db.php'; // must set $pdo (PDO, ERRMODE_EXCEPTION recommended)
+
+// Helper: respond JSON for AJAX, otherwise redirect with a flash-style message
+function respond($isAjax, $ok, $payload = [])
+{
+    if ($isAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(array_merge(['success' => $ok], $payload));
+        exit;
+    } else {
+        // For non-AJAX: put message in session and redirect back to OTP page or success page
+        $_SESSION['flash'] = $payload['message'] ?? ($ok ? 'OK' : 'Error');
+        if ($ok && !empty($payload['redirect'])) {
+            header('Location: ' . $payload['redirect']);
+        } else {
+            header('Location: registration_otp.php'); // same page
+        }
+        exit;
+    }
+}
 
 
-// Only handle AJAX POST requests for OTP verification
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-    $enteredOtp = trim($_POST['otp']);
+$isPost = ($_SERVER['REQUEST_METHOD'] === 'POST');
+$isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
-    // Validate session
+if ($isPost) {
+    // ---- Read & validate input
+    $enteredOtp = isset($_POST['otp']) ? trim($_POST['otp']) : '';
+    if ($enteredOtp === '' || !ctype_digit($enteredOtp) || strlen($enteredOtp) < 4) { // adjust length as needed (e.g., 6)
+        respond($isAjax, false, ['message' => 'Please enter a valid numeric OTP.']);
+    }
+
+    // ---- Validate session state
     if (!isset($_SESSION['otp'], $_SESSION['otp_expiry'], $_SESSION['registration'])) {
-        echo json_encode(['success' => false, 'message' => 'No registration session found. Please register again.']);
-        exit;
+        respond($isAjax, false, ['message' => 'No registration session found. Please register again.']);
     }
 
-    // Expiry check
-    if (time() > $_SESSION['otp_expiry']) {
-        session_unset();
-        echo json_encode(['success' => false, 'message' => 'OTP has expired. Please restart registration.']);
-        exit;
+    // ---- Check expiry
+    if (time() > (int)$_SESSION['otp_expiry']) {
+        // keep only what you need; safest to clear all OTP-related data
+        unset($_SESSION['otp'], $_SESSION['otp_expiry']);
+        respond($isAjax, false, ['message' => 'OTP has expired. Please restart registration.']);
     }
 
-    // OTP check
-    if ($enteredOtp !== $_SESSION['otp']) {
-        echo json_encode(['success' => false, 'message' => 'Invalid OTP. Please try again.']);
-        exit;
+    // ---- Check OTP (compare as strings to avoid type quirks)
+    if ($enteredOtp !== strval($_SESSION['otp'])) {
+        respond($isAjax, false, ['message' => 'Invalid OTP. Please try again.']);
     }
 
-    // OTP valid → insert patient
+    // ---- OTP valid -> insert patient
     $regData = $_SESSION['registration'];
     $hashedPassword = password_hash($regData['password'], PASSWORD_DEFAULT);
 
     try {
-        $sql = "INSERT INTO patients 
-                (last_name, first_name, middle_name, suffix, barangay, dob, sex, contact_num, email, password) 
+        // Email uniqueness check removed to allow multiple patients with the same email
+
+        // Insert inside a transaction (safer if you add more steps later)
+        $pdo->beginTransaction();
+
+        $sql = "INSERT INTO patients
+                (last_name, first_name, middle_name, suffix, barangay, dob, sex, contact_num, email, password)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            $regData['last_name'],
-            $regData['first_name'],
-            $regData['middle_name'],
-            $regData['suffix'],
-            $regData['barangay'],
-            $regData['dob'],
-            $regData['sex'],
-            $regData['contact_num'],
-            $regData['email'],
+            $regData['last_name']   ?? null,
+            $regData['first_name']  ?? null,
+            $regData['middle_name'] ?? null,
+            $regData['suffix']      ?? null,
+            $regData['barangay']    ?? null,
+            $regData['dob']         ?? null,
+            $regData['sex']         ?? null,
+            $regData['contact_num'] ?? null,
+            $regData['email']       ?? null,
             $hashedPassword
         ]);
 
         $patientId = $pdo->lastInsertId();
 
-        // Fetch generated username
-        $stmt2 = $pdo->prepare("SELECT username FROM patients WHERE id = ?");
-        $stmt2->execute([$patientId]);
-        $row = $stmt2->fetch(PDO::FETCH_ASSOC);
+        // Generate username as PXXXXXX and update patient record
+        $generatedUsername = 'P' . str_pad($patientId, 6, '0', STR_PAD_LEFT);
+        $stmtUpdate = $pdo->prepare("UPDATE patients SET username = ? WHERE id = ?");
+        $stmtUpdate->execute([$generatedUsername, $patientId]);
 
-        $username = $row ? $row['username'] : null;
+        $pdo->commit();
 
-        // Cleanup session
+        // Cleanup OTP + registration payload
         unset($_SESSION['otp'], $_SESSION['otp_expiry'], $_SESSION['registration']);
 
-        sleep(5); // Delay redirect for 5 seconds
-        echo json_encode([
-            'success' => true,
-            'message' => 'Registration successful.',
+        // You can stash username in session to show on success page if you like
+        $_SESSION['registered_username'] = $generatedUsername;
+
+        respond($isAjax, true, [
+            'message'  => 'Registration successful.',
             'redirect' => 'registration_success.php',
-            'username' => $username
+            'id'       => $patientId,
+            'email'    => $regData['email'],
+            'username' => $generatedUsername
         ]);
-        exit;
-    } catch (Exception $e) {
-        echo json_encode(['success' => false, 'message' => 'Database insertion failed. Please try again later.']);
-        exit;
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        respond($isAjax, false, ['message' => 'Database error: ' . $e->getMessage()]);
     }
+    // exit after POST
+    exit;
 }
+
 // For non-AJAX requests, just render the HTML below (no JSON output)
 ?>
 
@@ -321,14 +357,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest' // <-- add this
+
                     },
                     body: 'otp=' + encodeURIComponent(otp)
                 })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        window.location.href = 'registration_success.php?username=' + encodeURIComponent(data.username);
+                        window.location.href = 'registration_success.php?id=' + encodeURIComponent(data.id) + '&email=' + encodeURIComponent(data.email);
                     } else {
                         showError(data.message || 'Invalid OTP.');
                     }
@@ -337,39 +375,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
         });
 
         // resend OTP with cooldown
-        resendBtn.addEventListener('click', () => {
-            fetch('resend_registration_otp.php', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(r => r.json())
-                .then(data => {
-                    showSnack(data.message || 'OTP resent', !data.success);
-                    if (data.success) startCooldown(30); // start 30s cooldown
-                })
-                .catch(() => showSnack('Failed to resend OTP', true));
-        });
-
+        let cooldownInterval = null;
         function startCooldown(seconds) {
             let remaining = seconds;
             resendBtn.disabled = true;
             resendBtn.style.opacity = '0.6';
             resendBtn.textContent = `Resend OTP (${remaining}s)`;
 
-            const interval = setInterval(() => {
+            if (cooldownInterval) clearInterval(cooldownInterval);
+            cooldownInterval = setInterval(() => {
                 remaining--;
                 resendBtn.textContent = `Resend OTP (${remaining}s)`;
-
                 if (remaining <= 0) {
-                    clearInterval(interval);
-                    resendBtn.disabled = false;
-                    resendBtn.style.opacity = '1';
-                    resendBtn.textContent = 'Resend OTP';
+                    clearInterval(cooldownInterval);
+                    cooldownInterval = null;
+                    resetResendBtn();
                 }
             }, 1000);
         }
+
+        function resetResendBtn() {
+            resendBtn.disabled = false;
+            resendBtn.style.opacity = '1';
+            resendBtn.textContent = 'Resend OTP';
+            if (cooldownInterval) {
+                clearInterval(cooldownInterval);
+                cooldownInterval = null;
+            }
+        }
+
+        // Start cooldown on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            startCooldown(30);
+        });
+
+        resendBtn.addEventListener('click', () => {
+            if (resendBtn.disabled) return; // Prevent multiple clicks
+            startCooldown(30); // Start cooldown immediately on click
+            fetch('resend_registration_otp.php', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                showSnack(data.message || 'OTP resent', !data.success);
+                // If resend failed, reset button immediately
+                if (!data.success) {
+                    resetResendBtn();
+                }
+            })
+            .catch(() => {
+                showSnack('Failed to resend OTP', true);
+                resetResendBtn();
+            });
+        });
     </script>
 
 </body>

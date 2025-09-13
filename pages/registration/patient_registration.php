@@ -1,14 +1,5 @@
 <?php // patient_registration.php 
 session_start();
-session_unset();
-session_destroy();
-if (ini_get("session.use_cookies")) {
-    $params = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 42000,
-        $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
-    );
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -494,7 +485,6 @@ if (ini_get("session.use_cookies")) {
         .hidden {
             display: none !important;
         }
-    
     </style>
 </head>
 
@@ -600,8 +590,8 @@ if (ini_get("session.use_cookies")) {
                     </div>
 
                     <div>
-                        <label for="date-of-birth">Date of Birth*</label>
-                        <input type="date" id="date-of-birth" name="dob" class="input-field" required />
+                        <label for="dob">Date of Birth*</label>
+                        <input type="date" id="dob" name="dob" class="input-field" required />
                     </div>
 
                     <div>
@@ -653,7 +643,23 @@ if (ini_get("session.use_cookies")) {
                     </label>
                 </div>
 
-                <div id="error" class="error" role="alert" aria-live="polite" style="display:none"></div>
+                <div id="error" class="error" role="alert" aria-live="polite" style="display:none">
+                    <?php
+                    if (isset($_SESSION['registration_error']) && $_SESSION['registration_error'] !== '') {
+                        echo '<script>
+                            document.addEventListener("DOMContentLoaded", function() {
+                                var errorDiv = document.getElementById("error");
+                                if (errorDiv) {
+                                    errorDiv.textContent = ' . json_encode($_SESSION['registration_error']) . ';
+                                    errorDiv.style.display = "block";
+                                    errorDiv.focus && errorDiv.focus();
+                                }
+                            });
+                        </script>';
+                        unset($_SESSION['registration_error']);
+                    }
+                    ?>
+                </div>
                 <div class="form-footer">
                     <button id="submitBtn" type="submit" class="btn">Submit <i
                             class="fa-solid fa-arrow-right"></i></button>
@@ -714,8 +720,8 @@ if (ini_get("session.use_cookies")) {
                     if (data.suffix) $('#suffix').value = data.suffix;
                     if (data.barangay) $('#barangay').value = data.barangay;
                     if (data.sex) $('#sex').value = data.sex;
-                    if (data.date_of_birth) $('#date-of-birth').value = data.date_of_birth;
-                    if (data.contact_number) $('#contact-number').value = data.contact_number;
+                    if (data.dob) $('#dob').value = data.dob;
+                    if (data.contact_num) $('#contact-number').value = data.contact_num;
                     if (data.email) $('#email').value = data.email;
                 }
             } catch (_) {}
@@ -739,9 +745,9 @@ if (ini_get("session.use_cookies")) {
             icon.classList.toggle('fa-eye-slash');
         });
 
-        // --- Phone formatter + validation (PH mobile without leading 0; prefix +63) ---
-        const phone = $('#contact-number');
-        phone.addEventListener('input', function() {
+        // --- Contact_Num formatter + validation (PH mobile without leading 0; prefix +63) ---
+        const contact_num = $('#contact-number');
+        contact_num.addEventListener('input', function() {
             let value = this.value.replace(/\D/g, '');
             if (value.startsWith('0')) value = value.substring(1); // remove leading 0
             if (value.length > 10) value = value.slice(0, 10);
@@ -809,7 +815,7 @@ if (ini_get("session.use_cookies")) {
         });
 
         // --- DOB guardrails (no future, not older than 120 years) ---
-        const dob = $('#date-of-birth');
+        const dob = $('#dob');
         const setDobBounds = () => {
             const today = new Date();
             const max = today.toISOString().split('T')[0];
@@ -879,7 +885,7 @@ if (ini_get("session.use_cookies")) {
             }
 
             // Basic requireds (IDs must match)
-            const requiredIds = ['last-name', 'first-name', 'barangay', 'sex', 'date-of-birth', 'contact-number', 'email', 'password', 'confirm-password'];
+            const requiredIds = ['last-name', 'first-name', 'barangay', 'sex', 'dob', 'contact-number', 'email', 'password', 'confirm-password'];
             for (const id of requiredIds) {
                 const el = document.getElementById(id);
                 if (!el || !el.value) {
@@ -913,7 +919,7 @@ if (ini_get("session.use_cookies")) {
                 }
             }
 
-            // Phone: ensure 10 digits and starts with 9 (PH mobile)
+            // Contact_Num: ensure 10 digits and starts with 9 (PH mobile)
             const digits = $('#contact-number').value.replace(/\D/g, '');
             if (!/^[0-9]{10}$/.test(digits)) {
                 e.preventDefault();
@@ -963,8 +969,8 @@ if (ini_get("session.use_cookies")) {
                 suffix: $('#suffix').value,
                 barangay: $('#barangay').value,
                 sex: $('#sex').value,
-                date_of_birth: $('#date-of-birth').value,
-                contact_number: $('#contact-number').value,
+                dob: $('#dob').value,
+                contact_num: $('#contact-number').value,
                 email: $('#email').value
             };
             try {

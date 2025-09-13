@@ -1,8 +1,19 @@
 <?php
 session_start();
+require_once '../../config/db.php';
 
-// Grab username from query string
-$username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : null;
+// Get id and email from query string
+$id = isset($_GET['id']) ? intval($_GET['id']) : null;
+$email = isset($_GET['email']) ? $_GET['email'] : null;
+$username = null;
+if ($id && $email) {
+    $stmt = $pdo->prepare('SELECT username FROM patients WHERE id = ? AND email = ? LIMIT 1');
+    $stmt->execute([$id, $email]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row && isset($row['username'])) {
+        $username = htmlspecialchars($row['username']);
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -151,13 +162,13 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
                 <div class="countdown">
                     Redirecting to login page in <span id="timer">10</span> seconds...
                 </div>
-                <a href="patient_login.php" class="btn" id="backBtn">
+                <a href="../auth/patient_login.php" class="btn" id="backBtn">
                     <i class="fa-solid fa-arrow-right-to-bracket"></i> Back to Login
                 </a>
                 <script>
                     let seconds = 10;
                     const timerSpan = document.getElementById('timer');
-                    const loginUrl = 'patient_login.php';
+                    const loginUrl = '../auth/patient_login.php';
                     const countdown = setInterval(() => {
                         seconds--;
                         timerSpan.textContent = seconds;

@@ -32,8 +32,8 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 // ---- Configurable paths ----
-$otp_page    = '../../pages/registration/verify_otp.php';
-$return_page = isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER'] !== '' ? $_SERVER['HTTP_REFERER'] : 'patient_registration.php';
+$otp_page    = '../../pages/registration/registration_otp.php';
+$return_page = '../../pages/registration/patient_registration.php';
 
 // ---- Helper: redirect back with an error message ----
 function back_with_error(string $msg, int $http_code = 302): void
@@ -58,6 +58,8 @@ try {
     // --- Collect fields ---
     $first_name  = isset($_POST['first_name']) ? trim((string)$_POST['first_name']) : '';
     $last_name   = isset($_POST['last_name']) ? trim((string)$_POST['last_name']) : '';
+    $middle_name = isset($_POST['middle_name']) ? trim((string)$_POST['middle_name']) : '';
+    $suffix      = isset($_POST['suffix']) ? trim((string)$_POST['suffix']) : '';
     $dob         = isset($_POST['dob']) ? trim((string)$_POST['dob']) : '';
     $email       = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
     $contact_num = isset($_POST['contact_num']) ? trim((string)$_POST['contact_num']) : '';
@@ -75,8 +77,8 @@ try {
     }
 
     // --- Phone normalize length check ---
-    $normalizedPhone = preg_replace('/[^0-9+]/', '', $contact_num);
-    if (strlen($normalizedPhone) < 7 || strlen($normalizedPhone) > 20) {
+    $normalizedContactNum = preg_replace('/(?!^\+)\D/', '', $contact_num);
+    if (!preg_match('/^\+?\d{7,20}$/', $normalizedContactNum)) {
         back_with_error('Please enter a valid contact number.');
     }
 
@@ -129,31 +131,32 @@ try {
     // --- Send OTP via PHPMailer ---
     $mail = new PHPMailer(true);
     try {
-        // SMTP config (TODO: replace with your real SMTP credentials)
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.example.com';   // e.g., smtp.gmail.com
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'your@email.com';
-        $mail->Password   = 'yourpassword';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; // 'tls'
-        $mail->Port       = 587;
+    // Load SMTP config from environment variables
+    $mail->isSMTP();
+    $mail->Host       = $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com';
+    $mail->SMTPAuth   = true;
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Username   = $_ENV['SMTP_USER'] ?? 'cityhealthofficeofkoronadal@gmail.com';
+    $mail->Password   = $_ENV['SMTP_PASS'] ?? '';
+    $mail->Port       = $_ENV['SMTP_PORT'] ?? 587;
+    $fromEmail        = $_ENV['SMTP_FROM'] ?? 'cityhealthofficeofkoronadal@gmail.com';
+    $fromName         = $_ENV['SMTP_FROM_NAME'] ?? 'City Health Office of Koronadal';
+    $mail->setFrom($fromEmail, $fromName);
+    $mail->addAddress($email, $first_name . ' ' . $last_name);
+    $mail->isHTML(true);
+    $mail->Subject = 'Your OTP for CHO Koronadal Registration';
+    $mail->Body    = '<p>Your One-Time Password (OTP) for registration is:</p><h2 style="letter-spacing:2px;">' . htmlspecialchars($otp, ENT_QUOTES, 'UTF-8') . '</h2><p>This code will expire in 5 minutes.</p>';
+    $mail->AltBody = "Your OTP is: {$otp} (expires in 5 minutes)";
 
-        $mail->setFrom('no-reply@yourdomain.tld', 'CHO Koronadal');
-        $mail->addAddress($email, $first_name . ' ' . $last_name);
-        $mail->isHTML(true);
-        $mail->Subject = 'Your OTP for CHO Koronadal Registration';
-        $mail->Body    = '<p>Your One-Time Password (OTP) for registration is:</p><h2 style="letter-spacing:2px;">' . htmlspecialchars($otp, ENT_QUOTES, 'UTF-8') . '</h2><p>This code will expire in 5 minutes.</p>';
-        $mail->AltBody = "Your OTP is: {$otp} (expires in 5 minutes)";
+    $mail->send();
 
-        $mail->send();
-
-        // Success → redirect to OTP page (no artificial delay; your UI shows a spinner)
-        header('Location: ' . $otp_page);
-        exit;
+    // Success → redirect to OTP page (no artificial delay; your UI shows a spinner)
+    header('Location: ' . $otp_page);
+    exit;
     } catch (Exception $e) {
-        // Cleanup OTP if email failed (optional)
-        unset($_SESSION['otp'], $_SESSION['otp_expiry']);
-        back_with_error('Could not send OTP email. Please try again.');
+    error_log('PHPMailer error: ' . $mail->ErrorInfo . ' Exception: ' . $e->getMessage());
+    unset($_SESSION['otp'], $_SESSION['otp_expiry']);
+    back_with_error('Could not send OTP email. Please try again.');
     }
 } catch (Throwable $e) {
     // Generic server error

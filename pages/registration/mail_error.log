@@ -1,0 +1,6 @@
+SMTP Error: Could not authenticate.
+SMTP Error: Could not authenticate.
+SMTP Error: Could not authenticate.
+2025-09-13 14:21:45 | PHPMailer Error: SMTP Error: Could not authenticate. | Exception: SMTP Error: Could not authenticate.
+2025-09-13 14:24:40 | PHPMailer Error: SMTP Error: Could not authenticate. | Exception: SMTP Error: Could not authenticate.
+2025-09-13 14:25:51 | PHPMailer Error: SMTP Error: Could not authenticate. | Exception: SMTP Error: Could not authenticate.
