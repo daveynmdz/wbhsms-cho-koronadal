@@ -100,8 +100,9 @@ try {
 
     // --- Duplicate check ---
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM patients WHERE first_name = ? AND last_name = ? AND dob = ? AND barangay = ?');
-    $stmt->execute([$first_name, $last_name, $dob, $barangay]);
-    if ((int)$stmt->fetchColumn() > 0) {
+    $success = $stmt->execute([$first_name, $last_name, $dob, $barangay]);
+    $count = $success ? (int)$stmt->fetchColumn() : 0;
+    if ($count > 0) {
         back_with_error('Patient already exists.');
     }
 
