@@ -1,8 +1,14 @@
 <?php
 session_start();
 
-// Grab username from query string
-$username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : null;
+// Check if there's a flash message in the session
+if (isset($_SESSION['flash'])) {
+    $flash = $_SESSION['flash'];
+    unset($_SESSION['flash']);  // Clear the flash message after it's used
+} else {
+    // Default message if no flash is set
+    $flash = ['type' => 'fail', 'msg' => 'Unexpected error occurred.'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -10,7 +16,7 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
 
 <head>
     <meta charset="UTF-8">
-    <title>Registration Success</title>
+    <title>Password Reset Status</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -26,7 +32,9 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
             --focus-ring: 0 0 0 3px rgba(0, 123, 255, .25);
         }
 
-        * {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box
         }
 
@@ -73,12 +81,25 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
             padding: 160px 16px 40px
         }
 
+        .form-box {
+            width: 100%;
+            min-width: 350px;
+            max-width: 600px;
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 20px 22px 26px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            position: relative
+        }
+
+
         .container {
             background: #fff;
             border-radius: 16px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
             padding: 36px 32px 28px;
-            max-width: 480px;
+            max-width: 420px;
             width: 100%;
             text-align: center;
         }
@@ -87,10 +108,13 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
             color: #006400;
         }
 
+        .fail {
+            color: #b91c1c;
+        }
+
         .icon {
             font-size: 3rem;
             margin-bottom: 10px;
-            color: #006400;
         }
 
         .btn {
@@ -112,26 +136,34 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
             background: #0056b3;
         }
 
-        .credential-box {
-            margin: 18px 0;
-            padding: 14px;
-            border: 2px dashed #007bff;
-            border-radius: 8px;
-            background: #f0f9ff;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1e3a8a;
+        .contact-info {
+            margin: 22px 0 10px;
+            text-align: left;
+            font-size: 1.07em;
+        }
+
+        .contact-info .row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .contact-info .row i {
+            font-size: 1.3em;
+            color: #007bff;
+            min-width: 28px;
+            text-align: center;
         }
 
         .countdown {
-            font-size: 1.05em;
+            font-size: 1.09em;
             color: #1e40af;
-            margin-top: 12px;
+            margin-top: 10px;
             font-weight: 600;
         }
     </style>
 </head>
-
 <body>
     <header>
         <div class="logo-container">
@@ -141,18 +173,15 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
 
     <section class="homepage">
         <div class="container">
-            <?php if ($username): ?>
-                <div class="icon"><i class="fa-solid fa-circle-check"></i></div>
-                <h2 class="success">Registration Successful!</h2>
-                <p>Your account has been created successfully. Please use the following username to log in:</p>
-                <div class="credential-box">
-                    <i class="fa-solid fa-user"></i> <?= $username ?>
-                </div>
+            <?php if ($flash['type'] === 'success'): ?>
+                <div class="icon success"><i class="fa-solid fa-circle-check"></i></div>
+                <h2 class="success">Password Changed Successfully!</h2>
+                <p>Your password has been updated. You can now log in with your new password.</p>
                 <div class="countdown">
                     Redirecting to login page in <span id="timer">10</span> seconds...
                 </div>
                 <a href="patient_login.php" class="btn" id="backBtn">
-                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Back to Login
+                    <i class="fa-solid fa-arrow-left"></i> Back to Login
                 </a>
                 <script>
                     let seconds = 10;
@@ -166,17 +195,33 @@ $username = isset($_GET['username']) ? htmlspecialchars($_GET['username']) : nul
                             window.location.href = loginUrl;
                         }
                     }, 1000);
-                    document.getElementById('backBtn').addEventListener('click', () => {
+                    document.getElementById('backBtn').addEventListener('click', function(e) {
                         window.location.href = loginUrl;
                     });
                 </script>
             <?php else: ?>
-                <div class="icon" style="color:#b91c1c"><i class="fa-solid fa-circle-xmark"></i></div>
-                <h2 style="color:#b91c1c">Registration Failed</h2>
-                <p>We could not retrieve your username. Please try registering again.</p>
-                <a href="patient_registration.php" class="btn">
-                    <i class="fa-solid fa-user-plus"></i> Try Again
+                <div class="icon fail"><i class="fa-solid fa-circle-xmark"></i></div>
+                <h2 class="fail">Password Change Failed</h2>
+                <p>We're sorry, but your password could not be changed.</p>
+                <p>For further assistance, please contact your administrator.</p>
+                <div class="contact-info">
+                    <div class="row">
+                        <i class="fa-solid fa-phone"></i>
+                        <span>(083) 228 2293</span>
+                    </div>
+                    <div class="row">
+                        <i class="fa-solid fa-envelope"></i>
+                        <span>cityhealthofficeofkoronadal@gmail.com</span>
+                    </div>
+                </div>
+                <a href="patient_login.php" class="btn" id="failBackBtn">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Login
                 </a>
+                <script>
+                    document.getElementById('failBackBtn').addEventListener('click', function(e) {
+                        window.location.href = 'patient_login.php';
+                    });
+                </script>
             <?php endif; ?>
         </div>
     </section>

@@ -118,19 +118,23 @@ try {
 </script>
 <style>
     #snackbar {
-        visibility: hidden;
-        min-width: 250px;
-        background-color: #333;
-        color: #fff;
-        text-align: center;
-        border-radius: 2px;
-        padding: 16px;
         position: fixed;
-        z-index: 1;
         left: 50%;
-        bottom: 30px;
-        font-size: 17px;
-        transform: translateX(-50%);
+        bottom: 24px;
+        transform: translateX(-50%) translateY(20px);
+        min-width: 260px;
+        max-width: 92vw;
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: #16a34a;
+        /* success green */
+        color: #fff;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform .25s ease, opacity .25s ease;
+        z-index: 9999;
+        font: 600 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
 
     #snackbar.show {

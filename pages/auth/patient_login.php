@@ -1,6 +1,13 @@
 <?php
 // Main entry point for the website
+session_start();
+session_unset();
+session_destroy();
 include_once __DIR__ . '/../../config/db.php';
+
+$sessionFlash = $_SESSION['flash'] ?? null;
+unset($_SESSION['flash']); // one-time
+$flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error] : null);
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -22,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,6 +41,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Icons & Styles -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="../../assets/css/login.css" />
+    <style>
+        /* Snackbar */
+        #snackbar {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%) translateY(20px);
+            min-width: 260px;
+            max-width: 92vw;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: #16a34a;
+            /* green */
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform .25s ease, opacity .25s ease;
+            z-index: 9999;
+            font: 600 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+
+        #snackbar.error {
+            background: #dc2626;
+        }
+
+        #snackbar.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
 </head>
 
 <body>
@@ -76,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <p class="alt-action">
                     Don’t have an account?
-                    <a class="register-link" href="patientRegistration.php">Register</a>
+                    <a class="register-link" href="../registration/patient_registration.php">Register</a>
                 </p>
 
                 <!-- Live region for client-side validation or server messages -->
@@ -86,10 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </main>
 
     <script>
-        // Password toggle (accessible)
+        // Password toggle (accessible & null-safe)
         (function() {
             const toggleBtn = document.querySelector(".toggle-password");
             const pwd = document.getElementById("password");
+            if (!toggleBtn || !pwd) return;
+
             const icon = toggleBtn.querySelector("i");
 
             function toggle() {
@@ -97,17 +138,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 pwd.type = isHidden ? "text" : "password";
                 toggleBtn.setAttribute("aria-pressed", String(isHidden));
                 toggleBtn.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
-                icon.classList.toggle("fa-eye");
-                icon.classList.toggle("fa-eye-slash");
+                if (icon) {
+                    icon.classList.toggle("fa-eye", !isHidden);
+                    icon.classList.toggle("fa-eye-slash", isHidden);
+                }
             }
-
             toggleBtn.addEventListener("click", toggle);
         })();
 
-        // Optional: Light client validation message surface
+        // Light client validation message surface (null-safe)
         (function() {
             const form = document.querySelector("form");
             const status = document.getElementById("form-status");
+            if (!form || !status) return;
+
             form.addEventListener("submit", function(e) {
                 if (!form.checkValidity()) {
                     e.preventDefault();
@@ -115,7 +159,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
         })();
+
+        // Snackbar flash (with animation reset + null-safe)
+        (function() {
+            const el = document.getElementById('snackbar');
+            if (!el) return;
+
+            const msg = <?php echo json_encode($flash['msg']  ?? ''); ?>;
+            const type = <?php echo json_encode($flash['type'] ?? ''); ?>;
+            if (!msg) return;
+
+            el.textContent = msg;
+            el.classList.toggle('error', type === 'error');
+            // restart animation reliably
+            el.classList.remove('show');
+            void el.offsetWidth; // force reflow
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 4000);
+        })();
     </script>
+
 </body>
 
 </html>

@@ -90,6 +90,7 @@ body {
   background: var(--surface);
   border-radius: 16px;
   padding: 20px 22px 26px;
+  margin-top: 42px;
   box-shadow: var(--shadow);
 }
 
