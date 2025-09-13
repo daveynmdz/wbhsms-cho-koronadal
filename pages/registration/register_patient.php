@@ -36,7 +36,8 @@ $otp_page    = '../../pages/registration/verify_otp.php';
 $return_page = isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER'] !== '' ? $_SERVER['HTTP_REFERER'] : 'patient_registration.php';
 
 // ---- Helper: redirect back with an error message ----
-function back_with_error(string $msg, int $http_code = 302): void {
+function back_with_error(string $msg, int $http_code = 302): void
+{
     $_SESSION['registration_error'] = $msg;
     http_response_code($http_code);
     global $return_page;
