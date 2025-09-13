@@ -10,7 +10,9 @@
 // - Generates OTP and stores expiry in session
 // - Sends OTP using PHPMailer with clear error handling
 // - Redirects to verify_otp.php on success, back to patient_registration.php on error
-
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 declare(strict_types=1);
 session_start();
 
@@ -99,9 +101,19 @@ try {
     }
 
     // --- Duplicate check ---
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM patients WHERE first_name = ? AND last_name = ? AND dob = ? AND barangay = ?');
-    $success = $stmt->execute([$first_name, $last_name, $dob, $barangay]);
-    $count = $success ? (int)$stmt->fetchColumn() : 0;
+    $count = 0;
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM patients WHERE first_name = ? AND last_name = ? AND dob = ? AND barangay = ?');
+        if ($stmt && $stmt->execute([$first_name, $last_name, $dob, $barangay])) {
+            $result = $stmt->fetchColumn();
+            if ($result !== false) {
+                $count = (int)$result;
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('Duplicate check error: ' . $e->getMessage());
+        // Do not output anything to browser
+    }
     if ($count > 0) {
         back_with_error('Patient already exists.');
     }
