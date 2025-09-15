@@ -659,16 +659,18 @@ unset($_SESSION['registration']);
                     </div>
                 </div>
 
-                <h4 id="pw-req">Password Requirements:</h4>
-                <ul class="password-requirements" id="password-requirements">
-                    <li id="length"><i class="fa-solid fa-circle-xmark icon red"></i> At least 8 characters</li>
-                    <li id="uppercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one uppercase letter
-                    </li>
-                    <li id="lowercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one lowercase letter
-                    </li>
-                    <li id="number"><i class="fa-solid fa-circle-xmark icon red"></i> At least one number</li>
-                    <li id="match"><i class="fa-solid fa-circle-xmark icon red"></i> Passwords match</li>
-                </ul>
+                <div class="password-requirements-wrapper">
+                    <h4 id="pw-req">Password Requirements:</h4>
+                    <ul class="password-requirements" id="password-requirements">
+                        <li id="length"><i class="fa-solid fa-circle-xmark icon red"></i> At least 8 characters</li>
+                        <li id="uppercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one uppercase letter
+                        </li>
+                        <li id="lowercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one lowercase letter
+                        </li>
+                        <li id="number"><i class="fa-solid fa-circle-xmark icon red"></i> At least one number</li>
+                        <li id="match"><i class="fa-solid fa-circle-xmark icon red"></i> Passwords match</li>
+                    </ul>
+                </div>
 
                 <div class="terms-checkbox">
                     <input type="checkbox" id="terms-check" name="agree_terms" required />

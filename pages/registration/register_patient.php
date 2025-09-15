@@ -168,7 +168,8 @@ try {
         }
 
         // --- DOB format YYYY-MM-DD and not future ---
-        $dobDate = DateTime::createFromFormat('Y-m-d', $dob);
+        // --- DOB format MM-DD-YYYY and not future ---
+        $dobDate = DateTime::createFromFormat('m-d-Y', $dob);
         $dobErrors = DateTime::getLastErrors();
         if (
             !$dobDate ||
@@ -176,7 +177,7 @@ try {
             ($dobErrors['warning_count'] ?? 0) > 0 ||
             ($dobErrors['error_count'] ?? 0) > 0
         ) {
-            back_with_error('Date of birth must be in YYYY-MM-DD format.');
+            back_with_error('Date of birth must be in MM-DD-YYYY format.');
         }
         $today = new DateTime('today');
         if ($dobDate > $today) {
