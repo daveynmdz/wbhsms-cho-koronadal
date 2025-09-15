@@ -155,20 +155,13 @@ try {
             back_with_error('Please select a valid barangay.');
         }
 
-        // --- Phone normalize (PH mobile: 9xxxxxxxxx, 09xxxxxxxxx, or +639xxxxxxxxx) ---
-        $digits = preg_replace('/\D+/', '', $contact_num);
-        if (preg_match('/^639\d{9}$/', $digits)) {
-            $normalizedContactNum = substr($digits, 2); // 9xxxxxxxxx
-        } elseif (preg_match('/^09\d{9}$/', $digits)) {
-            $normalizedContactNum = substr($digits, 1); // 9xxxxxxxxx
-        } elseif (preg_match('/^9\d{9}$/', $digits)) {
-            $normalizedContactNum = $digits;
-        } else {
-            back_with_error('Contact number must be a valid PH mobile (e.g., 9xxxxxxxxx or +639xxxxxxxxx).');
-        }
-
+        // --- DOB validation (YYYY-MM-DD) ---
         $dob = isset($_POST['dob']) ? trim((string)$_POST['dob']) : '';
         $dobDate   = DateTime::createFromFormat('Y-m-d', $dob);
+        // Debug: log raw DOB input and parsed result
+        error_log('DOB raw input: ' . $dob);
+        $dobDate   = DateTime::createFromFormat('Y-m-d', $dob);
+        error_log('DOB parsed: ' . ($dobDate ? $dobDate->format('Y-m-d') : 'false'));
         $dobErrors = DateTime::getLastErrors();
         if (
             !$dobDate ||
@@ -190,6 +183,17 @@ try {
             back_with_error('Please enter a valid date of birth.');
         }
 
+        // --- Phone normalize (PH mobile: 9xxxxxxxxx, 09xxxxxxxxx, or +639xxxxxxxxx) ---
+        $digits = preg_replace('/\D+/', '', $contact_num);
+        if (preg_match('/^639\d{9}$/', $digits)) {
+            $normalizedContactNum = substr($digits, 2); // 9xxxxxxxxx
+        } elseif (preg_match('/^09\d{9}$/', $digits)) {
+            $normalizedContactNum = substr($digits, 1); // 9xxxxxxxxx
+        } elseif (preg_match('/^9\d{9}$/', $digits)) {
+            $normalizedContactNum = $digits;
+        } else {
+            back_with_error('Contact number must be a valid PH mobile (e.g., 9xxxxxxxxx or +639xxxxxxxxx).');
+        }
 
         // --- Password policy (len + upper + lower + digit) ---
         if (
