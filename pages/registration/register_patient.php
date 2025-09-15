@@ -11,7 +11,7 @@ declare(strict_types=1);
 // - Hashes password (stored in session; do NOT keep plaintext)
 // - Generates OTP and stores expiry in session
 // - Sends OTP using PHPMailer with clear error handling
-// - Redirects to verify_otp.php on success, back to patient_registration.php on error
+// - Redirects to registration_verify.php on success, back to patient_registration.php on error
 // Put this at the very top of PHP files that do redirects (before session_start)
 $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
 ini_set('display_errors', $debug ? '1' : '0');
@@ -19,7 +19,10 @@ ini_set('display_startup_errors', $debug ? '1' : '0');
 error_reporting(E_ALL);
 
 // ---- Session hardening ----
-ini_set('session.cookie_secure', '1');   // requires HTTPS in prod
+$https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (($_SERVER['SERVER_PORT'] ?? null) == 443);
+
+ini_set('session.cookie_secure', $https ? '1' : '0'); // secure only when HTTPS
 ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Lax');
 if (session_status() === PHP_SESSION_NONE) {
@@ -44,8 +47,8 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 // ---- Configurable paths ----
-$otp_page    = '../../pages/registration/registration_otp.php';
-$return_page = '../../pages/registration/patient_registration.php';
+$otp_page    = 'registration_otp.php';
+$return_page = 'patient_registration.php';
 
 // ---- Helper: redirect back with an error message ----
 function back_with_error(string $msg, int $http_code = 303): void
@@ -64,6 +67,13 @@ if (isset($pdo) && $pdo instanceof PDO) {
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // --- CSRF ---
+        if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], (string)$_POST['csrf_token'])) {
+            back_with_error('Invalid or missing CSRF token.');
+        }
+        // Rotate token after successful check
+        unset($_SESSION['csrf_token']);
+
         // --- Collect fields ---
         $first_name  = isset($_POST['first_name']) ? trim((string)$_POST['first_name']) : '';
         $last_name   = isset($_POST['last_name']) ? trim((string)$_POST['last_name']) : '';
@@ -74,10 +84,36 @@ try {
         $contact_num = isset($_POST['contact_num']) ? trim((string)$_POST['contact_num']) : '';
         $barangay    = isset($_POST['barangay']) ? trim((string)$_POST['barangay']) : '';
         $password    = isset($_POST['password']) ? (string)$_POST['password'] : '';
+        $sex         = isset($_POST['sex']) ? trim((string)$_POST['sex']) : '';
+        $agree_terms = isset($_POST['agree_terms']); // checkbox
+        $email       = strtolower($email);
+
+        // Pre-stash for repopulation on error (no passwords)
+        $_SESSION['registration'] = [
+            'first_name'  => $first_name,
+            'last_name'   => $last_name,
+            'middle_name' => $middle_name,
+            'suffix'      => $suffix,
+            'barangay'    => $barangay,
+            'dob'         => $dob,
+            'sex'         => $sex,
+            'contact_num' => $contact_num, // keep as typed for UI; we store normalized later on success
+            'email'       => $email,
+        ];
+
 
         // --- Required fields ---
-        if ($first_name === '' || $last_name === '' || $dob === '' || $email === '' || $contact_num === '' || $barangay === '' || $password === '') {
+        if (
+            $first_name === '' || $last_name === '' || $dob === '' || $email === '' ||
+            $contact_num === '' || $barangay === '' || $password === '' || $sex === ''
+        ) {
             back_with_error('All fields are required.');
+        }
+        if (!$agree_terms) {
+            back_with_error('You must agree to the Terms & Conditions.');
+        }
+        if (!in_array($sex, ['Male', 'Female'], true)) {
+            back_with_error('Please select a valid sex.');
         }
 
         // --- Email ---
@@ -85,10 +121,50 @@ try {
             back_with_error('Please enter a valid email address.');
         }
 
-        // --- Phone normalize length check ---
-        $normalizedContactNum = preg_replace('/(?!^\+)\D/', '', $contact_num);
-        if (!preg_match('/^\+?\d{7,20}$/', $normalizedContactNum)) {
-            back_with_error('Please enter a valid contact number.');
+        // --- Barangay whitelist ---
+        $allowed_barangays = [
+            'Brgy. Assumption',
+            'Brgy. Avanceña',
+            'Brgy. Cacub',
+            'Brgy. Caloocan',
+            'Brgy. Carpenter Hill',
+            'Brgy. Concepcion',
+            'Brgy. Esperanza',
+            'Brgy. General Paulino Santos',
+            'Brgy. Mabini',
+            'Brgy. Magsaysay',
+            'Brgy. Mambucal',
+            'Brgy. Morales',
+            'Brgy. Namnama',
+            'Brgy. New Pangasinan',
+            'Brgy. Paraiso',
+            'Brgy. Rotonda',
+            'Brgy. San Isidro',
+            'Brgy. San Roque',
+            'Brgy. San Jose',
+            'Brgy. Sta. Cruz',
+            'Brgy. Sto. Niño',
+            'Brgy. Saravia',
+            'Brgy. Topland',
+            'Brgy. Zone 1',
+            'Brgy. Zone 2',
+            'Brgy. Zone 3',
+            'Brgy. Zone 4'
+        ];
+        if (!in_array($barangay, $allowed_barangays, true)) {
+            back_with_error('Please select a valid barangay.');
+        }
+
+        // --- Phone normalize (PH mobile: 9xxxxxxxxx, 09xxxxxxxxx, or +639xxxxxxxxx) ---
+        $digits = preg_replace('/\D+/', '', $contact_num);
+        if (preg_match('/^639\d{9}$/', $digits)) {
+            $normalizedContactNum = substr($digits, 2); // 9xxxxxxxxx
+        } elseif (preg_match('/^09\d{9}$/', $digits)) {
+            $normalizedContactNum = substr($digits, 1); // 9xxxxxxxxx
+        } elseif (preg_match('/^9\d{9}$/', $digits)) {
+            $normalizedContactNum = $digits;
+        } else {
+            back_with_error('Contact number must be a valid PH mobile (e.g., 9xxxxxxxxx or +639xxxxxxxxx).');
         }
 
         // --- DOB format YYYY-MM-DD and not future ---
@@ -107,10 +183,23 @@ try {
             back_with_error('Date of birth cannot be in the future.');
         }
 
-        // --- Password policy ---
-        if (strlen($password) < 8) {
-            back_with_error('Password must be at least 8 characters long.');
+        // ADD:
+        $oldest = (clone $today)->modify('-120 years');
+        if ($dobDate < $oldest) {
+            back_with_error('Please enter a valid date of birth.');
         }
+
+
+        // --- Password policy (len + upper + lower + digit) ---
+        if (
+            strlen($password) < 8 ||
+            !preg_match('/[A-Z]/', $password) ||
+            !preg_match('/[a-z]/', $password) ||
+            !preg_match('/\d/', $password)
+        ) {
+            back_with_error('Password must be at least 8 characters with uppercase, lowercase, and a number.');
+        }
+
 
         // --- Duplicate check ---
         $count = 0;
@@ -145,9 +234,9 @@ try {
             'suffix'       => isset($_POST['suffix']) ? trim((string)$_POST['suffix']) : '',
             'barangay'     => $barangay,
             'dob'          => isset($_POST['dob']) ? trim((string)$_POST['dob']) : '',
-            'sex'          => isset($_POST['sex']) ? trim((string)$_POST['sex']) : '',
-            'contact_num'  => $contact_num,
-            'email'        => $email,
+            'sex'          => $sex,
+            'contact_num'  => $normalizedContactNum, // <- use normalized digits
+            'email'        => $email,                // already lowercased
             'password'     => $hashed // store hashed only
         ];
         $_SESSION['otp'] = $otp;
@@ -155,6 +244,8 @@ try {
 
         // --- Send OTP via PHPMailer ---
         $mail = new PHPMailer(true);
+        $mail->CharSet  = 'UTF-8';
+        $mail->Encoding = 'base64';
         try {
             // Load SMTP config from environment variables
             $mail->isSMTP();
@@ -175,8 +266,8 @@ try {
 
             $mail->send();
 
-            // Success → redirect to OTP page (no artificial delay; your UI shows a spinner)
-            header('Location: ' . $otp_page);
+            // Success → redirect to OTP page
+            header('Location: ' . $otp_page, true, 303);
             exit;
         } catch (Exception $e) {
             error_log('PHPMailer error: ' . $mail->ErrorInfo . ' Exception: ' . $e->getMessage());

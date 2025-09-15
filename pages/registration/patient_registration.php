@@ -1,5 +1,10 @@
 <?php // patient_registration.php 
 session_start();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrf_token = $_SESSION['csrf_token'];
+
 // --- Error message and repopulation logic ---
 $errorMsg = '';
 if (isset($_SESSION['registration_error'])) {
@@ -542,90 +547,120 @@ unset($_SESSION['registration']);
 
             <!-- Live error region moved below, just above submit button -->
 
-            <form id="registrationForm" action="register_patient.php" method="POST" novalidate>
+            <form id="registrationForm" action="register_patient.php" method="POST">
                 <!-- CSRF placeholder (server should populate) -->
-                <input type="hidden" name="csrf_token"
-                    value="<?php echo isset($csrf_token) ? htmlspecialchars($csrf_token) : ''; ?>" />
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>" />
 
-                <div class="grid">
-                        <div>
-                            <label for="barangay">Barangay*</label>
-                            <select id="barangay" name="barangay" class="input-field" required>
-                                <option value="" disabled>Select your barangay</option>
-                                <?php
-                                $barangays = [
-                                    'Brgy. Assumption', 'Brgy. Avanceña', 'Brgy. Cacub', 'Brgy. Caloocan', 'Brgy. Carpenter Hill', 'Brgy. Concepcion', 'Brgy. Esperanza', 'Brgy. General Paulino Santos', 'Brgy. Mabini', 'Brgy. Magsaysay', 'Brgy. Mambucal', 'Brgy. Morales', 'Brgy. Namnama', 'Brgy. New Pangasinan', 'Brgy. Paraiso', 'Brgy. Rotonda', 'Brgy. San Isidro', 'Brgy. San Roque', 'Brgy. San Jose', 'Brgy. Sta. Cruz', 'Brgy. Sto. Niño', 'Brgy. Saravia', 'Brgy. Topland', 'Brgy. Zone 1', 'Brgy. Zone 2', 'Brgy. Zone 3', 'Brgy. Zone 4'
-                                ];
-                                foreach ($barangays as $b) {
-                                    $selected = ($formData['barangay'] === $b) ? 'selected' : '';
-                                    echo "<option value=\"$b\" $selected>$b</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
+                <div id="error" class="error" role="alert" aria-live="polite"
+                    style="display:<?php echo $errorMsg !== '' ? 'block' : 'none'; ?>" tabindex="-1">
+                    <?php echo htmlspecialchars($errorMsg, ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+                <div class=" grid">
+                    <div>
+                        <label for="barangay">Barangay*</label>
+                        <select id="barangay" name="barangay" class="input-field" required>
+                            <option value="" disabled <?php echo $formData['barangay'] === '' ? 'selected' : '' ?>>Select your barangay</option>
+                            <?php
+                            $barangays = [
+                                'Brgy. Assumption',
+                                'Brgy. Avanceña',
+                                'Brgy. Cacub',
+                                'Brgy. Caloocan',
+                                'Brgy. Carpenter Hill',
+                                'Brgy. Concepcion',
+                                'Brgy. Esperanza',
+                                'Brgy. General Paulino Santos',
+                                'Brgy. Mabini',
+                                'Brgy. Magsaysay',
+                                'Brgy. Mambucal',
+                                'Brgy. Morales',
+                                'Brgy. Namnama',
+                                'Brgy. New Pangasinan',
+                                'Brgy. Paraiso',
+                                'Brgy. Rotonda',
+                                'Brgy. San Isidro',
+                                'Brgy. San Roque',
+                                'Brgy. San Jose',
+                                'Brgy. Sta. Cruz',
+                                'Brgy. Sto. Niño',
+                                'Brgy. Saravia',
+                                'Brgy. Topland',
+                                'Brgy. Zone 1',
+                                'Brgy. Zone 2',
+                                'Brgy. Zone 3',
+                                'Brgy. Zone 4'
+                            ];
+                            foreach ($barangays as $b) {
+                                $selected = ($formData['barangay'] === $b) ? 'selected' : '';
+                                $label = htmlspecialchars($b, ENT_QUOTES, 'UTF-8');
+                                echo '<option value="' . $label . '" ' . $selected . '>' . $label . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
 
-                        <div>
-                            <label for="last-name">Last Name*</label>
-                            <input type="text" id="last-name" name="last_name" class="input-field" required autocomplete="family-name" value="<?php echo $formData['last_name']; ?>" />
-                        </div>
+                    <div>
+                        <label for="last-name">Last Name*</label>
+                        <input type="text" id="last-name" name="last_name" class="input-field" required autocomplete="family-name" value="<?php echo $formData['last_name']; ?>" />
+                    </div>
 
-                        <div>
-                            <label for="first-name">First Name*</label>
-                            <input type="text" id="first-name" name="first_name" class="input-field" required autocomplete="given-name" value="<?php echo $formData['first_name']; ?>" />
-                        </div>
+                    <div>
+                        <label for="first-name">First Name*</label>
+                        <input type="text" id="first-name" name="first_name" class="input-field" required autocomplete="given-name" value="<?php echo $formData['first_name']; ?>" />
+                    </div>
 
-                        <div>
-                            <label for="middle-name">Middle Name</label>
-                            <input type="text" id="middle-name" name="middle_name" class="input-field" autocomplete="additional-name" value="<?php echo $formData['middle_name']; ?>" />
-                        </div>
+                    <div>
+                        <label for="middle-name">Middle Name</label>
+                        <input type="text" id="middle-name" name="middle_name" class="input-field" autocomplete="additional-name" value="<?php echo $formData['middle_name']; ?>" />
+                    </div>
 
-                        <div>
-                            <label for="suffix">Suffix</label>
-                            <input type="text" id="suffix" name="suffix" placeholder="e.g. Jr., Sr., II, III" class="input-field" value="<?php echo $formData['suffix']; ?>" />
-                        </div>
+                    <div>
+                        <label for="suffix">Suffix</label>
+                        <input type="text" id="suffix" name="suffix" placeholder="e.g. Jr., Sr., II, III" class="input-field" value="<?php echo $formData['suffix']; ?>" />
+                    </div>
 
-                        <div>
-                            <label for="sex">Sex*</label>
-                            <select id="sex" name="sex" class="input-field" required>
-                                <option value="">Select if Male or Female</option>
-                                <option value="Male" <?php echo ($formData['sex'] === 'Male') ? 'selected' : ''; ?>>Male</option>
-                                <option value="Female" <?php echo ($formData['sex'] === 'Female') ? 'selected' : ''; ?>>Female</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label for="sex">Sex*</label>
+                        <select id="sex" name="sex" class="input-field" required>
+                            <option value="" disabled <?php echo $formData['sex'] === '' ? 'selected' : '' ?>>Select if Male or Female</option>
+                            <option value="Male" <?php echo ($formData['sex'] === 'Male') ? 'selected' : ''; ?>>Male</option>
+                            <option value="Female" <?php echo ($formData['sex'] === 'Female') ? 'selected' : ''; ?>>Female</option>
+                        </select>
+                    </div>
 
-                        <div>
-                            <label for="dob">Date of Birth*</label>
-                            <input type="date" id="dob" name="dob" class="input-field" required value="<?php echo $formData['dob']; ?>" />
-                        </div>
+                    <div>
+                        <label for="dob">Date of Birth*</label>
+                        <input type="date" id="dob" name="dob" class="input-field" required value="<?php echo $formData['dob']; ?>" />
+                    </div>
 
-                        <div>
-                            <label for="contact-number">Contact No.*</label>
-                            <div class="contact-input-wrapper">
-                                <span class="prefix">+63</span>
-                                <input type="tel" id="contact-number" name="contact_num" class="input-field contact-number" placeholder="### ### ####" maxlength="13" inputmode="numeric" autocomplete="tel-national" required value="<?php echo $formData['contact_num']; ?>" />
-                            </div>
+                    <div>
+                        <label for="contact-number">Contact No.*</label>
+                        <div class="contact-input-wrapper">
+                            <span class="prefix">+63</span>
+                            <input type="tel" id="contact-number" name="contact_num" class="input-field contact-number" placeholder="### ### ####" maxlength="13" inputmode="numeric" autocomplete="tel-national" required value="<?php echo $formData['contact_num']; ?>" />
                         </div>
+                    </div>
 
-                        <div class="span-2">
-                            <label for="email">Email*</label>
-                            <input type="email" id="email" name="email" class="input-field" required autocomplete="email" value="<?php echo $formData['email']; ?>" />
-                        </div>
+                    <div class="span-2">
+                        <label for="email">Email*</label>
+                        <input type="email" id="email" name="email" class="input-field" required autocomplete="email" value="<?php echo $formData['email']; ?>" />
+                    </div>
 
-                        <div class="password-wrapper">
-                            <label for="password">Password*</label>
-                            <input type="password" id="password" name="password" class="input-field" required autocomplete="new-password" aria-describedby="pw-req" />
-                            <i class="fa-solid fa-eye toggle-password" aria-hidden="true"></i>
-                        </div>
+                    <div class="password-wrapper">
+                        <label for="password">Password*</label>
+                        <input type="password" id="password" name="password" class="input-field" required autocomplete="new-password" aria-describedby="pw-req" />
+                        <i class="fa-solid fa-eye toggle-password" role="button" tabindex="0" aria-label="Toggle password visibility" aria-hidden="true"></i>
+                    </div>
 
-                        <div class="password-wrapper">
-                            <label for="confirm-password">Confirm Password*</label>
-                            <input type="password" id="confirm-password" name="confirm_password" class="input-field" required autocomplete="new-password" />
-                            <i class="fa-solid fa-eye toggle-password" aria-hidden="true"></i>
-                        </div>
+                    <div class="password-wrapper">
+                        <label for="confirm-password">Confirm Password*</label>
+                        <input type="password" id="confirm-password" name="confirm_password" class="input-field" required autocomplete="new-password" />
+                        <i class="fa-solid fa-eye toggle-password" aria-hidden="true"></i>
+                    </div>
                 </div>
 
+                <h4 id="pw-req">Password Requirements:</h4>
                 <ul class="password-requirements" id="password-requirements">
-                    <h4 id="pw-req">Password Requirements:</h4>
                     <li id="length"><i class="fa-solid fa-circle-xmark icon red"></i> At least 8 characters</li>
                     <li id="uppercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one uppercase letter
                     </li>
@@ -636,30 +671,13 @@ unset($_SESSION['registration']);
                 </ul>
 
                 <div class="terms-checkbox">
-                    <input type="checkbox" id="terms-check" />
+                    <input type="checkbox" id="terms-check" name="agree_terms" required />
                     <label for="terms-check">
                         I agree to the
                         <button type="button" id="show-terms" class="link-button">Terms &amp; Conditions</button>
                     </label>
                 </div>
 
-                <div id="error" class="error" role="alert" aria-live="polite" style="display:none">
-                    <?php
-                    if (isset($_SESSION['registration_error']) && $_SESSION['registration_error'] !== '') {
-                        echo '<script>
-                            document.addEventListener("DOMContentLoaded", function() {
-                                var errorDiv = document.getElementById("error");
-                                if (errorDiv) {
-                                    errorDiv.textContent = ' . json_encode($_SESSION['registration_error']) . ';
-                                    errorDiv.style.display = "block";
-                                    errorDiv.focus && errorDiv.focus();
-                                }
-                            });
-                        </script>';
-                        unset($_SESSION['registration_error']);
-                    }
-                    ?>
-                </div>
                 <div class="form-footer">
                     <button id="submitBtn" type="submit" class="btn">Submit <i
                             class="fa-solid fa-arrow-right"></i></button>
@@ -873,15 +891,22 @@ unset($_SESSION['registration']);
         }
 
         // --- Form submission handling ---
-        const form = $('#registrationForm');
+        const loading = document.getElementById('loading');
+        const regForm = $('#registrationForm');
         let isSubmitting = false;
 
-        form.addEventListener('submit', (e) => {
+        regForm.addEventListener('submit', (e) => {
             clearError();
 
             if (isSubmitting) {
                 e.preventDefault();
                 return;
+            }
+
+            function fail(msg) {
+                e.preventDefault();
+                if (loading) loading.classList.add('hidden');
+                showError(msg);
             }
 
             // Basic requireds (IDs must match)
@@ -976,6 +1001,7 @@ unset($_SESSION['registration']);
             try {
                 sessionStorage.setItem('registrationData', JSON.stringify(registrationData));
             } catch (_) {}
+            if (loading) loading.classList.remove('hidden');
 
             // Double-submit guard + loading indicator
             isSubmitting = true;
