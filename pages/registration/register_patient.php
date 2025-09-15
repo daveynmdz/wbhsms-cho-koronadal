@@ -155,30 +155,23 @@ try {
             back_with_error('Please select a valid barangay.');
         }
 
-        // --- DOB validation (YYYY-MM-DD) ---
+        // --- DOB validation (strict YYYY-MM-DD) ---
         $dob = isset($_POST['dob']) ? trim((string)$_POST['dob']) : '';
-        $dobDate   = DateTime::createFromFormat('Y-m-d', $dob);
-        // Debug: log raw DOB input and parsed result
-        error_log('DOB raw input: ' . $dob);
-        $dobDate   = DateTime::createFromFormat('Y-m-d', $dob);
-        error_log('DOB parsed: ' . ($dobDate ? $dobDate->format('Y-m-d') : 'false'));
-        $dobErrors = DateTime::getLastErrors();
-        if (
-            !$dobDate ||
-            !is_array($dobErrors) ||
-            ($dobErrors['warning_count'] ?? 0) > 0 ||
-            ($dobErrors['error_count'] ?? 0) > 0
-        ) {
+
+        // Use '!' to reset fields and avoid weird carry-overs
+        $dobDate = DateTimeImmutable::createFromFormat('!Y-m-d', $dob);
+
+        // Strict: must parse AND round-trip to exactly the same string
+        if (!$dobDate || $dobDate->format('Y-m-d') !== $dob) {
             back_with_error('Date of birth must be in YYYY-MM-DD format.');
         }
 
-        $today = new DateTime('today');
+        // Disallow future dates and absurdly old ages
+        $today = new DateTimeImmutable('today');
         if ($dobDate > $today) {
             back_with_error('Date of birth cannot be in the future.');
         }
-
-        // ADD:
-        $oldest = (clone $today)->modify('-120 years');
+        $oldest = $today->modify('-120 years');
         if ($dobDate < $oldest) {
             back_with_error('Please enter a valid date of birth.');
         }

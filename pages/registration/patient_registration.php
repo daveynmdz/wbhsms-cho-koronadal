@@ -635,8 +635,8 @@ unset($_SESSION['registration']);
                     <div>
                         <label for="dob">Date of Birth*</label>
                         <input type="date" id="dob" name="dob" class="input-field" required
-                            pattern="\d{4}-\d{2}-\d{2}" placeholder="YYYY-MM-DD"
-                            value="<?php echo $formData['dob']; ?>" />
+                            min="1900-01-01" max="<?php echo date('Y-m-d'); ?>"
+                            value="<?php echo htmlspecialchars($formData['dob'] ?? '', ENT_QUOTES); ?>" />
                     </div>
 
                     <div>
@@ -840,12 +840,12 @@ unset($_SESSION['registration']);
             if (e.target === termsModal) termsModal.classList.remove('show');
         });
 
-        /*// --- DOB guardrails (no future, not older than 120 years) ---
+        // --- DOB guardrails (no future, not older than 120 years) ---
         const dobInput = $('#dob'); // was "dob"
         const fmtLocal = (d) => {
             const p = (n) => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-        };*/
+        };
         const setDobBounds = () => {
             const today = new Date();
             const max = fmtLocal(today); // local date, not UTC ISO
