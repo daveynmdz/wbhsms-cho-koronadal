@@ -28,6 +28,10 @@ if (isset($_SESSION['registration']) && is_array($_SESSION['registration'])) {
             $formData[$k] = htmlspecialchars($_SESSION['registration'][$k], ENT_QUOTES, 'UTF-8');
         }
     }
+    // Convert MM-DD-YYYY to YYYY-MM-DD for dob if needed
+    if (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $formData['dob'], $m)) {
+        $formData['dob'] = $m[3] . '-' . $m[1] . '-' . $m[2];
+    }
 }
 // Optionally clear registration session after repopulating
 unset($_SESSION['registration']);
@@ -632,8 +636,6 @@ unset($_SESSION['registration']);
                         <label for="dob">Date of Birth*</label>
                         <input type="date" id="dob" name="dob" class="input-field" required value="<?php echo $formData['dob']; ?>" />
                     </div>
-                    <!-- Hidden field for MM-DD-YYYY DOB format -->
-                    <input type="hidden" name="dob_mdy" id="dob_mdy" />
 
                     <div>
                         <label for="contact-number">Contact No.*</label>
@@ -901,18 +903,6 @@ unset($_SESSION['registration']);
 
         regForm.addEventListener('submit', (e) => {
             clearError();
-
-            // Convert DOB to MM-DD-YYYY for PHP
-            const dobInput = document.getElementById('dob');
-            const dobHidden = document.getElementById('dob_mdy');
-            if (dobInput && dobHidden && dobInput.value) {
-                const [yyyy, mm, dd] = dobInput.value.split('-');
-                if (yyyy && mm && dd) {
-                    dobHidden.value = `${mm}-${dd}-${yyyy}`;
-                } else {
-                    dobHidden.value = '';
-                }
-            }
 
             if (isSubmitting) {
                 e.preventDefault();
