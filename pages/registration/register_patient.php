@@ -167,9 +167,10 @@ try {
             back_with_error('Contact number must be a valid PH mobile (e.g., 9xxxxxxxxx or +639xxxxxxxxx).');
         }
 
+        /* IGNORE TO SEE IF THIS IS NOT NEEDED */
+        /* --- DOB format MM-DD-YYYY and not future ---
         // --- DOB format YYYY-MM-DD and not future ---
-        // --- DOB format MM-DD-YYYY and not future ---
-        $dobDate = DateTime::createFromFormat('m-d-Y', $dob);
+        $dobDate = DateTime::createFromFormat('Y-m-d', $dob);
         $dobErrors = DateTime::getLastErrors();
         if (
             !$dobDate ||
@@ -177,8 +178,8 @@ try {
             ($dobErrors['warning_count'] ?? 0) > 0 ||
             ($dobErrors['error_count'] ?? 0) > 0
         ) {
-            back_with_error('Date of birth must be in MM-DD-YYYY format.');
-        }
+            back_with_error('Date of birth must be in YYYY-MM-DD format.');
+        } */
         $today = new DateTime('today');
         if ($dobDate > $today) {
             back_with_error('Date of birth cannot be in the future.');
