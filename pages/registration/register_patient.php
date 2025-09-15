@@ -75,18 +75,19 @@ try {
         unset($_SESSION['csrf_token']);
 
         // --- Collect fields ---
-        $first_name  = isset($_POST['first_name']) ? trim((string)$_POST['first_name']) : '';
-        $last_name   = isset($_POST['last_name']) ? trim((string)$_POST['last_name']) : '';
-        $middle_name = isset($_POST['middle_name']) ? trim((string)$_POST['middle_name']) : '';
-        $suffix      = isset($_POST['suffix']) ? trim((string)$_POST['suffix']) : '';
-        $dob         = isset($_POST['dob']) ? trim((string)$_POST['dob']) : '';
-        $email       = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
-        $contact_num = isset($_POST['contact_num']) ? trim((string)$_POST['contact_num']) : '';
-        $barangay    = isset($_POST['barangay']) ? trim((string)$_POST['barangay']) : '';
-        $password    = isset($_POST['password']) ? (string)$_POST['password'] : '';
-        $sex         = isset($_POST['sex']) ? trim((string)$_POST['sex']) : '';
-        $agree_terms = isset($_POST['agree_terms']); // checkbox
-        $email       = strtolower($email);
+    $first_name  = isset($_POST['first_name']) ? trim((string)$_POST['first_name']) : '';
+    $last_name   = isset($_POST['last_name']) ? trim((string)$_POST['last_name']) : '';
+    $middle_name = isset($_POST['middle_name']) ? trim((string)$_POST['middle_name']) : '';
+    $suffix      = isset($_POST['suffix']) ? trim((string)$_POST['suffix']) : '';
+    // Read MM-DD-YYYY from dob_mdy (hidden field)
+    $dob         = isset($_POST['dob_mdy']) ? trim((string)$_POST['dob_mdy']) : '';
+    $email       = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
+    $contact_num = isset($_POST['contact_num']) ? trim((string)$_POST['contact_num']) : '';
+    $barangay    = isset($_POST['barangay']) ? trim((string)$_POST['barangay']) : '';
+    $password    = isset($_POST['password']) ? (string)$_POST['password'] : '';
+    $sex         = isset($_POST['sex']) ? trim((string)$_POST['sex']) : '';
+    $agree_terms = isset($_POST['agree_terms']); // checkbox
+    $email       = strtolower($email);
 
         // Pre-stash for repopulation on error (no passwords)
         $_SESSION['registration'] = [
@@ -167,10 +168,8 @@ try {
             back_with_error('Contact number must be a valid PH mobile (e.g., 9xxxxxxxxx or +639xxxxxxxxx).');
         }
 
-        /* IGNORE TO SEE IF THIS IS NOT NEEDED */
-        /* --- DOB format MM-DD-YYYY and not future ---
-        // --- DOB format YYYY-MM-DD and not future ---
-        $dobDate = DateTime::createFromFormat('Y-m-d', $dob);
+        // --- DOB format MM-DD-YYYY and not future ---
+        $dobDate = DateTime::createFromFormat('m-d-Y', $dob);
         $dobErrors = DateTime::getLastErrors();
         if (
             !$dobDate ||
@@ -178,8 +177,8 @@ try {
             ($dobErrors['warning_count'] ?? 0) > 0 ||
             ($dobErrors['error_count'] ?? 0) > 0
         ) {
-            back_with_error('Date of birth must be in YYYY-MM-DD format.');
-        } */
+            back_with_error('Date of birth must be in MM-DD-YYYY format.');
+        }
         $today = new DateTime('today');
         if ($dobDate > $today) {
             back_with_error('Date of birth cannot be in the future.');

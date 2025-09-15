@@ -632,6 +632,8 @@ unset($_SESSION['registration']);
                         <label for="dob">Date of Birth*</label>
                         <input type="date" id="dob" name="dob" class="input-field" required value="<?php echo $formData['dob']; ?>" />
                     </div>
+                    <!-- Hidden field for MM-DD-YYYY DOB format -->
+                    <input type="hidden" name="dob_mdy" id="dob_mdy" />
 
                     <div>
                         <label for="contact-number">Contact No.*</label>
@@ -900,6 +902,18 @@ unset($_SESSION['registration']);
         regForm.addEventListener('submit', (e) => {
             clearError();
 
+            // Convert DOB to MM-DD-YYYY for PHP
+            const dobInput = document.getElementById('dob');
+            const dobHidden = document.getElementById('dob_mdy');
+            if (dobInput && dobHidden && dobInput.value) {
+                const [yyyy, mm, dd] = dobInput.value.split('-');
+                if (yyyy && mm && dd) {
+                    dobHidden.value = `${mm}-${dd}-${yyyy}`;
+                } else {
+                    dobHidden.value = '';
+                }
+            }
+
             if (isSubmitting) {
                 e.preventDefault();
                 return;
@@ -936,8 +950,8 @@ unset($_SESSION['registration']);
             }
 
             // DOB guard
-            if (dob.value) {
-                const d = new Date(dob.value);
+            if (dobInput.value) {
+                const d = new Date(dobInput.value);
                 const today = new Date();
                 const oldest = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
                 if (d > today || d < oldest) {
