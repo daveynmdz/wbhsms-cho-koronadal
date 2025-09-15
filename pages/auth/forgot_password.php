@@ -59,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([$identifier]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
         } else {
             // Case-insensitive compare for email (primary)
             error_log('[forgot_password] Searching by EMAIL: ' . $identifier);
