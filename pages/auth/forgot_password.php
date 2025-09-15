@@ -369,7 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- NORMAL POST submit (no JS fetch) -->
             <form id="forgotForm"
                 method="POST"
-                action="/wbhsms-cho-koronadal/pages/auth/forgot_password.php"
+                action="/pages/auth/forgot_password.php"
                 autocomplete="off" novalidate>
 
                 <label for="identifier">Enter your Patient ID or Email Address</label>
@@ -383,7 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="form-footer" style="text-align:center; margin-top:18px;">
-                    <a href="/wbhsms-cho-koronadal/pages/auth/patient_login.php"
+                    <a href="/pages/auth/patient_login.php"
                         class="btn" style="background:#eee; color:#333; padding:8px 24px; border-radius:10px; text-decoration:none; display:inline-block; margin-right:8px;">
                         Back to Login
                     </a>
