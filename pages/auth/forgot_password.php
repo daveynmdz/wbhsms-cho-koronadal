@@ -16,7 +16,7 @@ require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-const OTP_PAGE = '/wbhsms-cho-koronadal/pages/auth/forgot_password_otp.php?reset=1';
+const OTP_PAGE = '/pages/auth/forgot_password_otp.php?reset=1';
 
 /** Helpers */
 function generateOTP(int $length = 6): string
