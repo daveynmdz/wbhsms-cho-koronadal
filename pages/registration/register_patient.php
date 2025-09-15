@@ -167,9 +167,8 @@ try {
             back_with_error('Contact number must be a valid PH mobile (e.g., 9xxxxxxxxx or +639xxxxxxxxx).');
         }
 
-        // --- DOB format YYYY-MM-DD and not future ---
-        $dob = $_POST['dob'] ?? '';
-        $dobDate = DateTime::createFromFormat('Y-m-d', $dob);
+        $dob = isset($_POST['dob']) ? trim((string)$_POST['dob']) : '';
+        $dobDate   = DateTime::createFromFormat('Y-m-d', $dob);
         $dobErrors = DateTime::getLastErrors();
         if (
             !$dobDate ||
@@ -179,6 +178,7 @@ try {
         ) {
             back_with_error('Date of birth must be in YYYY-MM-DD format.');
         }
+
         $today = new DateTime('today');
         if ($dobDate > $today) {
             back_with_error('Date of birth cannot be in the future.');

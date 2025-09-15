@@ -634,7 +634,9 @@ unset($_SESSION['registration']);
 
                     <div>
                         <label for="dob">Date of Birth*</label>
-                        <input type="date" id="dob" name="dob" class="input-field" required value="<?php echo $formData['dob']; ?>" />
+                        <input type="date" id="dob" name="dob" class="input-field" required
+                            pattern="\d{4}-\d{2}-\d{2}" placeholder="YYYY-MM-DD"
+                            value="<?php echo $formData['dob']; ?>" />
                     </div>
 
                     <div>
@@ -839,17 +841,20 @@ unset($_SESSION['registration']);
         });
 
         // --- DOB guardrails (no future, not older than 120 years) ---
-        const dob = $('#dob');
+        const dobInput = $('#dob'); // was "dob"
+        const fmtLocal = (d) => {
+            const p = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+        };
         const setDobBounds = () => {
             const today = new Date();
-            const max = today.toISOString().split('T')[0];
-            const min = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate())
-                .toISOString()
-                .split('T')[0];
-            dob.max = max;
-            dob.min = min;
+            const max = fmtLocal(today); // local date, not UTC ISO
+            const min = fmtLocal(new Date(today.getFullYear() - 120, today.getMonth(), today.getDate()));
+            dobInput.max = max;
+            dobInput.min = min;
         };
         setDobBounds();
+
 
         // --- Accessibility: make error region focusable so error.focus() works ---
         const error = $('#error');
@@ -939,16 +944,18 @@ unset($_SESSION['registration']);
                 return showError('Please select a valid barangay.');
             }
 
-            // DOB guard
+            // DOB guard (string compare against min/max avoids timezone issues)
             if (dobInput.value) {
-                const d = new Date(dobInput.value);
-                const today = new Date();
-                const oldest = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
-                if (d > today || d < oldest) {
+                if (dobInput.min && dobInput.value < dobInput.min) {
+                    e.preventDefault();
+                    return showError('Please enter a valid date of birth.');
+                }
+                if (dobInput.max && dobInput.value > dobInput.max) {
                     e.preventDefault();
                     return showError('Please enter a valid date of birth.');
                 }
             }
+
 
             // Contact_Num: ensure 10 digits and starts with 9 (PH mobile)
             const digits = $('#contact-number').value.replace(/\D/g, '');
