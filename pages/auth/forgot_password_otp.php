@@ -469,7 +469,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
 
             // --- resend OTP (ABSOLUTE PATH to actions file)
-            const RESEND_URL = 'resend_otp.php';
+            const RESEND_URL = './resend_otp.php';
 
             let cooldown = 30,
                 timerId = null;
