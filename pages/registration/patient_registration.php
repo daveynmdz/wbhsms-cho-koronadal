@@ -660,7 +660,7 @@ unset($_SESSION['registration']);
                 </div>
 
                 <div class="password-requirements-wrapper">
-                    <h4 id="pw-req">Password Requirements:</h4>
+                    <h4 id="pw-req" style="text-align: justify;">Password Requirements:</h4>
                     <ul class="password-requirements" id="password-requirements">
                         <li id="length"><i class="fa-solid fa-circle-xmark icon red"></i> At least 8 characters</li>
                         <li id="uppercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one uppercase letter
