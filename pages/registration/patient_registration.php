@@ -840,12 +840,12 @@ unset($_SESSION['registration']);
             if (e.target === termsModal) termsModal.classList.remove('show');
         });
 
-        // --- DOB guardrails (no future, not older than 120 years) ---
+        /*// --- DOB guardrails (no future, not older than 120 years) ---
         const dobInput = $('#dob'); // was "dob"
         const fmtLocal = (d) => {
             const p = (n) => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-        };
+        };*/
         const setDobBounds = () => {
             const today = new Date();
             const max = fmtLocal(today); // local date, not UTC ISO
