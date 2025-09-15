@@ -5,7 +5,6 @@ ini_set('display_errors', $debug ? '1' : '0');
 ini_set('display_startup_errors', $debug ? '1' : '0');
 error_reporting(E_ALL); // log everything, just don't display in prod
 
-session_start();
 require_once __DIR__ . '/env.php';
 
 if (file_exists(__DIR__ . '/.env.local')) {

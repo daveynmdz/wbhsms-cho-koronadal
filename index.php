@@ -4,8 +4,9 @@ $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
 ini_set('display_errors', $debug ? '1' : '0');
 ini_set('display_startup_errors', $debug ? '1' : '0');
 error_reporting(E_ALL); // log everything, just don't display in prod
-session_start();
-
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Main entry point for the website

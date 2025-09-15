@@ -22,9 +22,10 @@ error_reporting(E_ALL);
 ini_set('session.cookie_secure', '1');   // requires HTTPS in prod
 ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Lax');
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 session_regenerate_id(true);
-
 require_once '../../config/db.php'; // must define $pdo (PDO)
 
 // ---- Load PHPMailer (prefer Composer, fallback to manual includes) ----
@@ -39,8 +40,6 @@ if (!class_exists('\PHPMailer\PHPMailer\PHPMailer')) {
     }
 }
 
-use PDO;
-use Throwable;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
