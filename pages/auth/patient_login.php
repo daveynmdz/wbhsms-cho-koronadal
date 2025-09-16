@@ -2,39 +2,68 @@
 // Main entry point for the website
 // At the VERY TOP of your PHP file (before session_start or other code)
 $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
-ini_set('display_errors', $debug ? '1' : '0');
-ini_set('display_startup_errors', $debug ? '1' : '0');
+ini_set('session.use_only_cookies', '1');
+ini_set('session.use_strict_mode', '1');
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax'); // or 'Strict' if flows allow
+ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
 error_reporting(E_ALL); // log everything, just don't display in prod
 session_start();
 
 include_once __DIR__ . '/../../config/db.php';
 
-$sessionFlash = $_SESSION['flash'] ?? null;
-unset($_SESSION['flash']); // one-time
-$flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error] : null);
+// If already logged in, redirect to dashboard
+if (!empty($_SESSION['patient_id'])) {
+    header('Location: /wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php');
+    exit;
+}
 
+// Handle flashes from redirects like ?logged_out=1 or ?expired=1
+if (isset($_GET['logged_out'])) {
+    $_SESSION['flash'] = ['type' => 'success', 'msg' => 'You’ve signed out successfully.'];
+    header('Location: patient_login.php'); // clean URL (PRG)
+    exit;
+}
+if (isset($_GET['expired'])) {
+    $_SESSION['flash'] = ['type' => 'error', 'msg' => 'Your session expired. Please log in again.'];
+    header('Location: patient_login.php'); // clean URL (PRG)
+    exit;
+}
+
+// Handle POST
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $patient_number = trim($_POST['username'] ?? '');
+    $patient_number = strtoupper(trim($_POST['username'] ?? '')); // normalize to uppercase
+    $patient_number = preg_replace('/\s+/', '', $patient_number); // remove spaces just in case
     $password = $_POST['password'] ?? '';
 
-    if (empty($patient_number) || empty($password)) {
+    if ($patient_number === '' || $password === '') {
         $error = 'Please enter both Patient Number and Password.';
+    } elseif (!preg_match('/^P\d{6}\z/', $patient_number)) {
+        usleep(300000);
+        $error = 'Invalid Patient Number or Password.';
     } else {
         $stmt = $pdo->prepare('SELECT id, password FROM patients WHERE username = ?');
         $stmt->execute([$patient_number]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row && password_verify($password, $row['password'])) {
+            session_regenerate_id(true);
             $_SESSION['patient_id'] = $row['id'];
-            header('Location: /WBHSMS-CHO/pages/dashboard/dashboard_patient.php');
-            exit();
+            header('Location: /wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php');
+            exit;
         } else {
+            usleep(300000);
             $error = 'Invalid Patient Number or Password.';
         }
     }
 }
 
+
+$sessionFlash = $_SESSION['flash'] ?? null;
+unset($_SESSION['flash']);
+$flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error] : null);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -75,6 +104,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        /* Subtle inline help under inputs */
+        .input-help {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.85rem;
+            color: #6b7280;
+            /* muted gray (Tailwind gray-500 style) */
+            line-height: 1.3;
+        }
     </style>
 </head>
 
@@ -90,26 +129,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <section class="login-box" aria-labelledby="login-title">
             <h1 id="login-title" class="visually-hidden">Patient Login</h1>
 
-            <form class="form active" action="patientLogin.php" method="POST" novalidate>
+            <form class="form active" action="patient_login.php" method="POST" novalidate>
                 <div class="form-header">
                     <h2>Patient Login</h2>
                 </div>
 
                 <!-- Patient Number -->
                 <label for="username">Patient Number</label>
-                <input type="text" id="username" name="username" class="input-field"
-                    placeholder="Enter Patient Number (e.g., P000001)" inputmode="text" autocomplete="username" pattern="^P\d{6}$"
-                    aria-describedby="username-help" required />
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="input-field"
+                    placeholder="Enter Patient Number (e.g., P000001)"
+                    inputmode="text"
+                    autocomplete="username"
+                    pattern="^P\d{6}$"
+                    title="Format: capital P followed by 6 digits (e.g., P000001)"
+                    maxlength="7"
+                    required
+                    autofocus />
+                <small class="input-help">
+                    Format: capital “P” followed by 6 digits (e.g., P000001)
+                </small>
+
                 <!-- Password -->
                 <div class="password-wrapper">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" class="input-field" placeholder="Enter Password"
-                        autocomplete="current-password" required />
-                    <button type="button" class="toggle-password" aria-label="Show password" aria-pressed="false"
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        class="input-field"
+                        placeholder="Enter Password"
+                        autocomplete="current-password"
+                        required />
+                    <button
+                        type="button"
+                        class="toggle-password"
+                        aria-label="Show password"
+                        aria-pressed="false"
                         title="Show/Hide Password">
                         <i class="fa-solid fa-eye" aria-hidden="true"></i>
                     </button>
                 </div>
+
 
                 <div class="form-footer">
                     <a href="forgot_password.php" class="forgot">Forgot Password?</a>
@@ -127,6 +191,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
         </section>
     </main>
+
+    <!-- Snackbar for flash messages -->
+    <div id="snackbar" role="status" aria-live="polite"></div>
 
     <script>
         // Password toggle (accessible & null-safe)

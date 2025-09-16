@@ -1,6 +1,12 @@
         /* =====================
    1. GLOBAL/BODY STYLES
    ===================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             background-image: url(https://ik.imagekit.io/wbhsmslogo/Blue%20Minimalist%20Background.png?updatedAt=1752410073954);
             background-size: cover;
@@ -224,6 +230,7 @@
         .user-text strong {
             font-size: 14px;
             font-weight: 600;
+            color: #fff;
         }
 
         .user-text small {

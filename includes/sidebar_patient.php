@@ -1,146 +1,179 @@
 <?php
-// Sidebar refactor: modular, robust, accessible, highlights active page
-// Usage: set $activePage = 'dashboard'|'appointments'|'prescription'|'laboratory'|'billing'|'profile'|'notifications' before including
-// sidebar_patient.php (reusable for patient pages)
+// sidebar_patient.php
+// Expected (optional) from caller: $activePage, $defaults['name'], $defaults['patient_number'], $patient_id
+// This file does NOT open/close <html> or <body>.
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-$activePage = $activePage ?? ''; // allow caller to set
-$patientId  = $_SESSION['patient_id'] ?? null;
-$patientName = $_SESSION['patient_name'] ?? 'Patient';
-require_once __DIR__ . '/../config/db.php';
 
-$patient_id = isset($_SESSION['patient_id']) ? $_SESSION['patient_id'] : null;
-$patient = null;
-if ($patient_id) {
-    // Use your correct patient table and columns if different
-    $stmt = $pdo->prepare("SELECT * FROM personal_information WHERE patient_id = ?");
-    $stmt->execute([$patient_id]);
-    $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+$activePage = $activePage ?? '';
+$patient_id = $patient_id ?? ($_SESSION['patient_id'] ?? null);
+
+// Initial display values from caller/session; will be refined from DB if needed.
+$displayName = $defaults['name'] ?? ($_SESSION['patient_name'] ?? 'Patient');
+$patientNo   = $defaults['patient_number'] ?? '';
+
+// If we don't have good display values yet, pull from DB (only if we have an id)
+$needsName = empty($displayName) || $displayName === 'Patient';
+$needsNo   = empty($patientNo);
+
+if (($needsName || $needsNo) && $patient_id) {
+    // Ensure $pdo exists; adjust the path if your config lives elsewhere
+    if (!isset($pdo)) {
+        require_once __DIR__ . '/../config/db.php';
+    }
+
+    if (isset($pdo)) {
+        $stmt = $pdo->prepare("
+            SELECT id, first_name, middle_name, last_name, suffix, username
+            FROM patients
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$patient_id]);
+        if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if ($needsName) {
+                $parts = [];
+                if (!empty($row['first_name'])) {
+                    $parts[] = $row['first_name'];
+                }
+                if (!empty($row['middle_name'])) {
+                    $parts[] = $row['middle_name'];
+                }
+                if (!empty($row['last_name'])) {
+                    $parts[] = $row['last_name'];
+                }
+                $full = trim(implode(' ', $parts));
+                if (!empty($row['suffix'])) {
+                    $full .= ' ' . $row['suffix'];
+                }
+                $displayName = $full ?: 'Patient';
+            }
+            if ($needsNo && !empty($row['username'])) {
+                $patientNo = $row['username'];
+            }
+        }
+    }
 }
-$defaults = [
-    'name' => $patient ? ($patient['first_name'] ?? '') . ' ' . ($patient['last_name'] ?? '') : 'Patient',
-    'patient_number' => $patient ? ($patient['patient_number'] ?? '') : ''
-];
-if (!isset($activePage)) $activePage = '';
 ?>
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="sidebar.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-</head>
+<!-- Mobile topbar -->
+<div class="mobile-topbar">
+    <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php">
+        <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
+    </a>
+</div>
 
-<body>
-    <!-- Mobile topbar -->
-    <div class="mobile-topbar">
-        <img src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="Sidebar Logo" class="logo">
-        <button class="mobile-toggle" onclick="toggleNav()">
-            <i class="fas fa-bars"></i>
-        </button>
+<!-- Sidebar -->
+<nav class="nav" id="sidebarNav" aria-label="Patient sidebar">
+    <button class="close-btn" type="button" onclick="closeNav()" aria-label="Close navigation">
+        <i class="fas fa-times"></i>
+    </button>
+
+    <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php">
+        <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
+    </a>
+
+    <div class="menu" role="menu">
+        <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php"
+            class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="/wbhsms-cho-koronadal/pages/appointment/appointments.php"
+            class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-calendar-check"></i> Appointments
+        </a>
+        <a href="/wbhsms-cho-koronadal/pages/prescription/prescriptions.php"
+            class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-prescription-bottle-alt"></i> Prescription
+        </a>
+        <a href="/wbhsms-cho-koronadal/pages/laboratory/lab_tests.php"
+            class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-vials"></i> Laboratory
+        </a>
+        <a href="/wbhsms-cho-koronadal/pages/billing/billing.php"
+            class="<?= $activePage === 'billing' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-file-invoice-dollar"></i> Billing
+        </a>
     </div>
 
-    <!-- Sidebar -->
-    <nav class="nav" id="sidebarNav">
-        <button class="close-btn" onclick="closeNav()"><i class="fas fa-times"></i></button>
-        <img src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="Sidebar Logo" class="logo">
-
-        <div class="menu">
-            <a href="dashboard.php" class="<?= $activePage === 'dashboard' ? 'active' : '' ?>">
-                <i class="fas fa-home"></i> Dashboard
-            </a>
-            <a href="appointments.php" class="<?= $activePage === 'appointments' ? 'active' : '' ?>">
-                <i class="fas fa-calendar-check"></i> Appointments
-            </a>
-            <a href="prescriptions.php" class="<?= $activePage === 'prescription' ? 'active' : '' ?>">
-                <i class="fas fa-prescription-bottle-alt"></i> Prescription
-            </a>
-            <a href="lab_tests.php" class="<?= $activePage === 'laboratory' ? 'active' : '' ?>">
-                <i class="fas fa-vials"></i> Laboratory
-            </a>
-            <a href="billing.php" class="<?= $activePage === 'billing' ? 'active' : '' ?>">
-                <i class="fas fa-file-invoice-dollar"></i> Billing
-            </a>
-
-        </div>
-
-        <a href="profile.php" class="<?= $activePage === 'profile' ? 'active' : '' ?>">
-            <div class="user-profile">
-                <div class="user-info">
-                    <img class="profile-photo"
-                        src="<?php
-                                if ($patient_id) {
-                                    echo '/WBHSMS-CHO/public/patient/PhotoController.php?patient_id=' . urlencode($patient_id);
-                                } else {
-                                    echo 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';
-                                }
-                                ?>" alt="User" onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
-                    <div class="user-text">
-                        <strong><?= htmlspecialchars($defaults['name']) ?></strong>
-                        <small>Patient No.: <?= htmlspecialchars($defaults['patient_number']) ?></small>
+    <a href="/wbhsms-cho-koronadal/pages/patient/profile.php"
+        class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
+        <div class="user-profile">
+            <div class="user-info">
+                <img class="profile-photo"
+                    src="<?= $patient_id
+                                ? '/wbhsms-cho-koronadal/vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
+                                : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
+                    alt="User photo"
+                    onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
+                <div class="user-text">
+                    <div class="user-name" style="font-size:16px;font-weight:600;line-height:1.2;color:#fff;">
+                        <?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?>
                     </div>
-                    <span class="tooltip">View Profile</span>
+                    <div class="user-id" style="font-size:13px;font-weight:400;color:#e0e0e0;margin-top:2px;letter-spacing:1px;">
+                        <i class="fas fa-id-card" style="margin-right:5px;color:#90e0ef;"></i>: <span style="font-weight:500; color:#fff;"><?= htmlspecialchars($patientNo, ENT_QUOTES, 'UTF-8') ?></span>
+                    </div>
                 </div>
-        </a>
-
-        <div class="user-actions">
-            <a href="user_settings.php"><i class="fas fa-cog"></i> Settings</a>
-            <a href="/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <span class="tooltip">View Profile</span>
+            </div>
         </div>
-    </nav>
+    </a>
 
-    <!-- Overlay -->
-    <div class="overlay" id="overlay" onclick="closeNav()"></div>
-    <script>
-        function toggleNav() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            const topbarLogo = document.getElementById('topbarLogo');
-            const menuIcon = document.getElementById('menuIcon');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-            const isOpen = sidebar.classList.contains('open');
-            if (window.innerWidth <= 768) {
-                topbarLogo.style.display = isOpen ? 'none' : 'block';
-            }
-            menuIcon.classList.toggle('fa-bars', !isOpen);
-            menuIcon.classList.toggle('fa-times', isOpen);
-        }
+    <div class="user-actions">
+        <a href="/wbhsms-cho-koronadal/patient/user_settings.php"><i class="fas fa-cog"></i> Settings</a>
+        <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+</nav>
 
-        function closeNav() {
-            document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('overlay').classList.remove('active');
-            if (window.innerWidth <= 768) {
-                document.getElementById('topbarLogo').style.display = 'block';
-            }
-            const menuIcon = document.getElementById('menuIcon');
-            menuIcon.classList.remove('fa-times');
-            menuIcon.classList.add('fa-bars');
-        }
+<!-- Hidden logout form -->
+<form id="logoutForm" action="/wbhsms-cho-koronadal/logout.php" method="post" style="display:none;"></form>
 
-        function showLogoutModal(e) {
-            e.preventDefault();
-            closeNav();
-            document.getElementById('logoutModal').style.display = 'flex';
-        }
+<!-- Logout Modal (can be styled via your site-wide CSS) -->
+<div id="logoutModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
+        <h2 id="logoutTitle">Sign Out</h2>
+        <p>Are you sure you want to sign out?</p>
+        <div class="modal-actions">
+            <button type="button" onclick="confirmLogout()" class="btn btn-danger">Sign Out</button>
+            <button type="button" onclick="closeLogoutModal()" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
 
-        function closeLogoutModal() {
-            document.getElementById('logoutModal').style.display = 'none';
-        }
+<!-- Optional overlay (if your layout uses it). Safe if duplicated; JS guards for missing element. -->
+<div class="overlay" id="overlay" onclick="closeNav()"></div>
 
-        function confirmLogout() {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/pages/patient/patientLogout.php', true);
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    window.location.href = '/pages/auth/patient_login.php';
-                }
-            };
-            xhr.send();
-        }
-    </script>
-</body>
+<script>
+    function toggleNav() {
+        const s = document.getElementById('sidebarNav');
+        const o = document.getElementById('overlay');
+        if (s) s.classList.toggle('open');
+        if (o) o.classList.toggle('active');
+    }
 
-</html>
+    function closeNav() {
+        const s = document.getElementById('sidebarNav');
+        const o = document.getElementById('overlay');
+        if (s) s.classList.remove('open');
+        if (o) o.classList.remove('active');
+    }
+
+    function showLogoutModal(e) {
+        if (e) e.preventDefault();
+        closeNav();
+        const m = document.getElementById('logoutModal');
+        if (m) m.style.display = 'flex';
+    }
+
+    function closeLogoutModal() {
+        const m = document.getElementById('logoutModal');
+        if (m) m.style.display = 'none';
+    }
+
+    function confirmLogout() {
+        const f = document.getElementById('logoutForm');
+        if (f) f.submit();
+    }
+</script>

@@ -1,7 +1,9 @@
 <?php
 // dashboard_patient.php
 session_start();
-
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 // If user is not logged in, bounce to login
 if (!isset($_SESSION['patient_id'])) {
     header('Location: patient_login.php'); // make sure this matches your actual filename/path
@@ -11,9 +13,6 @@ if (!isset($_SESSION['patient_id'])) {
 // DB
 require_once '../../config/db.php'; // adjust relative path if needed
 $patient_id = $_SESSION['patient_id'];
-
-// Tell the sidebar which menu item to highlight
-$activePage = 'dashboard';
 
 // -------------------- Data bootstrap (from patientHomepage.php) --------------------
 $defaults = [
@@ -109,7 +108,8 @@ try {
     <title>CHO Koronadal — Patient Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <!-- Reuse your existing styles -->
-    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../includes/sidebar.css">
     <style>
         /* Optional: small layout wrapper for content next to sidebar */
         .content-wrapper {
@@ -194,11 +194,13 @@ try {
 <body>
 
     <?php
-    $activePage = 'dashboard'; // highlight menu
-    include 'sidebar_patient.php';
+    // Tell the sidebar which menu item to highlight
+    $activePage = 'dashboard';
+    include '../../includes/sidebar_patient.php';
     ?>
-    <section class="homepage">
-        <h1 class="page-title">Welcome, <?= htmlspecialchars($defaults['name']) ?>!</h1>
+
+    <section class="content-wrapper">
+        <h1 style="margin-top:50px;margin-bottom:2rem;">Welcome to the <strong>CITY HEALTH OFFICE OF KORONADAL's</strong> <br>Official Website, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
 
         <div class="card-container" style="margin-bottom: 1rem;">
             <h3>What would you like to do?</h3>
@@ -223,10 +225,106 @@ try {
                     <h3>View Billing</h3>
                     <p>Review your billing and payments.</p>
                 </a>
+                <a href="../../pages/patient/medical_record_print.php" class="card-button green-card">
+                    <i class="fas fa-notes-medical icon"></i>
+                    <h3>View Medical Record</h3>
+                    <p>See your complete medical history.</p>
+                </a>
+            </div>
+        </div>
+
+        <div class="info-layout">
+            <div class="left-column">
+                <div class="card-section latest-appointment collapsible">
+                    <div class="section-header">
+                        <h3>Latest Appointment</h3>
+                        <a href="patientUIAppointments.html" class="view-more-btn">
+                            <i class="fas fa-chevron-right"></i> View More
+                        </a>
+                    </div>
+                    <div class="appointment-layout">
+                        <div class="appointment-details">
+                            <div class="detail-box">
+                                <span class="label">Date:</span>
+                                <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['date']); ?></span>
+                            </div>
+                            <div class="detail-box">
+                                <span class="label">Chief Complaint:</span>
+                                <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['complaint']); ?></span>
+                            </div>
+                            <div class="detail-box">
+                                <span class="label">Diagnosis:</span>
+                                <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['diagnosis']); ?></span>
+                            </div>
+                            <div class="detail-box">
+                                <span class="label">Treatment:</span>
+                                <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['treatment']); ?></span>
+                            </div>
+                        </div>
+                        <div class="appointment-vitals">
+                            <div class="vital-box"><i class="fas fa-ruler-vertical"></i> <strong>Height:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['height']); ?> cm</div>
+                            <div class="vital-box"><i class="fas fa-weight"></i> <strong>Weight:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['weight']); ?> kg</div>
+                            <div class="vital-box"><i class="fas fa-tachometer-alt"></i> <strong>BP:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['bp']); ?> mmHg</div>
+                            <div class="vital-box"><i class="fas fa-heartbeat"></i> <strong>Cardiac Rate:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['cardiac_rate']); ?> bpm</div>
+                            <div class="vital-box"><i class="fas fa-thermometer-half"></i> <strong>Temperature:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['temperature']); ?>°C</div>
+                            <div class="vital-box"><i class="fas fa-lungs"></i> <strong>Resp. Rate:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['resp_rate']); ?> brpm</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="right-column">
+                <div class="card-section notification-card">
+                    <div class="section-header">
+                        <h3>Notifications</h3>
+                        <a href="patientUINotifications.html" class="view-more-btn">
+                            <i class="fas fa-chevron-right"></i> View More
+                        </a>
+                    </div>
+                    <div class="scroll-wrapper">
+                        <div class="scroll-table">
+                            <table class="notification-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($defaults['notifications'] as $notif): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($notif['date']); ?></td>
+                                            <td><?php echo htmlspecialchars($notif['description']); ?></td>
+                                            <td><span class="status <?php echo $notif['status'] === 'read' ? 'read' : 'unread'; ?>"><?php echo ucfirst($notif['status']); ?></span></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="fade-bottom"></div>
+                    </div>
+                </div>
+                <div class="card-section activity-log-card">
+                    <div class="section-header">
+                        <h3>Activity Log</h3>
+                        <a href="patientUINotifications.html" class="view-more-btn">
+                            <i class="fas fa-chevron-right"></i> View More
+                        </a>
+                    </div>
+                    <div class="scroll-wrapper">
+                        <div class="scroll-log">
+                            <ul class="activity-log">
+                                <?php foreach ($defaults['activity_log'] as $log): ?>
+                                    <li><?php echo htmlspecialchars($log['date']); ?> - <?php echo htmlspecialchars($log['activity']); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                        <div class="fade-bottom"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
-
 </body>
 
 </html>
