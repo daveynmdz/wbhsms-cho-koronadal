@@ -3,6 +3,14 @@
 declare(strict_types=1);
 session_start();
 
+header('Content-Type: application/json; charset=UTF-8');
+
+if (empty($_SESSION['reset_email'])) {
+  http_response_code(400);
+  echo json_encode(['success'=>false,'message'=>'No reset email in session.']);
+  exit;
+}
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -52,6 +60,9 @@ $toName  = $_SESSION['reset_name'] ?? 'Patient';
 try {
     $mail = new PHPMailer(true);
     $mail->isSMTP();
+    $mail->SMTPDebug   = 2;          // verbose
+    $mail->Debugoutput = 'error_log'; // goes to Coolify Logs
+    error_log('[mailer] START ' . __FILE__);
     $mail->Host       = $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?? 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
     $mail->Username   = $_ENV['SMTP_USER'] ?? getenv('SMTP_USER') ?? 'cityhealthofficeofkoronadal@gmail.com';
@@ -66,10 +77,12 @@ try {
     $mail->Body    = "<p>Your new One-Time Password (OTP) is: <strong>{$otp}</strong></p>";
 
     $mail->send();
+    error_log('[mailer] SENT to ' . $toEmail);
     error_log('[resend_otp] Mail resent to ' . $toEmail);
     echo json_encode(['success' => true, 'message' => 'A new OTP has been sent to ' . $toEmail . '.']);
     exit;
 } catch (Exception $e) {
+    error_log('[mailer] ERROR ' . ($mail->ErrorInfo ?? $e->getMessage()));
     error_log('[resend_otp] Mailer Error: ' . ($mail->ErrorInfo ?? $e->getMessage()));
     echo json_encode(['success' => false, 'message' => 'Could not resend OTP. Please try again in a moment.']);
     exit;
