@@ -60,7 +60,7 @@ if (($needsName || $needsNo) && $patient_id) {
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="<?= url('pages/dashboard/dashboard_patient.php') ?>">
+    <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
@@ -73,34 +73,34 @@ if (($needsName || $needsNo) && $patient_id) {
         <i class="fas fa-times"></i>
     </button>
 
-    <a href="<?= url('pages/dashboard/dashboard_patient.php') ?>">
+    <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
     <div class="menu" role="menu">
-        <a href="<?= url('pages/dashboard/dashboard_patient.php') ?>"
+        <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= url('pages/appointment/appointments.php') ?>"
+        <a href="/wbhsms-cho-koronadal/pages/appointment/appointments.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments
         </a>
-        <a href="<?= url('pages/prescription/prescriptions.php') ?>"
+        <a href="/wbhsms-cho-koronadal/pages/prescription/prescriptions.php"
             class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-prescription-bottle-alt"></i> Prescription
         </a>
-        <a href="<?= url('pages/laboratory/lab_tests.php') ?>"
+        <a href="/wbhsms-cho-koronadal/pages/laboratory/lab_tests.php"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-vials"></i> Laboratory
         </a>
-        <a href="<?= url('pages/billing/billing.php') ?>"
+        <a href="/wbhsms-cho-koronadal/pages/billing/billing.php"
             class="<?= $activePage === 'billing' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-file-invoice-dollar"></i> Billing
         </a>
     </div>
 
-    <a href="<?= url('pages/patient/profile.php') ?>"
+    <a href="/wbhsms-cho-koronadal/pages/patient/profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
             <div class="user-info">
@@ -124,13 +124,13 @@ if (($needsName || $needsNo) && $patient_id) {
     </a>
 
     <div class="user-actions">
-        <a href="<?= url('pages/user/user_settings.php') ?>"><i class="fas fa-cog"></i> Settings</a>
+        <a href="/wbhsms-cho-koronadal/patient/user_settings.php"><i class="fas fa-cog"></i> Settings</a>
         <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>
 
 <!-- Hidden logout form -->
-<form id="logoutForm" action="<?= url('logout.php') ?>" method="post" style="display:none;"></form>
+<form id="logoutForm" action="/wbhsms-cho-koronadal/logout.php" method="post" style="display:none;"></form>
 
 <!-- Logout Modal (can be styled via your site-wide CSS) -->
 <div id="logoutModal" class="modal-overlay" style="display:none;">
