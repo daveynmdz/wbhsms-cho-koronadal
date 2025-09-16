@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row && password_verify($password, $row['password'])) {
             $_SESSION['patient_id'] = $row['id'];
-            header('Location: /WBHSMS-CHO/public/patient/patientHomepage.php');
+            header('Location: /WBHSMS-CHO/pages/dashboard/dashboard_patient.php');
             exit();
         } else {
             $error = 'Invalid Patient Number or Password.';

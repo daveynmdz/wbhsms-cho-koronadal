@@ -1,450 +1,97 @@
+<?php
+// Sidebar refactor: modular, robust, accessible, highlights active page
+// Usage: set $activePage = 'dashboard'|'appointments'|'prescription'|'laboratory'|'billing'|'profile'|'notifications' before including
+// sidebar_patient.php (reusable for patient pages)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$activePage = $activePage ?? ''; // allow caller to set
+$patientId  = $_SESSION['patient_id'] ?? null;
+$patientName = $_SESSION['patient_name'] ?? 'Patient';
+require_once __DIR__ . '/../config/db.php';
+
+$patient_id = isset($_SESSION['patient_id']) ? $_SESSION['patient_id'] : null;
+$patient = null;
+if ($patient_id) {
+    // Use your correct patient table and columns if different
+    $stmt = $pdo->prepare("SELECT * FROM personal_information WHERE patient_id = ?");
+    $stmt->execute([$patient_id]);
+    $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+$defaults = [
+    'name' => $patient ? ($patient['first_name'] ?? '') . ' ' . ($patient['last_name'] ?? '') : 'Patient',
+    'patient_number' => $patient ? ($patient['patient_number'] ?? '') : ''
+];
+if (!isset($activePage)) $activePage = '';
+?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CHO Koronadal</title>
-    <style>
-        /* =====================
-   1. GLOBAL/BODY STYLES
-   ===================== */
-        body {
-            background-image: url(https://ik.imagekit.io/wbhsmslogo/Blue%20Minimalist%20Background.png?updatedAt=1752410073954);
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center;
-            background-repeat: no-repeat;
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        /* =====================
-   2. MAIN CONTENT AREA
-   ===================== */
-        .homepage {
-            margin-left: 250px;
-            min-height: 100vh;
-            padding: 20px 30px 30px 30px;
-            color: #03045e;
-            box-sizing: border-box;
-        }
-
-        /* Responsive layout for homepage on mobile screens */
-        @media (max-width: 768px) {
-            .homepage {
-                margin-left: 0;
-                padding: 70px 20px 20px 20px;
-                /* top padding for mobile topbar */
-                min-height: 100vh;
-                font-size: 1em;
-            }
-        }
-
-        .mobile-topbar {
-            display: none;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 15px;
-            background-color: #03045e;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 60px;
-            z-index: 900;
-            box-sizing: border-box;
-
-        }
-
-        .mobile-topbar .logo {
-            width: 210px;
-            height: auto;
-        }
-
-        .mobile-toggle {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            /* Move to the right side */
-            z-index: 1200;
-            background: none;
-            border: none;
-            font-size: 1.8rem;
-            color: white;
-            cursor: pointer;
-            display: none;
-        }
-
-
-        /* Show toggle only on screens 768px and below */
-        @media screen and (max-width: 768px) {
-            .mobile-toggle {
-                display: block;
-            }
-        }
-
-
-
-        /* =====================
-   3. SIDEBAR/NAVIGATION
-   ===================== */
-        .nav {
-            width: 250px;
-            height: 100vh;
-            background-color: #03045e;
-            color: #ffffff;
-            position: fixed;
-            top: 0;
-            left: 0;
-            display: flex;
-            flex-direction: column;
-            padding: 20px 15px;
-            z-index: 1000;
-            transition: transform 0.3s ease;
-            overflow-y: auto;
-            box-sizing: border-box;
-        }
-
-        .nav .close-btn {
-            display: none;
-            font-size: 24px;
-            color: var(--text-white);
-            background: none;
-            border: none;
-            align-self: flex-end;
-            margin-bottom: 20px;
-        }
-
-        .nav .logo {
-            width: 220px;
-            height: auto;
-            margin-bottom: 20px;
-        }
-
-
-        /* =====================
-   4. MENU LINKS
-   ===================== */
-        .menu {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .menu a {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 12px 16px;
-            color: var(--text-white);
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: 500;
-            border-radius: 8px;
-            background-color: transparent;
-            transition: background 0.25s ease, transform 0.2s ease;
-            box-shadow: 0 0 0 transparent;
-        }
-
-        .menu a i {
-            font-size: 18px;
-            min-width: 20px;
-        }
-
-        .menu a:hover {
-            background-color: #ffffff;
-            color: #03045e;
-            transform: translateX(4px);
-        }
-
-
-
-        /* =====================
-   5. USER PROFILE SECTION
-   ===================== */
-        .user-profile {
-            padding-top: 20px;
-            margin-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.25);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .user-info {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            transition: background 0.3s ease;
-            cursor: pointer;
-        }
-
-        .user-info:hover {
-            background-color: #ffffff;
-            color: #03045e;
-            transform: translateX(4px);
-        }
-
-        /* Tooltip (optional if not using native title attr) */
-        .user-info .tooltip {
-            position: absolute;
-            top: -28px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(255, 255, 255, 0.9);
-            color: #03045e;
-            font-size: 12px;
-            font-weight: 600;
-            padding: 4px 8px;
-            border-radius: 4px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-            z-index: 10;
-        }
-
-        .user-info:hover .tooltip {
-            opacity: 1;
-        }
-
-
-        .user-info img {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .user-text {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            line-height: 1.3;
-        }
-
-        .user-text strong {
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .user-text small {
-            font-size: 12px;
-        }
-
-        .user-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .user-actions a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            color: var(--text-white);
-            text-decoration: none;
-            font-size: 15px;
-            border-radius: 8px;
-            background-color: transparent;
-            transition: background 0.25s ease, transform 0.2s ease;
-        }
-
-        .user-actions a i {
-            font-size: 16px;
-            min-width: 18px;
-        }
-
-        .user-actions a:hover {
-            background-color: #ffffff;
-            color: #03045e;
-            transform: translateX(4px);
-        }
-
-
-
-        /* =====================
-   6. OVERLAY
-   ===================== */
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0, 0, 0, 0.4);
-            z-index: 900;
-            display: none;
-        }
-
-        .overlay.active {
-            display: block;
-        }
-
-
-        /* =====================
-   7. RESPONSIVE STYLES
-   ===================== */
-        @media (max-width: 768px) {
-            .mobile-topbar {
-                display: flex;
-            }
-
-            .nav {
-                transform: translateX(-100%);
-            }
-
-            .nav.open {
-                transform: translateX(0);
-            }
-
-            .nav .close-btn {
-                display: block;
-            }
-        }
-
-
-        /* =====================
-   8. CUSTOM HR
-   ===================== */
-        hr.custom-hr {
-            border: none;
-            height: 3px;
-            border-radius: 50px;
-            background: linear-gradient(to right, #00b4d8, #03045e);
-            /* matches your theme */
-            margin: 10px 0;
-            width: 100%;
-        }
-
-
-        /* =====================
-   9. MODAL STYLES
-   ===================== */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-
-        .modal-content {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
-            padding: 2rem 2.5rem;
-            text-align: center;
-            min-width: 300px;
-            max-width: 90vw;
-        }
-
-        .modal-content h2 {
-            margin-top: 0;
-            color: #d9534f;
-        }
-
-        .modal-actions {
-            margin-top: 1.5rem;
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-        }
-
-        .btn {
-            padding: 0.5rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-danger {
-            background: #d9534f;
-            color: #fff;
-        }
-
-        .btn-danger:hover {
-            background: #c9302c;
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="sidebar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
-    <nav class="nav" id="sidebar">
-        <a href="../pages/dashboard/dashboard_patient.php">
-            <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="Sidebar Logo" />
-        </a>
+    <!-- Mobile topbar -->
+    <div class="mobile-topbar">
+        <img src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="Sidebar Logo" class="logo">
+        <button class="mobile-toggle" onclick="toggleNav()">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar -->
+    <nav class="nav" id="sidebarNav">
+        <button class="close-btn" onclick="closeNav()"><i class="fas fa-times"></i></button>
+        <img src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="Sidebar Logo" class="logo">
+
         <div class="menu">
-            <a href="patientsAppointment.php" onclick="closeNav()"><i class="fas fa-calendar-check"></i> Appointments</a>
-            <a href="patient/patientsPrescription.php" onclick="closeNav()"><i class="fas fa-prescription-bottle-alt"></i> Prescription</a>
-            <a href="public/patient/patientsLaboratory.php" onclick="closeNav()"><i class="fas fa-vials"></i> Laboratory</a>
-            <a href="public/patient/patientsBilling.php" onclick="closeNav()"><i class="fas fa-file-invoice-dollar icon"></i> Billing</a>
+            <a href="dashboard.php" class="<?= $activePage === 'dashboard' ? 'active' : '' ?>">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a href="appointments.php" class="<?= $activePage === 'appointments' ? 'active' : '' ?>">
+                <i class="fas fa-calendar-check"></i> Appointments
+            </a>
+            <a href="prescriptions.php" class="<?= $activePage === 'prescription' ? 'active' : '' ?>">
+                <i class="fas fa-prescription-bottle-alt"></i> Prescription
+            </a>
+            <a href="lab_tests.php" class="<?= $activePage === 'laboratory' ? 'active' : '' ?>">
+                <i class="fas fa-vials"></i> Laboratory
+            </a>
+            <a href="billing.php" class="<?= $activePage === 'billing' ? 'active' : '' ?>">
+                <i class="fas fa-file-invoice-dollar"></i> Billing
+            </a>
+
         </div>
-        <div class="user-profile">
-            <a href="patientProfile.php" style="text-decoration: none; color: inherit;">
+
+        <a href="profile.php" class="<?= $activePage === 'profile' ? 'active' : '' ?>">
+            <div class="user-profile">
                 <div class="user-info">
-                    <img class="profile-photo" src="<?php
-                                                    if ($patient_id) {
-                                                        echo '/WBHSMS-CHO/public/patient/PhotoController.php?patient_id=' . urlencode($patient_id);
-                                                    } else {
-                                                        echo 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';
-                                                    }
-                                                    ?>" alt="User" onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
+                    <img class="profile-photo"
+                        src="<?php
+                                if ($patient_id) {
+                                    echo '/WBHSMS-CHO/public/patient/PhotoController.php?patient_id=' . urlencode($patient_id);
+                                } else {
+                                    echo 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';
+                                }
+                                ?>" alt="User" onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
                     <div class="user-text">
                         <strong><?= htmlspecialchars($defaults['name']) ?></strong>
                         <small>Patient No.: <?= htmlspecialchars($defaults['patient_number']) ?></small>
                     </div>
                     <span class="tooltip">View Profile</span>
                 </div>
-            </a>
-            <div class="user-actions">
-                <a href="patientUINotifications.html" onclick="closeNav()"><i class="fas fa-bell"></i> Notifications</a>
-                <a href="#" onclick="closeNav()"><i class="fas fa-cog"></i> Settings</a>
-                <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Log Out</a>
-            </div>
+        </a>
+
+        <div class="user-actions">
+            <a href="user_settings.php"><i class="fas fa-cog"></i> Settings</a>
+            <a href="/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </nav>
 
-    <!-- Custom Logout Modal -->
-    <div id="logoutModal" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <h2>Sign Out</h2>
-            <p>Are you sure you want to sign out?</p>
-            <div class="modal-actions">
-                <button onclick="confirmLogout()" class="btn btn-danger">Sign Out</button>
-                <button onclick="closeLogoutModal()" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-    <div class="mobile-topbar">
-        <a href="patientHomepage.php">
-            <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
-        </a>
-        <button class="mobile-toggle" onclick="toggleNav()" aria-label="Toggle Menu">
-            <i id="menuIcon" class="fas fa-bars"></i>
-        </button>
-    </div>
-
+    <!-- Overlay -->
     <div class="overlay" id="overlay" onclick="closeNav()"></div>
     <script>
         function toggleNav() {
@@ -455,7 +102,9 @@
             sidebar.classList.toggle('open');
             overlay.classList.toggle('active');
             const isOpen = sidebar.classList.contains('open');
-            topbarLogo.style.display = isOpen ? 'none' : 'block';
+            if (window.innerWidth <= 768) {
+                topbarLogo.style.display = isOpen ? 'none' : 'block';
+            }
             menuIcon.classList.toggle('fa-bars', !isOpen);
             menuIcon.classList.toggle('fa-times', isOpen);
         }
@@ -463,12 +112,14 @@
         function closeNav() {
             document.getElementById('sidebar').classList.remove('open');
             document.getElementById('overlay').classList.remove('active');
-            document.getElementById('topbarLogo').style.display = 'block';
+            if (window.innerWidth <= 768) {
+                document.getElementById('topbarLogo').style.display = 'block';
+            }
             const menuIcon = document.getElementById('menuIcon');
             menuIcon.classList.remove('fa-times');
             menuIcon.classList.add('fa-bars');
         }
-        // Custom Logout Modal logic
+
         function showLogoutModal(e) {
             e.preventDefault();
             closeNav();
@@ -480,12 +131,11 @@
         }
 
         function confirmLogout() {
-            // AJAX call to WBHSMS-CHO/public/patient/patientLogout.php, then redirect to WBHSMS-CHO/public/patient/Login/patientLogin.php
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', '../patient/patientLogout.php', true);
+            xhr.open('GET', '/pages/patient/patientLogout.php', true);
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
-                    window.location.href = '../patient/Login/patientLogin.php';
+                    window.location.href = '/pages/auth/patient_login.php';
                 }
             };
             xhr.send();

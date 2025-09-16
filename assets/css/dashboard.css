@@ -1,0 +1,377 @@
+body {
+    background-image: url('https://ik.imagekit.io/wbhsmslogo/Blue%20Minimalist%20Background.png?updatedAt=1752410073954');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.homepage {
+    margin-left: 250px;
+    /* Offset to leave space for sidebar */
+    min-height: 100vh;
+    padding: 20px 30px 30px 30px;
+    color: #03045e;
+    box-sizing: border-box;
+    
+}
+
+@media screen and (max-width: 768px) {
+    .homepage {
+        margin-left: 0;
+        padding-top: 80px;
+    }
+}
+
+/* CARD BUTTONS */
+.card-container {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    padding: 15px 20px;
+    margin: 10px auto;
+    width: 100%;
+    text-align: center;
+}
+
+@media screen and (max-width: 480px) {
+    .card-container {
+        padding: 20px 12px;
+    }
+}
+
+.card-container h3 {
+    font-weight: bolder;
+    margin-bottom: 10px;
+}
+
+.card-button-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.card-button {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    text-decoration: none;
+    color: #03045e;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-button .icon {
+    font-size: 30px;
+    margin-bottom: 10px;
+}
+
+.card-button h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.card-button p {
+    font-size: 14px;
+    color: #ffffff;
+    margin-top: 10px;
+}
+
+.card-button:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+}
+
+@media screen and (max-width: 768px) {
+    .card-button-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Gradient color themes */
+.blue-card {
+    background: linear-gradient(135deg, #6063f9, #03045e);
+    color: white;
+}
+
+.purple-card {
+    background: linear-gradient(135deg, #cdb4db, #7209b7);
+    color: white;
+}
+
+.orange-card {
+    background: linear-gradient(135deg, #ffc8a2, #ff5400);
+    color: white;
+}
+
+.teal-card {
+    background: linear-gradient(135deg, #90e0ef, #0077b6);
+    color: white;
+}
+
+/* MAIN LAYOUT */
+/* Flex container for left and right sections */
+.info-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 5px 0px;
+    margin: 10px auto;
+    box-sizing: border-box;
+}
+
+/* Reusable card section style */
+.card-section {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    padding: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #03045e;
+}
+
+/* LEFT */
+.left-column {
+    flex: 1 1 55%;
+}
+
+/* RIGHT */
+.right-column {
+    flex: 1 1 40%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Button style */
+/* View More Button (as a link) */
+.view-more-btn {
+    align-self: center;
+    background-color: #0077b6;
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.view-more-btn i {
+    font-size: 14px;
+}
+
+/* Hover effect for link-style button */
+.view-more-btn:hover {
+    background-color: #023e8a;
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+
+/* Appointment card layout split */
+.appointment-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+/* Left details */
+.appointment-details {
+    flex: 1 1 55%;
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Each detail box */
+.detail-box {
+    background-color: #cce4fc;
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: #03045e;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: 70px;
+}
+
+/* Label inside box */
+.detail-box .label {
+    font-weight: bold;
+    font-size: 13px;
+    color: #03045e;
+    margin-bottom: 4px;
+}
+
+/* Value inside box */
+.detail-box .value {
+    font-size: 14px;
+    color: #03045e;
+}
+
+
+/* Right vitals (one column) */
+/* Optional: Limit visible vitals initially */
+.appointment-vitals {
+    position: relative;
+    transition: max-height 0.3s ease;
+}
+
+/* Reuse existing styles for .vital-box */
+.vital-box {
+    background-color: #f1f3f5;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #03045e;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vital-box i {
+    font-size: 16px;
+    color: #0077b6;
+}
+
+/* Responsive fallback */
+@media screen and (max-width: 768px) {
+    .appointment-layout {
+        flex-direction: column;
+    }
+
+    .appointment-details,
+    .appointment-vitals {
+        flex: 1 1 100%;
+    }
+}
+
+
+/* Notifications Table */
+.notification-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.notification-table th,
+.notification-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.status {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.status.read {
+    background-color: #d8f3dc;
+    color: #2d6a4f;
+}
+
+.status.unread {
+    background-color: #ffe5ec;
+    color: #d00000;
+}
+
+/* Activity Log */
+.activity-log {
+    list-style: none;
+    padding-left: 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.activity-log li {
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+    .info-layout {
+        flex-direction: column;
+    }
+
+    .left-column,
+    .right-column {
+        flex: 1 1 100%;
+    }
+}
+
+.scroll-wrapper {
+    position: relative;
+}
+
+.scroll-table,
+.scroll-log {
+    max-height: 110px;
+    overflow-y: auto;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+/* Sticky headers for notification table */
+.notification-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #ffffff;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Fade bottom effect */
+.fade-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85));
+    pointer-events: none;
+}
+
+/* Optional scrollbar styling */
+.scroll-table::-webkit-scrollbar,
+.scroll-log::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scroll-table::-webkit-scrollbar-thumb,
+.scroll-log::-webkit-scrollbar-thumb {
+    background-color: #ced4da;
+    border-radius: 4px;
+}
