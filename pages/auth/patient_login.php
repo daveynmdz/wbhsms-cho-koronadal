@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($row && password_verify($password, $row['password'])) {
             session_regenerate_id(true);
             $_SESSION['patient_id'] = $row['id'];
-            header('Location: /wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php');
+            header('Location: /pages/dashboard/dashboard_patient.php');
             exit;
         } else {
             usleep(300000);
