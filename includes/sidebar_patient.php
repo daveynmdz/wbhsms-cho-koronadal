@@ -64,7 +64,9 @@ if (($needsName || $needsNo) && $patient_id) {
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
-
+<button class="mobile-toggle" onclick="toggleNav()" aria-label="Toggle Menu">
+    <i id="menuIcon" class="fas fa-bars"></i>
+</button>
 <!-- Sidebar -->
 <nav class="nav" id="sidebarNav" aria-label="Patient sidebar">
     <button class="close-btn" type="button" onclick="closeNav()" aria-label="Close navigation">

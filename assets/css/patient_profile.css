@@ -1,0 +1,410 @@
+body {
+    background-image: url('https://ik.imagekit.io/wbhsmslogo/Blue%20Minimalist%20Background.png?updatedAt=1752410073954');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+}
+
+html {
+    font-size: 14px;
+}
+
+.profile-name h2 {
+    font-size: 1.2rem;
+}
+
+.profile-name p,
+.profile-card h3,
+.section-header h2,
+.view-more-btn {
+    font-size: 0.95rem;
+}
+
+.vital-card i {
+    font-size: 1.4rem;
+}
+
+.vital-card strong {
+    font-size: 0.9rem;
+}
+
+.vital-card .label {
+    font-size: 0.65rem;
+}
+
+.summary-table th,
+.summary-table td,
+.medical-card table th,
+.medical-card table td {
+    font-size: 0.85rem;
+    padding: 0.5rem;
+}
+
+.homepage {
+    margin-left: 250px;
+    min-height: 100vh;
+    max-height: 100vh;
+    width: auto;
+    overflow-y: auto;
+    padding: 30px 30px 30px 30px;
+    color: #03045e;
+    box-sizing: border-box;
+}
+
+@media screen and (max-width: 768px) {
+    .homepage {
+        margin-left: 0;
+        padding-top: 80px;
+    }
+}
+
+/* Flex container for left/right layout */
+.profile-layout {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* LEFT SIDE (1/3 width) */
+.profile-wrapper {
+    flex: 1 1 35%;
+    min-width: 280px;
+}
+
+/* RIGHT SIDE (2/3 width) */
+.patient-summary-section {
+    flex: 1 1 65%;
+    min-width: 300px;
+}
+
+/* Desktop view: 1/3 - 2/3 layout */
+@media (min-width: 1024px) {
+    .profile-wrapper {
+        flex: 0 0 33.333%;
+        max-width: 33.333%;
+    }
+
+    .patient-summary-section {
+        flex: 0 0 66.666%;
+        max-width: 66.666%;
+    }
+}
+
+/* LEFTSIDE */
+/* Wrapper and Header */
+.profile-wrapper {
+    max-width: 900px;
+    padding: 1rem 1rem 1rem 1rem;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.profile-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #ccc;
+    margin-right: 1rem;
+}
+
+.profile-name h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #2c3e50;
+}
+
+.profile-name p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+/* Profile Cards */
+.profile-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.profile-card h3 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    padding-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+/* Clean Info Alignment */
+.info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+    padding: 4px 0;
+}
+
+.info-row span:first-child {
+    color: #333;
+    font-weight: 500;
+}
+
+.info-row span:last-child {
+    color: #555;
+    text-align: right;
+    max-width: 60%;
+    word-wrap: break-word;
+}
+
+/* RIGHTSIDE */
+.patient-summary-section {
+    max-width: 1200px;
+    padding: 1rem 1rem 1rem 01em;
+}
+
+/* Summary Cards: Vitals, Appointment, Medical History */
+.summary-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+/* Section Header */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-header h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    color: #2c3e50;
+}
+
+.section-header small {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Vitals Section */
+.vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.vital-card {
+    background-color: #f6f8ff;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: inset 0 0 0 1px #dcdcdc;
+}
+
+.vital-card i {
+    font-size: 1.8rem;
+    color: #1a1a2e;
+}
+
+.vital-card .label {
+    font-size: 0.7rem;
+    color: #274c77;
+    font-weight: 600;
+}
+
+.vital-card strong {
+    font-size: 1rem;
+    color: #1a1a2e;
+}
+
+/* Table Styling (Appointment & Medical) */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.summary-table thead {
+    background-color: #f6f8ff;
+}
+
+.summary-table th,
+.summary-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border: 1px solid #eee;
+}
+
+/* View More Button */
+.view-more-btn {
+    align-self: center;
+    background-color: #0077b6;
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.view-more-btn i {
+    font-size: 14px;
+}
+
+.view-more-btn:hover {
+    background-color: #023e8a;
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+/* Medical History Grid */
+.medical-history-section h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.medical-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1rem;
+}
+
+.medical-card {
+    background-color: #f6f8ff;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: inset 0 0 0 1px #dcdcdc;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+}
+
+.medical-card h4 {
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+    font-size: 1rem;
+    color: #1a1a2e;
+}
+
+.medical-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.medical-card th,
+.medical-card td {
+    padding: 0.5rem;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.medical-card thead {
+    background-color: #e9ecf3;
+}
+
+@media screen and (max-width: 768px) {
+
+    .vitals-grid,
+    .medical-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .section-header {
+        flex-direction: grid;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+    gap: 1.5rem;
+}
+
+/* Container for name/number + edit btn */
+.profile-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Stack name and patient number vertically */
+.profile-name-number {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.profile-name-number h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.profile-name-number p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+/* Edit button with icon */
+.edit-btn {
+    background: var(--brand, #007bff);
+    color: #fff;
+    padding: 0.4rem 1rem;
+    border-radius: 5px;
+    font-size: 1rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.edit-btn:hover {
+    background: #0056b3;
+}

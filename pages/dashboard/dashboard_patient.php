@@ -109,7 +109,7 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <!-- Reuse your existing styles -->
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../includes/sidebar.css">
+    <link rel="stylesheet" href="../../assets/css/sidebar.css">
     <style>
         /* Optional: small layout wrapper for content next to sidebar */
         .content-wrapper {
@@ -118,10 +118,18 @@ try {
             /* if your sidebar uses fixed width */
             padding: 1.25rem;
         }
+        .content-wrapper h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
 
         @media (max-width: 960px) {
             .content-wrapper {
                 margin-left: 0;
+            }
+            .content-wrapper h1 {
+                font-size: 1.25rem;
+                text-align: center;
             }
         }
 
@@ -203,7 +211,7 @@ try {
         <h1 style="margin-top:50px;margin-bottom:2rem;">Welcome to the <strong>CITY HEALTH OFFICE OF KORONADAL's</strong> <br>Official Website, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
 
         <div class="card-container" style="margin-bottom: 1rem;">
-            <h3>What would you like to do?</h3>
+            <h2>What would you like to do?</h2>
             <div class="card-button-container">
                 <a href="#" class="card-button blue-card">
                     <i class="fas fa-calendar-check icon"></i>
@@ -225,10 +233,15 @@ try {
                     <h3>View Billing</h3>
                     <p>Review your billing and payments.</p>
                 </a>
-                <a href="../../pages/patient/medical_record_print.php" class="card-button green-card">
+                <a href="../../pages/patient/medical_record_print.php" class="card-button green-card" style="background: linear-gradient(135deg, #a8dadc, #1b4332);color: white;">
                     <i class="fas fa-notes-medical icon"></i>
                     <h3>View Medical Record</h3>
                     <p>See your complete medical history.</p>
+                </a>
+                <a href="../../pages/patient/patient_feedback.php" class="card-button red-card"  style="background: linear-gradient(135deg, #ffd6e0, #f2301eff); color: white;">
+                    <i class="fas fa-comment-dots icon"></i>
+                    <h3>Patient Feedback</h3>
+                    <p>Share your experience and suggestions.</p>
                 </a>
             </div>
         </div>
