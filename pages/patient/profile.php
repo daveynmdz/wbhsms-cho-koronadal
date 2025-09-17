@@ -464,9 +464,9 @@ if (isset($_GET['logout'])) {
                                     <?php if (!empty($medical_history['past_conditions'])): ?>
                                         <?php foreach (array_slice($medical_history['past_conditions'], 0, 2) as $condition): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($condition['condition']) ?></td>
-                                                <td><?= htmlspecialchars($condition['year_diagnosed']) ?></td>
-                                                <td><?= htmlspecialchars($condition['status']) ?></td>
+                                           <td><?= htmlspecialchars($condition['condition'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($condition['year_diagnosed'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($condition['status'] ?? '') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -494,9 +494,9 @@ if (isset($_GET['logout'])) {
                                     <?php if (!empty($medical_history['chronic_illnesses'])): ?>
                                         <?php foreach (array_slice($medical_history['chronic_illnesses'], 0, 2) as $illness): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($illness['illness']) ?></td>
-                                                <td><?= htmlspecialchars($illness['year_diagnosed']) ?></td>
-                                                <td><?= htmlspecialchars($illness['management']) ?></td>
+                                           <td><?= htmlspecialchars($illness['illness'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($illness['year_diagnosed'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($illness['management'] ?? '') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -575,10 +575,10 @@ if (isset($_GET['logout'])) {
                                     <?php if (!empty($medical_history['family_history'])): ?>
                                         <?php foreach (array_slice($medical_history['family_history'], 0, 2) as $fh): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($fh['family_member']) ?></td>
-                                                <td><?= htmlspecialchars($fh['condition']) ?></td>
-                                                <td><?= htmlspecialchars($fh['age_diagnosed']) ?></td>
-                                                <td><?= htmlspecialchars($fh['current_status']) ?></td>
+                                           <td><?= htmlspecialchars($fh['family_member'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($fh['condition'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($fh['age_diagnosed'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($fh['current_status'] ?? '') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -659,9 +659,9 @@ if (isset($_GET['logout'])) {
                                     <?php if (!empty($medical_history['surgical_history'])): ?>
                                         <?php foreach (array_slice($medical_history['surgical_history'], 0, 2) as $surgery): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($surgery['surgery']) ?></td>
-                                                <td><?= htmlspecialchars($surgery['year']) ?></td>
-                                                <td><?= htmlspecialchars($surgery['hospital']) ?></td>
+                                           <td><?= htmlspecialchars($surgery['surgery'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($surgery['year'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($surgery['hospital'] ?? '') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -738,9 +738,9 @@ if (isset($_GET['logout'])) {
                                     <?php if (!empty($medical_history['allergies'])): ?>
                                         <?php foreach (array_slice($medical_history['allergies'], 0, 2) as $idx => $allergy): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($allergy['allergen']) ?></td>
-                                                <td><?= htmlspecialchars($allergy['reaction']) ?></td>
-                                                <td><?= htmlspecialchars($allergy['severity']) ?></td>
+                                           <td><?= htmlspecialchars($allergy['allergen'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($allergy['reaction'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($allergy['severity'] ?? '') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -893,10 +893,10 @@ if (isset($_GET['logout'])) {
                                     <?php if (!empty($medical_history['current_medications'])): ?>
                                         <?php foreach (array_slice($medical_history['current_medications'], 0, 2) as $med): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($med['medication']) ?></td>
-                                                <td><?= htmlspecialchars($med['dosage']) ?></td>
-                                                <td><?= htmlspecialchars($med['frequency']) ?></td>
-                                                <td><?= htmlspecialchars($med['prescribed_by']) ?></td>
+                                           <td><?= htmlspecialchars($med['medication'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($med['dosage'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($med['frequency'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($med['prescribed_by'] ?? '') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -925,10 +925,10 @@ if (isset($_GET['logout'])) {
                                     <?php if (!empty($medical_history['immunizations'])): ?>
                                         <?php foreach (array_slice($medical_history['immunizations'], 0, 2) as $imm): ?>
                                             <tr>
-                                                <td><?= htmlspecialchars($imm['vaccine']) ?></td>
-                                                <td><?= htmlspecialchars($imm['year_received']) ?></td>
-                                                <td><?= htmlspecialchars($imm['doses_completed']) ?></td>
-                                                <td><?= htmlspecialchars($imm['status']) ?></td>
+                                           <td><?= htmlspecialchars($imm['vaccine'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($imm['year_received'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($imm['doses_completed'] ?? '') ?></td>
+                                           <td><?= htmlspecialchars($imm['status'] ?? '') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
