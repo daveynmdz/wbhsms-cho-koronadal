@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===============================
     window.proceedDelete = function (table, id, btn) {
         btn.disabled = true;
-        fetch('../pages/patient/actions/delete_medical_history.php', {
+    fetch('actions/delete_medical_history.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `table=${encodeURIComponent(table)}&id=${encodeURIComponent(id)}`
@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(addAllergyForm);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/add_medical_history.php', {
+            fetch('actions/add_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/update_medical_history.php', {
+            fetch('actions/update_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(addPastCondForm);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/add_medical_history.php', {
+            fetch('actions/add_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/update_medical_history.php', {
+            fetch('actions/update_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(addChronicIllForm);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/add_medical_history.php', {
+            fetch('actions/add_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/update_medical_history.php', {
+            fetch('actions/update_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(addFamilyHistForm);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/add_medical_history.php', {
+            fetch('actions/add_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/update_medical_history.php', {
+            fetch('actions/update_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -779,7 +779,7 @@ document.addEventListener('DOMContentLoaded', function () {
             params.append('year', year);
             params.append('hospital', hospital);
 
-            fetch('../pages/patient/actions/add_medical_history.php', {
+            fetch('actions/add_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -807,7 +807,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/update_medical_history.php', {
+            fetch('actions/update_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -908,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(addMedForm);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/add_medical_history.php', {
+            fetch('actions/add_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -936,7 +936,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/update_medical_history.php', {
+            fetch('actions/update_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -1018,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(addImmunForm);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/add_medical_history.php', {
+            fetch('actions/add_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
@@ -1046,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(form);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('../pages/patient/actions/update_medical_history.php', {
+            fetch('actions/update_medical_history.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
