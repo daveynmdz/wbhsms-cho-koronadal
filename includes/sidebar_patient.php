@@ -60,7 +60,7 @@ if (($needsName || $needsNo) && $patient_id) {
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php">
+    <a href="../dashboard/dashboard_patient.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
@@ -73,40 +73,40 @@ if (($needsName || $needsNo) && $patient_id) {
         <i class="fas fa-times"></i>
     </button>
 
-    <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php">
+    <a href="../dashboard/dashboard_patient.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
     <div class="menu" role="menu">
-        <a href="/wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php"
+        <a href="../dashboard/dashboard_patient.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="/wbhsms-cho-koronadal/pages/appointment/appointments.php"
+        <a href="../appointment/appointments.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments
         </a>
-        <a href="/wbhsms-cho-koronadal/pages/prescription/prescriptions.php"
+        <a href="../prescription/prescriptions.php"
             class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-prescription-bottle-alt"></i> Prescription
         </a>
-        <a href="/wbhsms-cho-koronadal/pages/laboratory/lab_tests.php"
+        <a href="../laboratory/lab_tests.php"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-vials"></i> Laboratory
         </a>
-        <a href="/wbhsms-cho-koronadal/pages/billing/billing.php"
+        <a href="../billing/billing.php"
             class="<?= $activePage === 'billing' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-file-invoice-dollar"></i> Billing
         </a>
     </div>
 
-    <a href="/wbhsms-cho-koronadal/pages/patient/profile.php"
+    <a href="../patient/profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
             <div class="user-info">
                 <img class="profile-photo"
                     src="<?= $patient_id
-                                ? '/wbhsms-cho-koronadal/vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
+                                ? '../vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
                                 : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
                     alt="User photo"
                     onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
