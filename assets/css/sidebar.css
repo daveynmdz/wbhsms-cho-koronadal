@@ -175,7 +175,6 @@
             position: relative;
             display: flex;
             align-items: center;
-            gap: 12px;
             padding: 10px 12px;
             border-radius: 8px;
             transition: background 0.3s ease;

@@ -1,0 +1,671 @@
+/* =============================
+   1. GLOBAL/BODY/BACKGROUND
+   ============================= */
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-image: url('https://ik.imagekit.io/wbhsmslogo/Blue%20Minimalist%20Background.png?updatedAt=1752410073954');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #222;
+    overflow-y: auto;
+}
+
+/* =============================
+   2. TOPBAR (Header)
+   ============================= */
+.edit-profile-topbar {
+    width: 100vw;
+    min-width: 0;
+    background: #03045e;
+    box-shadow: 0 2px 8px #0001;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 2rem 0.7rem 1.2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.edit-profile-topbar .topbar-logo img {
+    height: 48px;
+    width: auto;
+    display: block;
+}
+
+.edit-profile-topbar .topbar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #0077b6;
+    letter-spacing: 0.5px;
+}
+
+.edit-profile-topbar .topbar-userinfo {
+    display: flex;
+    max-width: 190px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.7rem;
+}
+
+.edit-profile-topbar .topbar-userphoto {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #eee;
+}
+
+.edit-profile-topbar .topbar-usertext {
+    flex-direction: column;
+    align-items: flex-start;
+    font-size: 1rem;
+}
+
+.edit-profile-topbar .topbar-usertext strong {
+    color: #222;
+}
+
+.edit-profile-topbar .topbar-usertext small {
+    color: #888;
+}
+
+/* =============================
+   3. FLOATING BACK/CANCEL BUTTON
+   ============================= */
+.floating-back-btn {
+    position: fixed;
+    top: 110px;
+    left: 2vw;
+    z-index: 1000;
+    min-width: 120px;
+    box-shadow: 0 2px 8px #0002;
+    background: #fff;
+    color: #d32f2f;
+    border: 1px solid #d32f2f;
+    font-weight: 600;
+    transition: background 0.2s, color 0.2s;
+}
+
+.floating-back-btn:hover {
+    background: #ffeaea;
+    color: #b71c1c;
+}
+
+/* =============================
+   4. TOOLBAR (Reminders, Cancel)
+   ============================= */
+.edit-profile-toolbar-flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 900px;
+    width: 100%;
+    gap: 1.5rem;
+    margin: auto;
+}
+
+.edit-profile-toolbar-flex .btn-cancel {
+    background: #fff;
+    color: #1877f2;
+    border: 1.5px solid #1877f2;
+    font-weight: 500;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px #0001;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+
+.edit-profile-toolbar-flex .btn-cancel:hover {
+    background: #e3eaff;
+    color: #0d47a1;
+    border-color: #0d47a1;
+}
+
+.edit-profile-reminders {
+    flex: 1;
+    background: #f8fafd;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px #0001;
+    padding: 1rem 7rem;
+    margin: 10px auto;
+    font-size: 1rem;
+    color: #333;
+}
+
+/* =============================
+   5. MAIN LAYOUT (Flex/Grid)
+   ============================= */
+.edit-profile-flex {
+    display: flex;
+    gap: 2.2rem;
+    width: 85%;
+    padding: 1vw 2vw;
+    box-sizing: border-box;
+    margin: 0 auto;
+    align-items: start;
+    justify-content: flex-start;
+}
+
+.edit-profile-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2.2rem;
+}
+
+.edit-profile-flex>.profile-card {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* =============================
+   6. PROFILE CARD
+   ============================= */
+.profile-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+    padding: 2rem 2.5rem 1.5rem 2.5rem;
+    width: 100%;
+    margin-bottom: 15px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    transition: box-shadow 0.2s;
+}
+
+.profile-card:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
+}
+
+.profile-card h3 {
+    margin-top: 0;
+    margin-bottom: 1.2rem;
+    font-size: 1.25rem;
+    color: #1877f2;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+/* =============================
+   7. FORM ROWS & FIELDS
+   ============================= */
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+}
+
+.form-row label {
+    flex: 1 1 5px;
+    font-weight: 500;
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    font-size: 1rem;
+}
+
+.form-row input,
+.form-row select {
+    width: 100%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid #ccd0d5;
+    font-size: 1rem;
+    margin-top: 0.3rem;
+    background: #f5f6fa;
+    transition: border 0.2s;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+    border: 1.5px solid #1877f2;
+    outline: none;
+    background: #fff;
+}
+
+.form-actions {
+    text-align: right;
+    margin-top: 1.2rem;
+}
+
+/* =============================
+   8. BUTTONS, STATES
+   ============================= */
+.btn {
+    background: linear-gradient(90deg, #1877f2, #42a5f5);
+    color: #fff;
+    border: none;
+    padding: 0.7rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(24, 119, 242, 0.08);
+    margin-left: 0.5rem;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn:disabled {
+    background: #ccc;
+}
+
+.btn:hover {
+    background: linear-gradient(90deg, #42a5f5, #1877f2);
+    box-shadow: 0 4px 16px rgba(24, 119, 242, 0.13);
+}
+
+.success {
+    color: #28a745;
+    margin-bottom: 1rem;
+}
+
+.error {
+    color: #c00;
+    margin-bottom: 1rem;
+}
+
+/* =============================
+   9. EDIT PROFILE FORM SPECIFIC
+   ============================= */
+.edit-profile-form {
+    width: 100%;
+    margin: 2rem auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px #0001;
+    padding: 2rem 2vw;
+    box-sizing: border-box;
+}
+
+.edit-profile-form h2 {
+    margin-bottom: 1.5rem;
+}
+
+.edit-profile-form .form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.edit-profile-form label {
+    flex: 1;
+    font-weight: 500;
+}
+
+.edit-profile-form input,
+.edit-profile-form select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.edit-profile-form .profile-photo-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.edit-profile-form .profile-photo-preview img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #eee;
+}
+
+.edit-profile-form .form-actions {
+    text-align: right;
+}
+
+.edit-profile-form .btn {
+    background: var(--brand, #007bff);
+    color: #fff;
+    border: none;
+    padding: 0.7rem 1.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.edit-profile-form .btn:disabled {
+    background: #ccc;
+}
+
+.edit-profile-form .error {
+    color: #c00;
+    margin-bottom: 1rem;
+}
+
+.edit-profile-form .success {
+    color: #28a745;
+    margin-bottom: 1rem;
+}
+
+/* =============================
+   10. LIFESTYLE SECTIONS
+   ============================= */
+.lifestyle-info-section {
+    background: #f8fafd;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px #0001;
+    margin-bottom: 1.7rem;
+    padding: 1.2rem 1.5rem 1.2rem 1.5rem;
+    transition: box-shadow 0.2s;
+}
+
+.lifestyle-info-section:last-child {
+    margin-bottom: 0;
+}
+
+.lifestyle-matrix-section {
+    margin: 1.2em 0 0.2em 0;
+    font-size: 1.08em;
+    color: #1877f2;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding-left: 0.5em;
+}
+
+/* =============================
+   11. LIFESTYLE MATRIX
+   ============================= */
+.lifestyle-matrix {
+    width: 100%;
+    max-width: 100%;
+    margin: 1.5rem 0 1rem 0;
+    border-radius: 14px;
+    background: #f8fafd;
+    box-shadow: 0 2px 8px #0001;
+    overflow-x: auto;
+}
+
+.lifestyle-matrix-header,
+.lifestyle-matrix-row {
+    display: flex;
+    align-items: center;
+}
+
+.lifestyle-matrix-header {
+    background: #fff;
+    font-weight: 500;
+    color: #444;
+    border-bottom: 1px solid #e5e7eb;
+    min-height: 44px;
+}
+
+.lifestyle-matrix-row {
+    background: #f6f8fa;
+    border-bottom: 1px solid #e5e7eb;
+    min-height: 56px;
+    transition: background 0.2s;
+}
+
+.lifestyle-matrix-row:last-child {
+    border-bottom: none;
+}
+
+.lifestyle-matrix-rowlabel {
+    width: 170px;
+    min-width: 120px;
+    text-align: left;
+    padding: 1.2em;
+    font-size: 1rem;
+    color: #333;
+    font-weight: 500;
+    background: transparent;
+    vertical-align: middle;
+    display: flex;
+    align-items: center;
+}
+
+.lifestyle-matrix-col {
+    flex: 1 1 10px;
+    text-align: center;
+    padding: 0.7em 0.7em;
+    font-size: 0.8rem;
+    min-width: 120px;
+}
+
+.lifestyle-matrix-cell {
+    flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 56px;
+    cursor: pointer;
+    background: transparent;
+    transition: background 0.2s;
+    min-width: 120px;
+}
+
+.lifestyle-matrix-cell input[type="radio"] {
+    display: none;
+}
+
+.custom-matrix-radio {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #b0b4ba;
+    background: #fff;
+    position: relative;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.lifestyle-matrix-cell input[type="radio"]:checked+.custom-matrix-radio {
+    border-color: #6c47ff;
+    box-shadow: 0 0 0 2px #e6e0fa;
+}
+
+.lifestyle-matrix-cell input[type="radio"]:checked+.custom-matrix-radio::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #6c47ff;
+}
+
+.lifestyle-matrix-cell input[type="radio"]:focus+.custom-matrix-radio {
+    outline: 2px solid #6c47ff;
+    outline-offset: 2px;
+}
+
+/* =============================
+   12. MEDIA QUERIES
+   ============================= */
+@media (max-width: 1100px) {
+    .edit-profile-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+        gap: 1.5rem;
+        max-width: 98vw;
+    }
+
+    .edit-profile-grid>.profile-card {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+    }
+
+    .profile-card {
+        padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+        border-radius: 12px;
+    }
+}
+
+@media (max-width: 900px) {
+    .edit-profile-topbar {
+        gap: 0.5rem;
+        padding: 0.7rem 0.5rem;
+    }
+
+    .edit-profile-topbar .topbar-title {
+        font-size: 1.2rem;
+        margin: 0.2rem 0;
+    }
+
+    .edit-profile-topbar .topbar-userinfo {
+        justify-content: flex-end;
+    }
+
+    .edit-profile-toolbar-flex {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.7rem;
+        width: 100%;
+    }
+
+    .edit-profile-reminders {
+        padding: 0.8rem 0.7rem;
+        font-size: 0.97rem;
+        margin: 10px auto;
+    }
+
+    .edit-profile-flex {
+        flex-direction: column;
+        width: 100%;
+        gap: 1.2rem;
+        padding: 0.5rem 0.5rem;
+    }
+
+    .lifestyle-matrix-header,
+    .lifestyle-matrix-row {
+        font-size: 0.97rem;
+    }
+
+    .lifestyle-matrix-rowlabel {
+        width: 110px;
+        min-width: 80px;
+        padding-left: 0.5em;
+    }
+
+    .lifestyle-matrix-col,
+    .lifestyle-matrix-cell {
+        min-width: 90px;
+        text-align: start;
+    }
+
+    .custom-matrix-radio {
+        width: 20px;
+        height: 20px;
+    }
+
+    .lifestyle-matrix-cell input[type="radio"]:checked+.custom-matrix-radio::after {
+        width: 9px;
+        height: 9px;
+        top: 4.5px;
+        left: 4.5px;
+    }
+}
+
+@media (max-width: 700px) {
+    .edit-profile-3col {
+        padding: 0.5rem 0;
+    }
+
+    .edit-profile-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .profile-card {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-radius: 10px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .edit-profile-topbar {
+        gap: 0.5rem;
+        padding: 0.7rem 0.5rem;
+    }
+
+    .edit-profile-topbar .topbar-title {
+        font-size: 1.2rem;
+        margin: 0.2rem 0;
+    }
+
+    .edit-profile-topbar .topbar-userinfo {
+        justify-content: flex-end;
+    }
+
+    .floating-back-btn {
+        top: 80px;
+        left: 1vw;
+        min-width: 90px;
+        font-size: 0.95em;
+        padding: 0.5em 0.8em;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .lifestyle-matrix-header,
+    .lifestyle-matrix-row {
+        font-size: 0.93rem;
+    }
+
+    .lifestyle-matrix-rowlabel {
+        width: 70px;
+        min-width: 60px;
+        padding-left: 0.2em;
+        margin: 20px;
+    }
+
+    .lifestyle-matrix-col,
+    .lifestyle-matrix-cell {
+        min-width: 70px;
+    }
+
+    .custom-matrix-radio {
+        width: 16px;
+        height: 16px;
+    }
+
+    .lifestyle-matrix-cell input[type="radio"]:checked+.custom-matrix-radio::after {
+        width: 6px;
+        height: 6px;
+        top: 5px;
+        left: 5px;
+    }
+}
+
+.reminders-box {
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: 8px;
+    padding: 1em 1.5em;
+    margin: 0 auto 2em auto;
+    width: auto;
+    color: #856404;
+    font-size: 1.05em;
+    box-shadow: 0 2px 8px rgba(255, 229, 143, 0.08);
+}
+
+.reminders-box ul {
+    margin: 0.5em 0 0 1.2em;
+    padding: 0;
+    list-style: disc;
+}
