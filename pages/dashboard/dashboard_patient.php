@@ -275,13 +275,20 @@ try {
                             </div>
                         </div>
                         <div class="appointment-vitals">
-                            <div class="vital-box"><i class="fas fa-ruler-vertical"></i> <strong>Height:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['height']); ?> cm</div>
-                            <div class="vital-box"><i class="fas fa-weight"></i> <strong>Weight:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['weight']); ?> kg</div>
-                            <div class="vital-box"><i class="fas fa-tachometer-alt"></i> <strong>BP:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['bp']); ?> mmHg</div>
-                            <div class="vital-box"><i class="fas fa-heartbeat"></i> <strong>Cardiac Rate:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['cardiac_rate']); ?> bpm</div>
-                            <div class="vital-box"><i class="fas fa-thermometer-half"></i> <strong>Temperature:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['temperature']); ?>°C</div>
-                            <div class="vital-box"><i class="fas fa-lungs"></i> <strong>Resp. Rate:</strong> <?php echo htmlspecialchars($defaults['latest_appointment']['resp_rate']); ?> brpm</div>
-                        </div>
+                            <?php
+                            // Fetch latest vitals for this patient
+                            $latest_vitals = null;
+                            $stmt = $pdo->prepare("SELECT * FROM vitals WHERE patient_id = ? ORDER BY recorded_at DESC LIMIT 1");
+                            $stmt->execute([$patient_id]);
+                            $latest_vitals = $stmt->fetch(PDO::FETCH_ASSOC);
+                            ?>
+                            <div class="vital-box"><i class="fas fa-ruler-vertical"></i> <strong>Height:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['ht'] ?? '-') . ' cm' : '-' ?></div>
+                            <div class="vital-box"><i class="fas fa-weight"></i> <strong>Weight:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['wt'] ?? '-') . ' kg' : '-' ?></div>
+                            <div class="vital-box"><i class="fas fa-tachometer-alt"></i> <strong>Blood Pressure:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['bp'] ?? '-') : '-' ?></div>
+                            <div class="vital-box"><i class="fas fa-heartbeat"></i> <strong>Cardiac Rate:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['hr'] ?? '-') . ' bpm' : '-' ?></div>
+                            <div class="vital-box"><i class="fas fa-thermometer-half"></i> <strong>Temperature:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['temp'] ?? '-') . ' °C' : '-' ?></div>
+                            <div class="vital-box"><i class="fas fa-lungs"></i> <strong>Respiratory Rate:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['rr'] ?? '-') . ' bpm' : '-' ?></div>
+                        </div>  
                     </div>
                 </div>
             </div>
