@@ -260,7 +260,7 @@ if (isset($_GET['logout'])) {
                 <div class="profile-header">
                     <img class="profile-photo"
                         src="<?= $patient_id
-                                    ? '/wbhsms-cho-koronadal/vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
+                                    ? '../vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
                                     : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
                         alt="User photo"
                         onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
