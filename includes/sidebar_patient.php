@@ -106,7 +106,7 @@ if (($needsName || $needsNo) && $patient_id) {
             <div class="user-info">
                 <img class="profile-photo"
                     src="<?= $patient_id
-                                ? '/wbhsms-cho-koronadal/vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
+                                ? '../../vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
                                 : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
                     alt="User photo"
                     onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
@@ -124,7 +124,7 @@ if (($needsName || $needsNo) && $patient_id) {
     </a>
 
     <div class="user-actions">
-        <a href="/wbhsms-cho-koronadal/patient/user_settings.php"><i class="fas fa-cog"></i> Settings</a>
+        <a href="../patient/user_settings.php"><i class="fas fa-cog"></i> Settings</a>
         <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>
