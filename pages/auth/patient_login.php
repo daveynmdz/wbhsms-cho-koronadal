@@ -14,7 +14,7 @@ include_once __DIR__ . '/../../config/db.php';
 
 // If already logged in, redirect to dashboard
 if (!empty($_SESSION['patient_id'])) {
-    header('Location: /wbhsms-cho-koronadal/pages/dashboard/dashboard_patient.php');
+    header('Location: ../pages/dashboard/dashboard_patient.php');
     exit;
 }
 
