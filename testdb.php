@@ -1,6 +1,6 @@
 <?php
 // Set to 'local' or 'remote' to test each connection
-$test = 'local'; // change to 'remote' to test remote server
+$test = 'remote'; // change to 'remote' to test remote server
 
 require_once __DIR__ . '/config/env.php';
 

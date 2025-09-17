@@ -35,5 +35,5 @@ if (ini_get('session.use_cookies')) {
 session_destroy();
 
 // Redirect to login with a flag
-header('Location: /wbhsms-cho-koronadal/pages/auth/patient_login.php?logged_out=1');
+header('Location: ../auth/patient_login.php?logged_out=1');
 exit;

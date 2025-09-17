@@ -14,7 +14,7 @@ include_once __DIR__ . '/../../config/db.php';
 
 // If already logged in, redirect to dashboard
 if (!empty($_SESSION['patient_id'])) {
-    header('Location: ../pages/dashboard/dashboard_patient.php');
+    header('Location: ../dashboard/dashboard_patient.php');
     exit;
 }
 
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($row && password_verify($password, $row['password'])) {
             session_regenerate_id(true);
             $_SESSION['patient_id'] = $row['id'];
-            header('Location: ../pages/dashboard/dashboard_patient.php');
+            header('Location: ../dashboard/dashboard_patient.php');
             exit;
         } else {
             usleep(300000);
