@@ -1,0 +1,226 @@
+html,
+body {
+    height: auto !important;
+    overflow-y: auto !important;
+}
+
+body {
+    /* Remove forced scrollbars on body */
+    overflow: visible !important;
+}
+
+.homepage {
+    overflow: visible !important;
+    height: auto !important;
+}
+
+.profile-wrapper {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Reminders box styling - already provided, just keep it */
+.reminders-box {
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: 8px;
+    padding: 1em 1.5em;
+    margin: 0 auto 2em auto;
+    width: auto;
+    color: #856404;
+    font-size: 1.05em;
+    box-shadow: 0 2px 8px rgba(255, 229, 143, 0.08);
+}
+
+.reminders-box ul {
+    margin: 0.5em 0 0 1.2em;
+    padding: 0;
+    list-style: disc;
+}
+
+/* New layout rows for cards */
+.profile-row {
+    display: flex;
+    gap: 1.5em;
+    margin-bottom: 1.5em;
+    align-items: stretch;
+    /* Ensure children stretch to full height */
+}
+
+.profile-photo-card,
+.profile-info-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+    padding: 1.25em;
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+    height: 100%;
+    /* Key line for stretching */
+    display: flex;
+    /* Optional: to vertically align content inside */
+    flex-direction: column;
+    /* Optional: for vertical stacking inside */
+}
+
+/* Optional: Make photo card smaller than info card in first row */
+.profile-photo-card {
+    flex: 0.7 1 0;
+    max-width: 250px;
+}
+
+/* If you want both info cards in second row to be equal */
+.profile-row+.profile-row .profile-info-card {
+    flex: 1 1 0;
+}
+
+#lifestyleInfoForm.profile-card .form-row {
+    flex: 1 1 auto;
+}
+
+#lifestyleInfoForm.profile-card .form-actions {
+    margin-top: auto;
+    /* Push actions to the bottom */
+}
+
+/* Responsive: Stack columns on mobile */
+@media (max-width: 700px) {
+    .profile-row {
+        flex-direction: column;
+    }
+
+    .profile-photo-card,
+    .profile-info-card {
+        max-width: 100%;
+    }
+}
+
+.centered-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.custom-modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-modal-content {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+    padding: 2em 2.5em;
+    max-width: 350px;
+    text-align: center;
+    animation: modalFadeIn 0.2s;
+}
+
+@keyframes modalFadeIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.custom-modal-content h3 {
+    margin-top: 0;
+    color: #c0392b;
+}
+
+.custom-modal-content p {
+    margin: 1em 0 2em 0;
+    color: #444;
+}
+
+.custom-modal-actions {
+    display: flex;
+    gap: 1em;
+    justify-content: center;
+}
+
+.btn-danger {
+    background: #c0392b;
+    color: #fff;
+    border: none;
+    padding: 0.5em 1.2em;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.btn-danger:hover {
+    background: #a93226;
+}
+
+.btn-secondary {
+    background: #eaeaea;
+    color: #333;
+    border: none;
+    padding: 0.5em 1.2em;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+    background: #d5d5d5;
+}
+
+/* Cropper modal styles */
+.cropper-modal-bg {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cropper-modal-content {
+    background: #fff;
+    padding: 1.5em;
+    border-radius: 10px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.cropper-modal-content img {
+    max-width: 60vw;
+    max-height: 60vh;
+    display: block;
+    margin-bottom: 1em;
+}
+
+.cropper-modal-actions {
+    display: flex;
+    gap: 1em;
+    justify-content: center;
+}

@@ -36,9 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
                 $stmt = $pdo->prepare("INSERT INTO personal_information (patient_id, profile_photo) VALUES (?, ?)");
                 $stmt->execute([$patient_id, $imgData]);
             }
-            header("Location: ../patient/profile_edit.php?upload=success");
+            $_SESSION['snackbar_message'] = 'Profile photo saved.';
+            $_SESSION['show_snackbar'] = true;
+            header("Location: ../patient/profile_edit.php");
             exit;
         }
     }
 }
-?>

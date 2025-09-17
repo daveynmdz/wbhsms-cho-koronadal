@@ -37,7 +37,7 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $form_type = $_POST['form_type'] ?? '';
     if ($form_type === 'personal_info') {
-        // Only update personal info fields
+        // ...existing code...
         $fields = [
             'blood_type',
             'civil_status',
@@ -63,8 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
+        $_SESSION['snackbar_message'] = 'Personal information saved.';
     } elseif ($form_type === 'home_address') {
-        // Only update street
+        // ...existing code...
         $street = trim($_POST['street'] ?? '');
         $stmt = $pdo->prepare("SELECT id FROM personal_information WHERE patient_id = ?");
         $stmt->execute([$patient_id]);
@@ -75,8 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$street, $patient_id]);
+        $_SESSION['snackbar_message'] = 'Home address saved.';
     } elseif ($form_type === 'emergency_contact') {
-        // Update emergency_contact table with correct column names
+        // ...existing code...
         $fields = ['last_name', 'first_name', 'middle_name', 'relation', 'contact_num'];
         $form_fields = ['ec_last_name', 'ec_first_name', 'ec_middle_name', 'ec_relation', 'ec_contact_num'];
         $updates = [];
@@ -97,8 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
+        $_SESSION['snackbar_message'] = 'Emergency contact saved.';
     } elseif ($form_type === 'lifestyle_info') {
-        // Update lifestyle_info table instead of personal_information
+        // ...existing code...
         $fields = ['smoking_status', 'alcohol_intake', 'physical_act', 'diet_habit'];
         $updates = [];
         $params = [];
@@ -118,11 +121,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
+        $_SESSION['snackbar_message'] = 'Lifestyle information saved.';
     }
+    // Set a session flag for snackbar
+    $_SESSION['show_snackbar'] = true;
     // Redirect to self to prevent resubmission and reload updated data (PRG pattern)
-    header('Location: patientEditProfile.php');
+    header('Location: profile_edit.php');
     exit();
 }
+
 
 function h($v)
 {
@@ -140,113 +147,23 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="../../assets/css/topbar.css" />
     <link rel="stylesheet" href="../../assets/css/patient_profile.css" />
+    <link rel="stylesheet" href="../../assets/css/profile-edit.css" />
     <link rel="stylesheet" href="../../assets/css/edit.css" />
     <link rel="stylesheet" href="../../vendor/cropper-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <style>
-        html,
-        body {
-            height: auto !important;
-            overflow-y: auto !important;
-        }
-
-        body {
-            /* Remove forced scrollbars on body */
-            overflow: visible !important;
-        }
-
-        .homepage {
-            overflow: visible !important;
-            height: auto !important;
-        }
-
-        .profile-wrapper {
-            max-width: 1500px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        /* Reminders box styling - already provided, just keep it */
-        .reminders-box {
-            background: #fffbe6;
-            border: 1px solid #ffe58f;
-            border-radius: 8px;
-            padding: 1em 1.5em;
-            margin: 0 auto 2em auto;
-            width: auto;
-            color: #856404;
-            font-size: 1.05em;
-            box-shadow: 0 2px 8px rgba(255, 229, 143, 0.08);
-        }
-
-        .reminders-box ul {
-            margin: 0.5em 0 0 1.2em;
-            padding: 0;
-            list-style: disc;
-        }
-
-        /* New layout rows for cards */
-        .profile-row {
-            display: flex;
-            gap: 1.5em;
-            margin-bottom: 1.5em;
-            align-items: stretch;
-            /* Ensure children stretch to full height */
-        }
-
-        .profile-photo-card,
-        .profile-info-card {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
-            padding: 1.25em;
-            flex: 1 1 0;
-            min-width: 0;
-            box-sizing: border-box;
-            height: 100%;
-            /* Key line for stretching */
-            display: flex;
-            /* Optional: to vertically align content inside */
-            flex-direction: column;
-            /* Optional: for vertical stacking inside */
-        }
-
-        /* Optional: Make photo card smaller than info card in first row */
-        .profile-photo-card {
-            flex: 0.7 1 0;
-            max-width: 250px;
-        }
-
-        /* If you want both info cards in second row to be equal */
-        .profile-row+.profile-row .profile-info-card {
-            flex: 1 1 0;
-        }
-
-        #lifestyleInfoForm.profile-card .form-row {
-            flex: 1 1 auto;
-        }
-
-        #lifestyleInfoForm.profile-card .form-actions {
-            margin-top: auto;
-            /* Push actions to the bottom */
-        }
-
-        /* Responsive: Stack columns on mobile */
-        @media (max-width: 700px) {
-            .profile-row {
-                flex-direction: column;
-            }
-
-            .profile-photo-card,
-            .profile-info-card {
-                max-width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
+    <script src="../../vendor/profile-photo-cropper.js"></script>
 </head>
 
 <body>
-    <header class="topbar" disabled>
+    <!-- Snackbar notification -->
+    <div id="snackbar" style="display:none;position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#323232;color:#fff;padding:1em 2em;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:1.1em;z-index:99999;opacity:0;transition:opacity 0.3s;">
+        <span id="snackbar-text"></span>
+    </div>
+
+    <!-- Top Bar -->
+    <header class="topbar">
         <div>
             <a href="patientHomepage.php" class="topbar-logo" style="pointer-events: none; cursor: default;">
                 <picture>
@@ -294,14 +211,14 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
                     <li>Double-check your information before saving.</li>
                     <li>Fields marked with * are required.</li>
                     <li>Click 'Save' after editing each section.</li>
-                    <li>To edit your name, date of birth, age, sex, contact number, or email, please go to User
+                    <li>To edit your Name, Date of Birth, Age, Sex, Contact Number, Email, and/or Barangay, please go to User
                         Settings.</li>
                 </ul>
             </div>
             <div class="profile-row">
                 <div class="profile-photo-card" style="max-width: none;">
                     <form class="profile-card profile-photo-form" id="profilePhotoForm" method="post"
-                        enctype="multipart/form-data" action="../profile_photo_upload.php">
+                        enctype="multipart/form-data" action="profile_photo_upload.php">
                         <h3>Profile Photo</h3>
                         <div class="profile-photo-container">
                             <img src="../../vendor/photo_controller.php?patient_id=<?= urlencode($patient_id) ?>" alt="Profile Photo"
@@ -328,13 +245,13 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
                         <input type="hidden" name="form_type" value="personal_info">
                         <h3>Personal Information</h3>
                         <div class="form-row">
-                            <label>Last Name <input type="text" name="last_name" disabled
+                            <label>Last Name <input type="text" name="last_name"
                                     value="<?= h($patient['last_name']) ?>" required readonly
                                     class="uneditable-field"></label>
-                            <label>First Name <input type="text" name="first_name" disabled
+                            <label>First Name <input type="text" name="first_name"
                                     value="<?= h($patient['first_name']) ?>" required readonly
                                     class="uneditable-field"></label>
-                            <label>Middle Name <input type="text" name="middle_name" disabled
+                            <label>Middle Name <input type="text" name="middle_name"
                                     value="<?= h($patient['middle_name']) ?>" readonly class="uneditable-field"></label>
                         </div>
                         <div class="form-row">
@@ -444,7 +361,7 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
                             <label>Street <input type="text" name="street" maxlength="100"
                                     value="<?= h($personal_information['street'] ?? '') ?>"></label>
                             <label>Barangay
-                                <select name="barangay" required disabled class="uneditable-field">
+                                <select name="barangay" required readonly class="uneditable-field">
                                     <?php
                                     $barangays = [
                                         'Brgy. Assumption',
@@ -484,9 +401,9 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
                                 </select>
                         </div>
                         <div class="form-row">
-                            <label>City <input type="text" value="Koronadal" readonly></label>
-                            <label>Province <input type="text" value="South Cotabato" readonly></label>
-                            <label>ZIP <input type="text" value="9506" readonly></label>
+                            <label>City <input type="text" value="Koronadal" disabled></label>
+                            <label>Province <input type="text" value="South Cotabato" disabled></label>
+                            <label>ZIP <input type="text" value="9506" disabled></label>
                         </div>
                         <div class="form-actions"><button class="btn" type="submit">Save Address</button></div>
                     </form>
@@ -663,188 +580,112 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
         </div>
     </section>
 
-
-    <!-- Cropper.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
-    <script src="../../vendor/profile-photo-cropper.js"></script>
-    <style>
-        .centered-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-
-        .custom-modal {
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.35);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .custom-modal-content {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
-            padding: 2em 2.5em;
-            max-width: 350px;
-            text-align: center;
-            animation: modalFadeIn 0.2s;
-        }
-
-        @keyframes modalFadeIn {
-            from {
-                transform: scale(0.95);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .custom-modal-content h3 {
-            margin-top: 0;
-            color: #c0392b;
-        }
-
-        .custom-modal-content p {
-            margin: 1em 0 2em 0;
-            color: #444;
-        }
-
-        .custom-modal-actions {
-            display: flex;
-            gap: 1em;
-            justify-content: center;
-        }
-
-        .btn-danger {
-            background: #c0392b;
-            color: #fff;
-            border: none;
-            padding: 0.5em 1.2em;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.15s;
-        }
-
-        .btn-danger:hover {
-            background: #a93226;
-        }
-
-        .btn-secondary {
-            background: #eaeaea;
-            color: #333;
-            border: none;
-            padding: 0.5em 1.2em;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.15s;
-        }
-
-        .btn-secondary:hover {
-            background: #d5d5d5;
-        }
-    </style>
     <script>
-        // Custom Back/Cancel modal logic
-        const backBtn = document.getElementById('backCancelBtn');
-        const modal = document.getElementById('backCancelModal');
-        const modalCancel = document.getElementById('modalCancelBtn');
-        const modalStay = document.getElementById('modalStayBtn');
-        backBtn.addEventListener('click', function() {
-            modal.style.display = 'flex';
-        });
-        modalCancel.addEventListener('click', function() {
-            window.location.href = 'profile.php';
-        });
-        modalStay.addEventListener('click', function() {
-            modal.style.display = 'none';
-        });
-        // Close modal on outside click
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) modal.style.display = 'none';
-        });
-
-        // Uneditable fields popup logic
-        const uneditablePopup = document.getElementById('uneditablePopup');
-        const closeUneditablePopup = document.getElementById('closeUneditablePopup');
-        // All fields that should trigger the popup
-        document.querySelectorAll('.uneditable-field').forEach(function(field) {
-            // For readonly/disabled fields, listen to focus and click
-            field.addEventListener('focus', showUneditablePopup);
-            field.addEventListener('mousedown', function(e) {
-                e.preventDefault();
-                showUneditablePopup();
-            });
-            // For selects, also listen to change
-            if (field.tagName === 'SELECT') {
-                field.addEventListener('change', showUneditablePopup);
-            }
-        });
-
-        function showUneditablePopup() {
-            uneditablePopup.style.display = 'flex';
-        }
-        closeUneditablePopup.addEventListener('click', function() {
-            uneditablePopup.style.display = 'none';
-        });
-        // Close popup on outside click
-        uneditablePopup.addEventListener('click', function(e) {
-            if (e.target === uneditablePopup) uneditablePopup.style.display = 'none';
-        });
-
-        // Enable Save Photo button only when a valid file is set
-        const fileInput = document.getElementById('profilePhotoInput');
-        const saveBtn = document.getElementById('savePhotoBtn');
-        if (fileInput && saveBtn) {
-            fileInput.addEventListener('change', function() {
-                saveBtn.disabled = !fileInput.files || !fileInput.files[0];
-            });
-        }
-        // Prevent form submit if no file
-        const photoForm = document.getElementById('profilePhotoForm');
-        if (photoForm && saveBtn) {
-            photoForm.addEventListener('submit', function(e) {
-                if (!fileInput.files || !fileInput.files[0]) {
-                    e.preventDefault();
-                    alert('Please select and crop a photo before saving.');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Snackbar logic
+            <?php if (isset($_SESSION['snackbar_message'])) { ?>
+                var snackbar = document.getElementById('snackbar');
+                var snackbarText = document.getElementById('snackbar-text');
+                if (snackbar && snackbarText) {
+                    snackbarText.textContent = <?= json_encode($_SESSION['snackbar_message']) ?>;
+                    snackbar.style.display = 'block';
+                    setTimeout(function() {
+                        snackbar.style.opacity = '1';
+                    }, 100);
+                    setTimeout(function() {
+                        snackbar.style.opacity = '0';
+                        setTimeout(function() {
+                            snackbar.style.display = 'none';
+                        }, 400);
+                    }, 2500);
                 }
-            });
-        }
+            <?php unset($_SESSION['snackbar_message']);
+            } ?>
 
-        function updateAge() {
-            const dob = document.getElementById('dobField').value;
-            if (!dob) {
-                document.getElementById('ageField').value = '';
-                return;
+            // Custom Back/Cancel modal logic
+            const backBtn = document.getElementById('backCancelBtn');
+            const modal = document.getElementById('backCancelModal');
+            const modalCancel = document.getElementById('modalCancelBtn');
+            const modalStay = document.getElementById('modalStayBtn');
+            if (backBtn && modal && modalCancel && modalStay) {
+                backBtn.addEventListener('click', function() {
+                    modal.style.display = 'flex';
+                });
+                modalCancel.addEventListener('click', function() {
+                    window.location.href = 'profile.php';
+                });
+                modalStay.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                });
+                // Close modal on outside click
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) modal.style.display = 'none';
+                });
             }
-            const birthDate = new Date(dob);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            document.getElementById('ageField').value = age;
-        }
 
-        function formatContact(input) {
-            let digits = input.value.replace(/[^0-9]/g, '').replace(/^0/, '');
-            input.value = '+63' + digits.slice(0, 10);
-        }
-        window.addEventListener('DOMContentLoaded', function() {
+            // Uneditable fields popup logic
+            const uneditablePopup = document.getElementById('uneditablePopup');
+            const closeUneditablePopup = document.getElementById('closeUneditablePopup');
+            if (uneditablePopup && closeUneditablePopup) {
+                document.querySelectorAll('.uneditable-field').forEach(function(field) {
+                    // For readonly/disabled fields, listen to focus and click
+                    field.addEventListener('focus', showUneditablePopup);
+                    field.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        showUneditablePopup();
+                    });
+                    // For selects, also listen to change
+                    if (field.tagName === 'SELECT') {
+                        field.addEventListener('change', showUneditablePopup);
+                    }
+                });
+
+                function showUneditablePopup() {
+                    uneditablePopup.style.display = 'flex';
+                }
+                closeUneditablePopup.addEventListener('click', function() {
+                    uneditablePopup.style.display = 'none';
+                });
+                // Close popup on outside click
+                uneditablePopup.addEventListener('click', function(e) {
+                    if (e.target === uneditablePopup) uneditablePopup.style.display = 'none';
+                });
+            }
+
+            // Enable Save Photo button only when a valid file is set
+            const fileInput = document.getElementById('profilePhotoInput');
+            const saveBtn = document.getElementById('savePhotoBtn');
+            if (fileInput && saveBtn) {
+                fileInput.addEventListener('change', function() {
+                    saveBtn.disabled = !fileInput.files || !fileInput.files[0];
+                });
+            }
+            // Prevent form submit if no file
+            const photoForm = document.getElementById('profilePhotoForm');
+            if (photoForm && saveBtn) {
+                photoForm.addEventListener('submit', function(e) {
+                    if (!fileInput.files || !fileInput.files[0]) {
+                        e.preventDefault();
+                        alert('Please select and crop a photo before saving.');
+                    }
+                });
+            }
+
+            function updateAge() {
+                const dob = document.getElementById('dobField').value;
+                if (!dob) {
+                    document.getElementById('ageField').value = '';
+                    return;
+                }
+                const birthDate = new Date(dob);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                document.getElementById('ageField').value = age;
+            }
             updateAge();
         });
     </script>

@@ -1,0 +1,698 @@
+/* ===========================================================
+   PatientEditMedHistory.php Stylesheet
+   -----------------------------------------------------------
+   Organized and updated for grid-based multi-card layout,
+   strict equal sizing, responsive design, and clarity.
+   =========================================================== */
+
+/* ==============================
+   1. GLOBAL/BODY/BACKGROUND
+   ============================== */
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-image: url('https://ik.imagekit.io/wbhsmslogo/Blue%20Minimalist%20Background.png?updatedAt=1752410073954');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #222;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* ==============================
+   2. MAIN PAGE LAYOUT
+   ============================== */
+.homepage {
+    margin-left: 250px;
+    padding: 30px;
+    color: #03045e;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 14px;
+    background: transparent;
+    box-sizing: border-box;
+    min-height: 0;
+    width: auto;
+    overflow-y: auto;
+    outline: none;
+}
+
+@media screen and (max-width: 768px) {
+    .homepage {
+        margin-left: 0;
+        min-width: 0;
+        max-width: 100vw;
+    }
+}
+
+.profile-wrapper {
+    max-width: 1500px;
+    margin: 0 auto;
+    /*padding: 1.5em;*/
+}
+
+/* ==============================
+   3. GRID & CARD LAYOUT
+   ============================== */
+/* Cards grid container for medical history layout */
+.profile-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5em;
+    width: 100%;
+}
+
+/* Individual rows */
+.profile-row {
+    display: flex;
+    gap: 1.5em;
+    width: 100%;
+}
+
+/* Three-col row (first row) */
+.profile-row.three-cols .profile-card-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+}
+
+/* Two-col row (other rows) */
+.profile-row.two-cols .profile-card-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+}
+
+/* Force cards to fill their columns perfectly */
+.profile-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+    padding: 1.25em;
+    min-height: 320px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    transition: box-shadow 0.18s, outline 0.18s;
+}
+
+.profile-card:focus-within,
+.profile-card:hover {
+    box-shadow: 0 6px 32px rgba(39, 174, 96, 0.15);
+    outline: 2px solid #27ae60;
+}
+
+/* Responsive: Stack columns on mobile */
+@media (max-width: 1100px) {
+    .profile-row {
+        flex-direction: column;
+        gap: 1em;
+    }
+}
+
+/* ==============================
+   4. TABLES
+   ============================== */
+.medical-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.2rem;
+    font-size: 1em;
+    table-layout: fixed;
+    /* Enforce equal columns */
+    word-break: break-word;
+}
+
+.medical-history-table th,
+.medical-history-table td {
+    padding: 0.7em 0.5em;
+    text-align: left;
+    border-bottom: 1px solid #ececec;
+    overflow-wrap: break-word;
+}
+
+.medical-history-table th {
+    background: #f5f5f5;
+    color: #222;
+    font-weight: 600;
+}
+
+.medical-history-table tr:last-child td {
+    border-bottom: none;
+}
+
+.medical-history-table tr:focus-within {
+    outline: 2px solid #27ae60;
+}
+
+/* ==============================
+   5. BUTTONS
+   ============================== */
+.floating-back-btn,
+#backCancelBtn {
+    background: #fff;
+    color: #1877f2;
+    border: 1.5px solid #1877f2;
+    font-weight: 500;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px #0001;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+
+.floating-back-btn {
+    position: fixed;
+    top: 110px;
+    left: 2vw;
+    z-index: 1000;
+}
+
+@media (max-width: 600px) {
+    .floating-back-btn {
+        position: fixed;
+        max-width: fit-content;
+        margin-bottom: 1em;
+        top: 10%;
+        width: 100%;
+    }
+}
+
+#backCancelBtn::before,
+.floating-back-btn::before {
+    content: "\2190";
+    margin-right: 0.5em;
+    font-weight: normal;
+    color: #1877f2;
+    font-size: 1.1em;
+}
+
+.btn-cancel,
+.btn {
+    background: none;
+    color: inherit;
+    border: none;
+    box-shadow: none;
+    padding: inherit;
+    border-radius: inherit;
+    margin-left: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+/* Action Buttons */
+.action-btn-group {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-btn-group>button {
+    flex: 1 1 0;
+    min-width: 70px;
+    /* Optional: prevents too small buttons */
+    display: flex;
+    justify-content: center;
+    /* horizontal center */
+    align-items: center;
+    /* vertical center */
+}
+
+
+.action-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 0.35em 1em;
+    font-weight: 600;
+    font-size: 1em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    transition: background 0.18s, color 0.18s;
+}
+
+.action-btn.edit {
+    background: #f1c40f;
+    color: #fff;
+}
+
+.action-btn.edit:hover,
+.action-btn.edit:focus {
+    background: #f39c12;
+}
+
+.action-btn.delete {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.action-btn.delete:hover,
+.action-btn.delete:focus {
+    background: #c0392b;
+}
+
+/* Modal Buttons */
+.btn-danger {
+    background: #c0392b;
+    color: #fff;
+    border: none;
+    padding: 0.5em 1.2em;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.btn-danger:hover,
+.btn-danger:focus {
+    background: #a93226;
+}
+
+.btn-secondary {
+    background: #eaeaea;
+    color: #333;
+    border: none;
+    padding: 0.5em 1.2em;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+    background: #d5d5d5;
+}
+
+/* ==============================
+   6. FORMS
+   ============================== */
+.neat-add-form {
+    margin-top: 1.2rem;
+    background: #f9f9fc;
+    padding: 1.2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.05);
+}
+
+.neat-add-form h4 {
+    margin-top: 0;
+    margin-bottom: 0.7em;
+    color: #27ae60;
+}
+
+.form-group {
+    margin-bottom: 1em;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.3em;
+}
+
+.form-group select,
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 0.45em 0.5em;
+    border: 1px solid #d1d1d1;
+    border-radius: 5px;
+    font-size: 1em;
+    background: #fff;
+}
+
+.form-group input[type="text"]:focus,
+.form-group select:focus {
+    border-color: #27ae60;
+    outline: none;
+}
+
+/* ==============================
+   7. REMINDERS BOX
+   ============================== */
+.reminders-box {
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: 8px;
+    padding: 1em 1.5em;
+    margin: 0 auto 2em auto;
+    color: #856404;
+    font-size: 1.05em;
+    box-shadow: 0 2px 8px rgba(255, 229, 143, 0.08);
+    width: 100%;
+    max-width: 100%;
+}
+@media (max-width: 768px) {
+    .reminders-box {
+        margin: 2em auto 2em auto;
+        font-size: 1em;
+    }
+}
+
+.reminders-box ul {
+    margin: 0.5em 0 0 1em;
+    padding: 0;
+    list-style: disc;
+}
+
+/* ==============================
+   8. MODALS (Modern & Neat)
+   ============================== */
+.custom-modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(30, 34, 54, 0.42);
+    /* slightly darker, modern overlay */
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s;
+    backdrop-filter: blur(3px);
+    /* subtle blur for modern effect */
+}
+
+.custom-modal[aria-hidden="false"],
+.custom-modal.open {
+    display: flex;
+}
+
+.custom-modal-content {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(30, 34, 54, 0.15), 0 1.5px 8px rgba(39, 174, 96, 0.09);
+    padding: 2.25em 2.75em 2em 2.75em;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    animation: modalFadeIn 0.25s cubic-bezier(.46, .03, .52, .96);
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes modalFadeIn {
+    from {
+        transform: translateY(20px) scale(0.97);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.custom-modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 0.7em;
+    color: #27ae60;
+    font-size: 1.55em;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.custom-modal-content p {
+    margin: 1em 0 2em 0;
+    color: #444;
+    font-size: 1.08em;
+    line-height: 1.6;
+}
+
+.custom-modal-actions {
+    display: flex;
+    gap: 0.8em;
+    justify-content: center;
+    margin-top: 1.3em;
+}
+
+.custom-modal button,
+.custom-modal .btn-danger,
+.custom-modal .btn-secondary {
+    font-size: 1em;
+    font-weight: 600;
+    padding: 0.55em 1.35em;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    box-shadow: 0 0.5px 2px rgba(39, 174, 96, 0.07);
+}
+
+.custom-modal .btn-danger {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.custom-modal .btn-danger:hover,
+.custom-modal .btn-danger:focus {
+    background: #c0392b;
+}
+
+.custom-modal .btn-secondary {
+    background: #f3f3f3;
+    color: #222;
+}
+
+.custom-modal .btn-secondary:hover,
+.custom-modal .btn-secondary:focus {
+    background: #eaeaea;
+}
+
+/* Add a subtle close X in top right */
+.custom-modal-close {
+    position: absolute;
+    top: 1em;
+    right: 1.1em;
+    font-size: 1.25em;
+    color: #bbb;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.18s;
+}
+
+.custom-modal-close:hover,
+.custom-modal-close:focus {
+    color: #e74c3c;
+    outline: none;
+}
+
+/* Accessibility: Focus ring for modal buttons */
+.custom-modal button:focus,
+.custom-modal .btn-danger:focus,
+.custom-modal .btn-secondary:focus {
+    outline: 2px solid #27ae60;
+    outline-offset: 2px;
+}
+
+.modern-modal-overlay {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(30, 34, 54, 0.42);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s;
+    backdrop-filter: blur(3px);
+}
+
+.modern-modal {
+    max-width: 400px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 6px 32px rgba(44, 62, 80, 0.12);
+    padding: 2em 1.5em;
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+}
+
+.modern-modal h3 {
+    margin-bottom: 1.2em;
+    font-size: 1.4em;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: -0.5px;
+}
+
+.modern-form .form-group {
+    margin-bottom: 1.2em;
+    display: flex;
+    flex-direction: column;
+}
+
+.modern-form label {
+    font-size: 1em;
+    font-weight: 500;
+    margin-bottom: 0.6em;
+    color: #34495e;
+    display: flex;
+    align-items: center;
+}
+
+.modern-form .required {
+    color: #e74c3c;
+    margin-left: 0.3em;
+    font-size: 1em;
+}
+
+.modern-select,
+.modern-input {
+    width: 100%;
+    padding: 0.52em 0.8em;
+    border: 1.5px solid #dde3ec;
+    border-radius: 6px;
+    background: #f8fafc;
+    font-size: 1em;
+    color: #222;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-top: 0.2em;
+    box-sizing: border-box;
+}
+
+.modern-select:focus,
+.modern-input:focus {
+    border-color: #27ae60;
+    outline: none;
+    box-shadow: 0 0 0 2px #d5f5e3;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1em;
+    margin-top: 1.6em;
+}
+
+.primary-btn {
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    padding: 0.6em 1.4em;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1em;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.08);
+    transition: background 0.18s, box-shadow 0.18s;
+}
+
+.primary-btn:hover,
+.primary-btn:focus {
+    background: #219150;
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.15);
+}
+
+.secondary-btn {
+    background: #f8fafc;
+    color: #34495e;
+    border: 1.5px solid #dde3ec;
+    padding: 0.6em 1.4em;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.18s, border-color 0.18s;
+}
+
+.secondary-btn:hover,
+.secondary-btn:focus {
+    background: #eaf2fb;
+    border-color: #bfc9d9;
+}
+
+
+/* ==============================
+   9. ACCESSIBILITY
+   ============================== */
+.action-btn:focus,
+.action-btn-group button:focus,
+.neat-add-form button:focus,
+.custom-modal button:focus {
+    outline: 2px solid #27ae60;
+    outline-offset: 2px;
+}
+
+/* ==============================
+   10. RESPONSIVE LOGO
+   ============================== */
+.responsive-logo {
+    height: 48px;
+    transition: content 0.2s;
+}
+
+/* ==============================
+   11. HISTORY CARD UTILITY
+   ============================== */
+.history-card {
+    margin-bottom: 1em;
+    background: #fcfcfc;
+    border-radius: 7px;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
+    padding: 1em;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==============================
+   12. RESPONSIVE DESIGN
+   ============================== */
+/*
+@media (max-width: 600px) {
+    .profile-wrapper {
+        padding: 0.5em;
+    }
+
+    .profile-cards-grid,
+    .profile-row,
+    .profile-card {
+        gap: 0.7em;
+        padding: 0.7em;
+        min-height: 0;
+    }
+
+    .profile-card {
+        min-height: 220px;
+        padding: 0.7em;
+    }
+
+    .medical-history-table {
+        font-size: 0.95em;
+        display: block;
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .medical-history-table th,
+    .medical-history-table td {
+        padding: 0.5em 0.3em;
+        min-width: 100px;
+    }
+
+    .reminders-box {
+        padding: 0.7em 1em;
+        font-size: 0.98em;
+    }
+
+    .custom-modal-content,
+    .modern-modal {
+        max-width: 98vw;
+        padding: 1em 0.5em;
+    }
+}*/

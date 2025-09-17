@@ -258,12 +258,12 @@ if (isset($_GET['logout'])) {
             <div class="profile-wrapper">
                 <!-- Top Header Card -->
                 <div class="profile-header">
-                <img class="profile-photo"
-                    src="<?= $patient_id
-                                ? '/wbhsms-cho-koronadal/vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
-                                : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
-                    alt="User photo"
-                    onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
+                    <img class="profile-photo"
+                        src="<?= $patient_id
+                                    ? '/wbhsms-cho-koronadal/vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
+                                    : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
+                        alt="User photo"
+                        onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
                     <div class="profile-info">
                         <div class="profile-name-number">
                             <h2><?= htmlspecialchars($patient['full_name']) ?></h2>
@@ -434,7 +434,7 @@ if (isset($_GET['logout'])) {
                     <div
                         style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1em; flex-wrap: wrap; gap: 0.5em;">
                         <h2>Medical History</h2>
-                        <a href="MedicalHistory/patientEditMedHistory.php" class="btn edit-btn">
+                        <a href="medical_history_edit.php" class="btn edit-btn">
                             <!-- Pencil SVG icon (inline) -->
                             <svg xmlns="http://www.w3.org/2000/svg"
                                 style="height:1em;width:1em;margin-right:0.5em;vertical-align:middle;" fill="none" viewBox="0 0 24 24"
