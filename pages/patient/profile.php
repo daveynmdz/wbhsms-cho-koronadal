@@ -452,109 +452,62 @@ if (isset($_GET['logout'])) {
                             <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <h4>Past Medical Conditions</h4>
                             </div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Condition</th>
-                                        <th>Year Diagnosed</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($medical_history['past_conditions'])): ?>
-                                        <?php foreach (array_slice($medical_history['past_conditions'], 0, 2) as $condition): ?>
-                                            <tr>
-                                           <td><?= htmlspecialchars($condition['condition'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($condition['year_diagnosed'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($condition['status'] ?? '') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
+                            <div class="scroll-table">
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            <th>Condition</th>
+                                            <th>Year Diagnosed</th>
+                                            <th>Status</th>
                                         </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($medical_history['past_conditions'])): ?>
+                                            <?php foreach (array_slice($medical_history['past_conditions'], 0, count(value: $medical_history['past_conditions'])) as $condition): ?> <tr>
+                                                    <td><?= htmlspecialchars($condition['condition'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($condition['year_diagnosed'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($condition['status'] ?? '') ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         <!-- Chronic Illnesses -->
                         <div class="medical-card">
                             <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <h4>Chronic Illnesses</h4>
                             </div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Illness</th>
-                                        <th>Year Diagnosed</th>
-                                        <th>Management</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($medical_history['chronic_illnesses'])): ?>
-                                        <?php foreach (array_slice($medical_history['chronic_illnesses'], 0, 2) as $illness): ?>
-                                            <tr>
-                                           <td><?= htmlspecialchars($illness['illness'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($illness['year_diagnosed'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($illness['management'] ?? '') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
+                            <div class="scroll-table">
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            <th>Illness</th>
+                                            <th>Year Diagnosed</th>
+                                            <th>Management</th>
                                         </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                            <!-- Modal for Chronic Illnesses -->
-                            <div id="ciModal" class="custom-modal"
-                                style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;">
-                                <div class="modal-content"
-                                    style="background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:2em 2.5em;max-width:600px;width:95vw;max-height:90vh;overflow-y:auto;position:relative;">
-                                    <button onclick="closeModal('ciModal')"
-                                        style="position:absolute;top:1em;right:1em;background:none;border:none;font-size:1.5em;color:#c0392b;cursor:pointer;">&times;</button>
-                                    <h3 style="margin-top:0;color:#333;">Chronic Illnesses</h3>
-                                    <table style="width:100%;margin-bottom:1em;">
-                                        <thead>
-                                            <tr style="background:#f5f5f5;">
-                                                <th style="padding:0.5em;">Illness</th>
-                                                <th style="padding:0.5em;">Year Diagnosed</th>
-                                                <th style="padding:0.5em;">Management</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (!empty($medical_history['chronic_illnesses'])): ?>
-                                                <?php foreach ($medical_history['chronic_illnesses'] as $illness): ?>
-                                                    <tr>
-                                                        <td><?= htmlspecialchars($illness['illness']) ?></td>
-                                                        <td><?= htmlspecialchars($illness['year_diagnosed']) ?></td>
-                                                        <td><?= htmlspecialchars($illness['management']) ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            <?php else: ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($medical_history['chronic_illnesses'])): ?>
+                                            <?php foreach (array_slice($medical_history['chronic_illnesses'], 0, count(value: $medical_history['chronic_illnesses'])) as $illness): ?>
                                                 <tr>
-                                                    <td colspan="3" style="text-align:center;color:#888;">No records found.
-                                                    </td>
+                                                    <td><?= htmlspecialchars($illness['illness'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($illness['year_diagnosed'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($illness['management'] ?? '') ?></td>
                                                 </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
-                                    <form method="post" action="add_chronic_illness.php" style="margin-top:1em;">
-                                        <h4 style="margin-bottom:0.5em;">Add New Illness</h4>
-                                        <div style="display:flex;gap:0.5em;flex-wrap:wrap;">
-                                            <input type="text" name="illness" placeholder="Illness" required
-                                                style="flex:1;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="number" name="year_diagnosed" placeholder="Year" min="1900"
-                                                max="<?= date('Y') ?>" required
-                                                style="width:100px;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="text" name="management" placeholder="Management" required
-                                                style="flex:1;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="hidden" name="patient_id" value="<?= $patient_id ?>">
-                                            <button type="submit"
-                                                style="background:#27ae60;color:#fff;border:none;padding:0.5em 1.2em;border-radius:5px;cursor:pointer;font-weight:600;">Add</button>
-                                        </div>
-                                    </form>
-                                </div>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         <!-- Family History -->
@@ -562,84 +515,33 @@ if (isset($_GET['logout'])) {
                             <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <h4>Family History</h4>
                             </div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Family Member</th>
-                                        <th>Condition</th>
-                                        <th>Age Diagnosed</th>
-                                        <th>Current Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($medical_history['family_history'])): ?>
-                                        <?php foreach (array_slice($medical_history['family_history'], 0, 2) as $fh): ?>
-                                            <tr>
-                                           <td><?= htmlspecialchars($fh['family_member'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($fh['condition'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($fh['age_diagnosed'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($fh['current_status'] ?? '') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
+                            <div class="scroll-table">
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td colspan="4" style="text-align:center;color:#888;">No records found.</td>
+                                            <th>Family Member</th>
+                                            <th>Condition</th>
+                                            <th>Age Diagnosed</th>
+                                            <th>Current Status</th>
                                         </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                            <!-- Modal for Family History -->
-                            <div id="fhModal" class="custom-modal"
-                                style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;">
-                                <div class="modal-content"
-                                    style="background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:2em 2.5em;max-width:600px;width:95vw;max-height:90vh;overflow-y:auto;position:relative;">
-                                    <button onclick="closeModal('fhModal')"
-                                        style="position:absolute;top:1em;right:1em;background:none;border:none;font-size:1.5em;color:#c0392b;cursor:pointer;">&times;</button>
-                                    <h3 style="margin-top:0;color:#333;">Family History</h3>
-                                    <table style="width:100%;margin-bottom:1em;">
-                                        <thead>
-                                            <tr style="background:#f5f5f5;">
-                                                <th style="padding:0.5em;">Family Member</th>
-                                                <th style="padding:0.5em;">Condition</th>
-                                                <th style="padding:0.5em;">Age Diagnosed</th>
-                                                <th style="padding:0.5em;">Current Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (!empty($medical_history['family_history'])): ?>
-                                                <?php foreach ($medical_history['family_history'] as $fh): ?>
-                                                    <tr>
-                                                        <td><?= htmlspecialchars($fh['family_member']) ?></td>
-                                                        <td><?= htmlspecialchars($fh['condition']) ?></td>
-                                                        <td><?= htmlspecialchars($fh['age_diagnosed']) ?></td>
-                                                        <td><?= htmlspecialchars($fh['current_status']) ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            <?php else: ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($medical_history['family_history'])): ?>
+                                            <?php foreach (array_slice($medical_history['family_history'], 0, 2) as $fh): ?>
                                                 <tr>
-                                                    <td colspan="4" style="text-align:center;color:#888;">No records found.
-                                                    </td>
+                                                    <td><?= htmlspecialchars($fh['family_member'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($fh['condition'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($fh['age_diagnosed'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($fh['current_status'] ?? '') ?></td>
                                                 </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
-                                    <form method="post" action="add_family_history.php" style="margin-top:1em;">
-                                        <h4 style="margin-bottom:0.5em;">Add New Family History</h4>
-                                        <div style="display:flex;gap:0.5em;flex-wrap:wrap;">
-                                            <input type="text" name="family_member" placeholder="Family Member" required
-                                                style="flex:1;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="text" name="condition" placeholder="Condition" required
-                                                style="flex:1;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="number" name="age_diagnosed" placeholder="Age Diagnosed" min="0" max="120"
-                                                required style="width:100px;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="text" name="current_status" placeholder="Current Status" required
-                                                style="flex:1;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="hidden" name="patient_id" value="<?= $patient_id ?>">
-                                            <button type="submit"
-                                                style="background:#27ae60;color:#fff;border:none;padding:0.5em 1.2em;border-radius:5px;cursor:pointer;font-weight:600;">Add</button>
-                                        </div>
-                                    </form>
-                                </div>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="4" style="text-align:center;color:#888;">No records found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         <!-- Surgical History -->
@@ -647,78 +549,31 @@ if (isset($_GET['logout'])) {
                             <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <h4>Surgical History</h4>
                             </div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Surgery</th>
-                                        <th>Year</th>
-                                        <th>Hospital</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($medical_history['surgical_history'])): ?>
-                                        <?php foreach (array_slice($medical_history['surgical_history'], 0, 2) as $surgery): ?>
-                                            <tr>
-                                           <td><?= htmlspecialchars($surgery['surgery'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($surgery['year'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($surgery['hospital'] ?? '') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
+                            <div class="scroll-table">
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            <th>Surgery</th>
+                                            <th>Year</th>
+                                            <th>Hospital</th>
                                         </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                            <!-- Modal for Surgical History -->
-                            <div id="shModal" class="custom-modal"
-                                style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;">
-                                <div class="modal-content"
-                                    style="background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:2em 2.5em;max-width:600px;width:95vw;max-height:90vh;overflow-y:auto;position:relative;">
-                                    <button onclick="closeModal('shModal')"
-                                        style="position:absolute;top:1em;right:1em;background:none;border:none;font-size:1.5em;color:#c0392b;cursor:pointer;">&times;</button>
-                                    <h3 style="margin-top:0;color:#333;">Surgical History</h3>
-                                    <table style="width:100%;margin-bottom:1em;">
-                                        <thead>
-                                            <tr style="background:#f5f5f5;">
-                                                <th style="padding:0.5em;">Surgery</th>
-                                                <th style="padding:0.5em;">Year</th>
-                                                <th style="padding:0.5em;">Hospital</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (!empty($medical_history['surgical_history'])): ?>
-                                                <?php foreach ($medical_history['surgical_history'] as $surgery): ?>
-                                                    <tr>
-                                                        <td><?= htmlspecialchars($surgery['surgery']) ?></td>
-                                                        <td><?= htmlspecialchars($surgery['year']) ?></td>
-                                                        <td><?= htmlspecialchars($surgery['hospital']) ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            <?php else: ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($medical_history['surgical_history'])): ?>
+                                            <?php foreach (array_slice($medical_history['surgical_history'], 0, count(value: $medical_history['surgical_history'])) as $surgery): ?>
                                                 <tr>
-                                                    <td colspan="3" style="text-align:center;color:#888;">No records found.
-                                                    </td>
+                                                    <td><?= htmlspecialchars($surgery['surgery'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($surgery['year'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($surgery['hospital'] ?? '') ?></td>
                                                 </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
-                                    <form method="post" action="add_surgical_history.php" style="margin-top:1em;">
-                                        <h4 style="margin-bottom:0.5em;">Add New Surgery</h4>
-                                        <div style="display:flex;gap:0.5em;flex-wrap:wrap;">
-                                            <input type="text" name="surgery" placeholder="Surgery" required
-                                                style="flex:1;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="number" name="year" placeholder="Year" min="1900" max="<?= date('Y') ?>"
-                                                required style="width:100px;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="text" name="hospital" placeholder="Hospital" required
-                                                style="flex:1;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                            <input type="hidden" name="patient_id" value="<?= $patient_id ?>">
-                                            <button type="submit"
-                                                style="background:#27ae60;color:#fff;border:none;padding:0.5em 1.2em;border-radius:5px;cursor:pointer;font-weight:600;">Add</button>
-                                        </div>
-                                    </form>
-                                </div>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         <!-- Allergies -->
@@ -726,153 +581,31 @@ if (isset($_GET['logout'])) {
                             <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <h4>Allergies</h4>
                             </div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Allergen</th>
-                                        <th>Reaction</th>
-                                        <th>Severity</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($medical_history['allergies'])): ?>
-                                        <?php foreach (array_slice($medical_history['allergies'], 0, 2) as $idx => $allergy): ?>
-                                            <tr>
-                                           <td><?= htmlspecialchars($allergy['allergen'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($allergy['reaction'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($allergy['severity'] ?? '') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
+                            <div class="scroll-table">
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            <th>Allergen</th>
+                                            <th>Reaction</th>
+                                            <th>Severity</th>
                                         </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                            <!-- Modal for Allergies -->
-                            <div id="allergyModal" class="custom-modal"
-                                style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;">
-                                <div class="modal-content"
-                                    style="background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:2em 2.5em;max-width:600px;width:95vw;max-height:90vh;overflow-y:auto;position:relative;">
-                                    <button type="button" onclick="closeModal('allergyModal')"
-                                        style="position:absolute;top:1em;right:1em;background:none;border:none;font-size:1.5em;color:#c0392b;cursor:pointer;">&times;</button>
-                                    <h3 style="margin-top:0;color:#333;">Allergies</h3>
-                                    <table style="width:100%;margin-bottom:1em;">
-                                        <thead>
-                                            <tr style="background:#f5f5f5;">
-                                                <th style="padding:0.5em;">Allergen</th>
-                                                <th style="padding:0.5em;">Reaction</th>
-                                                <th style="padding:0.5em;">Severity</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (!empty($medical_history['allergies'])): ?>
-                                                <?php foreach ($medical_history['allergies'] as $allergy): ?>
-                                                    <tr>
-                                                        <td><?= htmlspecialchars($allergy['allergen']) ?></td>
-                                                        <td><?= htmlspecialchars($allergy['reaction']) ?></td>
-                                                        <td><?= htmlspecialchars($allergy['severity']) ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            <?php else: ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($medical_history['allergies'])): ?>
+                                            <?php foreach (array_slice($medical_history['allergies'], 0, count(value: $medical_history['allergies'])) as $idx => $allergy): ?>
                                                 <tr>
-                                                    <td colspan="3" style="text-align:center;color:#888;">No records found.
-                                                    </td>
+                                                    <td><?= htmlspecialchars($allergy['allergen'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($allergy['reaction'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($allergy['severity'] ?? '') ?></td>
                                                 </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
-                                    <form method="post" action="add_allergy.php" style="margin-top:1em;">
-                                        <h4 style="margin-bottom:0.5em;">Add New Allergy</h4>
-                                        <div style="display:flex;gap:0.5em;flex-wrap:wrap;align-items:flex-start;">
-                                            <!-- Allergen Dropdown -->
-                                            <div style="flex:1;min-width:150px;">
-                                                <select name="allergen_dropdown" id="allergenSelect" required
-                                                    onchange="toggleOtherInput(this, 'allergenOtherInput')"
-                                                    style="width:100%;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                                    <option value="">Select Allergen</option>
-                                                    <option value="Peanuts">Peanuts</option>
-                                                    <option value="Penicillin">Penicillin</option>
-                                                    <option value="Pollen">Pollen</option>
-                                                    <option value="Shellfish">Shellfish</option>
-                                                    <option value="Eggs">Eggs</option>
-                                                    <option value="Milk">Milk</option>
-                                                    <option value="Latex">Latex</option>
-                                                    <option value="Insect Stings">Insect Stings</option>
-                                                    <option value="Dust Mites">Dust Mites</option>
-                                                    <option value="Mold">Mold</option>
-                                                    <option value="Others">Others (specify)</option>
-                                                </select>
-                                                <input type="text" id="allergenOtherInput" placeholder="Specify Allergen"
-                                                    style="display:none;margin-top:0.3em;width:100%;padding:0.5em;border:1px solid #ccc;border-radius:5px;" />
-                                            </div>
-                                            <!-- Reaction Dropdown -->
-                                            <div style="flex:1;min-width:150px;">
-                                                <select name="reaction_dropdown" id="reactionSelect" required
-                                                    onchange="toggleOtherInput(this, 'reactionOtherInput')"
-                                                    style="width:100%;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                                    <option value="">Select Reaction</option>
-                                                    <option value="Rash">Rash</option>
-                                                    <option value="Anaphylaxis">Anaphylaxis</option>
-                                                    <option value="Swelling">Swelling</option>
-                                                    <option value="Hives">Hives</option>
-                                                    <option value="Itching">Itching</option>
-                                                    <option value="Shortness of Breath">Shortness of Breath</option>
-                                                    <option value="Vomiting">Vomiting</option>
-                                                    <option value="Others">Others (specify)</option>
-                                                </select>
-                                                <input type="text" id="reactionOtherInput" placeholder="Specify Reaction"
-                                                    style="display:none;margin-top:0.3em;width:100%;padding:0.5em;border:1px solid #ccc;border-radius:5px;" />
-                                            </div>
-                                            <!-- Severity Dropdown -->
-                                            <div style="flex:1;min-width:120px;">
-                                                <select name="severity" required
-                                                    style="width:100%;padding:0.5em;border:1px solid #ccc;border-radius:5px;">
-                                                    <option value="">Select Severity</option>
-                                                    <option value="Mild">Mild</option>
-                                                    <option value="Moderate">Moderate</option>
-                                                    <option value="Severe">Severe</option>
-                                                </select>
-                                            </div>
-                                            <input type="hidden" name="allergen" id="allergenFinal" />
-                                            <input type="hidden" name="reaction" id="reactionFinal" />
-                                            <input type="hidden" name="patient_id" value="<?= $patient_id ?>">
-                                            <button type="submit"
-                                                style="background:#27ae60;color:#fff;border:none;padding:0.5em 1.2em;border-radius:5px;cursor:pointer;font-weight:600;">Add</button>
-                                        </div>
-                                        <script>
-                                            function toggleOtherInput(selectElem, inputId) {
-                                                var input = document.getElementById(inputId);
-                                                if (selectElem.value === 'Others') {
-                                                    input.style.display = 'block';
-                                                    input.required = true;
-                                                } else {
-                                                    input.style.display = 'none';
-                                                    input.required = false;
-                                                }
-                                            }
-                                            // On submit, set hidden allergen and reaction fields to the correct value
-                                            var allergyForm = document.currentScript.parentElement.parentElement;
-                                            allergyForm.onsubmit = function(e) {
-                                                var allergenSel = document.getElementById('allergenSelect');
-                                                var allergenOther = document.getElementById('allergenOtherInput');
-                                                var allergenFinal = document.getElementById('allergenFinal');
-                                                allergenFinal.value = (allergenSel.value === 'Others') ? allergenOther.value : allergenSel.value;
-                                                var reactionSel = document.getElementById('reactionSelect');
-                                                var reactionOther = document.getElementById('reactionOtherInput');
-                                                var reactionFinal = document.getElementById('reactionFinal');
-                                                reactionFinal.value = (reactionSel.value === 'Others') ? reactionOther.value : reactionSel.value;
-                                                // Prevent submit if required fields are empty
-                                                if (!allergenFinal.value || !reactionFinal.value) {
-                                                    alert('Please fill out all required fields.');
-                                                    return false;
-                                                }
-                                                return true;
-                                            }
-                                        </script>
-                                    </form>
-                                </div>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="3" style="text-align:center;color:#888;">No records found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         <!-- Current Medications -->
@@ -880,64 +613,68 @@ if (isset($_GET['logout'])) {
                             <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <h4>Current Medications</h4>
                             </div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Medication</th>
-                                        <th>Dosage</th>
-                                        <th>Frequency</th>
-                                        <th>Prescribed By</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($medical_history['current_medications'])): ?>
-                                        <?php foreach (array_slice($medical_history['current_medications'], 0, 2) as $med): ?>
-                                            <tr>
-                                           <td><?= htmlspecialchars($med['medication'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($med['dosage'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($med['frequency'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($med['prescribed_by'] ?? '') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
+                            <div class="scroll-table">
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td colspan="4" style="text-align:center;color:#888;">No records found.</td>
+                                            <th>Medication</th>
+                                            <th>Dosage</th>
+                                            <th>Frequency</th>
+                                            <th>Prescribed By</th>
                                         </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($medical_history['current_medications'])): ?>
+                                            <?php foreach (array_slice($medical_history['current_medications'], 0, count(value: $medical_history['current_medications'])) as $med): ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars($med['medication'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($med['dosage'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($med['frequency'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($med['prescribed_by'] ?? '') ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="4" style="text-align:center;color:#888;">No records found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         <!-- Immunizations -->
                         <div class="medical-card">
                             <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <h4>Immunizations</h4>
                             </div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Vaccine</th>
-                                        <th>Year Received</th>
-                                        <th>Doses Completed</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($medical_history['immunizations'])): ?>
-                                        <?php foreach (array_slice($medical_history['immunizations'], 0, 2) as $imm): ?>
-                                            <tr>
-                                           <td><?= htmlspecialchars($imm['vaccine'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($imm['year_received'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($imm['doses_completed'] ?? '') ?></td>
-                                           <td><?= htmlspecialchars($imm['status'] ?? '') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
+                            <div class="scroll-table">
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td colspan="4" style="text-align:center;color:#888;">No records found.</td>
+                                            <th>Vaccine</th>
+                                            <th>Year Received</th>
+                                            <th>Doses Completed</th>
+                                            <th>Status</th>
                                         </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($medical_history['immunizations'])): ?>
+                                            <?php foreach (array_slice($medical_history['immunizations'], 0, count(value: $medical_history['immunizations'])) as $imm): ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars($imm['vaccine'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($imm['year_received'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($imm['doses_completed'] ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($imm['status'] ?? '') ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="4" style="text-align:center;color:#888;">No records found.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

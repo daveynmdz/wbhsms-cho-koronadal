@@ -321,14 +321,29 @@ html {
     color: #1a1a2e;
 }
 
-.medical-card table {
+.scroll-table {
+    max-height: 160px;
+    /* Adjust as needed */
+    overflow-y: auto;
+    position: relative;
+}
+
+.scroll-table table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.88rem;
 }
 
-.medical-card th,
-.medical-card td {
+.scroll-table thead th {
+    position: sticky;
+    top: 0;
+    background: #ddd;
+    /* Or your header color */
+    z-index: 2;
+}
+
+.scroll-table th,
+.scroll-table td {
     padding: 0.5rem;
     text-align: left;
     border: 1px solid #ddd;
