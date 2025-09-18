@@ -70,6 +70,17 @@ try {
     // table might not exist yet; ignore
 }
 
+// Fetch latest vitals for this patient
+$latest_vitals = null;
+try {
+    $stmt = $pdo->prepare("SELECT * FROM vitals WHERE patient_id = ? ORDER BY date_recorded DESC LIMIT 1");
+    $stmt->execute([$patient_id]);
+    $latest_vitals = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // table might not exist yet; ignore
+}
+
+
 // Notifications (latest 5)
 try {
     $stmt = $pdo->prepare('SELECT date, description, status FROM notifications WHERE patient_id = ? ORDER BY date DESC LIMIT 5');
@@ -118,6 +129,7 @@ try {
             /* if your sidebar uses fixed width */
             padding: 1.25rem;
         }
+
         .content-wrapper h1 {
             font-size: 1.75rem;
             font-weight: 600;
@@ -127,6 +139,7 @@ try {
             .content-wrapper {
                 margin-left: 0;
             }
+
             .content-wrapper h1 {
                 font-size: 1.25rem;
                 text-align: center;
@@ -238,7 +251,7 @@ try {
                     <h3>View Medical Record</h3>
                     <p>See your complete medical history.</p>
                 </a>
-                <a href="../../pages/patient/patient_feedback.php" class="card-button red-card"  style="background: linear-gradient(135deg, #ffd6e0, #f2301eff); color: white;">
+                <a href="../../pages/patient/patient_feedback.php" class="card-button red-card" style="background: linear-gradient(135deg, #ffd6e0, #f2301eff); color: white;">
                     <i class="fas fa-comment-dots icon"></i>
                     <h3>Patient Feedback</h3>
                     <p>Share your experience and suggestions.</p>
@@ -247,6 +260,7 @@ try {
         </div>
 
         <div class="info-layout">
+            <!--Latest Appointment and Vitals-->
             <div class="left-column">
                 <div class="card-section latest-appointment collapsible">
                     <div class="section-header">
@@ -257,41 +271,42 @@ try {
                     </div>
                     <div class="appointment-layout">
                         <div class="appointment-details">
-                            <div class="detail-box">
+                            <div class="detail-box" style="flex:1;margin-bottom:10px;">
                                 <span class="label">Date:</span>
                                 <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['date']); ?></span>
                             </div>
-                            <div class="detail-box">
+                            <div class="detail-box" style="flex:1;margin-bottom:10px;">
                                 <span class="label">Chief Complaint:</span>
                                 <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['complaint']); ?></span>
                             </div>
-                            <div class="detail-box">
+                            <div class="detail-box" style="flex:1;margin-bottom:10px;">
                                 <span class="label">Diagnosis:</span>
                                 <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['diagnosis']); ?></span>
                             </div>
-                            <div class="detail-box">
+                            <div class="detail-box" style="flex:1;margin-bottom:10px;">
                                 <span class="label">Treatment:</span>
                                 <span class="value"><?php echo htmlspecialchars($defaults['latest_appointment']['treatment']); ?></span>
                             </div>
                         </div>
                         <div class="appointment-vitals">
-                            <?php
-                            // Fetch latest vitals for this patient
-                            $latest_vitals = null;
-                            $stmt = $pdo->prepare("SELECT * FROM vitals WHERE patient_id = ? ORDER BY recorded_at DESC LIMIT 1");
-                            $stmt->execute([$patient_id]);
-                            $latest_vitals = $stmt->fetch(PDO::FETCH_ASSOC);
-                            ?>
+                            <?php if ($latest_vitals && !empty($latest_vitals['date_recorded'])): ?>
+                                <div style="margin:0.5rem 0; font-size:0.95em; color:#555; font-style:italic;">
+                                    <span>Recorded on <?= htmlspecialchars(date('F d, Y', strtotime($latest_vitals['date_recorded']))) ?></span>
+                                </div>
+                            <?php endif; ?>
                             <div class="vital-box"><i class="fas fa-ruler-vertical"></i> <strong>Height:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['ht'] ?? '-') . ' cm' : '-' ?></div>
                             <div class="vital-box"><i class="fas fa-weight"></i> <strong>Weight:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['wt'] ?? '-') . ' kg' : '-' ?></div>
                             <div class="vital-box"><i class="fas fa-tachometer-alt"></i> <strong>Blood Pressure:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['bp'] ?? '-') : '-' ?></div>
                             <div class="vital-box"><i class="fas fa-heartbeat"></i> <strong>Cardiac Rate:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['hr'] ?? '-') . ' bpm' : '-' ?></div>
                             <div class="vital-box"><i class="fas fa-thermometer-half"></i> <strong>Temperature:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['temp'] ?? '-') . ' °C' : '-' ?></div>
                             <div class="vital-box"><i class="fas fa-lungs"></i> <strong>Respiratory Rate:</strong> <?= $latest_vitals ? htmlspecialchars($latest_vitals['rr'] ?? '-') . ' bpm' : '-' ?></div>
-                        </div>  
+
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!--Notifications and Activity Log-->
             <div class="right-column">
                 <div class="card-section notification-card">
                     <div class="section-header">
@@ -343,6 +358,7 @@ try {
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </section>
 </body>

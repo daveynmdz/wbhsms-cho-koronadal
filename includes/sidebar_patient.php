@@ -103,7 +103,7 @@ if (($needsName || $needsNo) && $patient_id) {
     <a href="../patient/profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
-            <div class="user-info">
+            <div class="user-info" style="display: flex; align-items: center; padding: 10px 12px; border-radius: 8px; gap: 10px; color: #03045e;">
                 <img class="profile-photo"
                     src="<?= $patient_id
                                 ? '../../vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)

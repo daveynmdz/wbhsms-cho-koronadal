@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 require_once '../../config/db.php';
 $patient_id = $_SESSION['patient_id'];
@@ -69,7 +73,7 @@ $patient = [
 // Fetch latest vitals for this patient
 $latest_vitals = null;
 if (!empty($patient['patient_id'])) {
-    $stmt = $pdo->prepare("SELECT * FROM vitals WHERE patient_id = ? ORDER BY recorded_at DESC LIMIT 1");
+    $stmt = $pdo->prepare("SELECT * FROM vitals WHERE patient_id = ? ORDER BY date_recorded DESC LIMIT 1");
     $stmt->execute([$patient['patient_id']]);
     $latest_vitals = $stmt->fetch(PDO::FETCH_ASSOC);
 }
@@ -356,8 +360,8 @@ if (isset($_GET['logout'])) {
                         <h2>Latest Vitals</h2>
                         <small><i>
                                 <?php
-                                if ($latest_vitals && !empty($latest_vitals['recorded_at'])) {
-                                    echo "as of " . date("F d, Y h:i A", strtotime($latest_vitals['recorded_at']));
+                                if ($latest_vitals && !empty($latest_vitals['date_recorded'])) {
+                                    echo "as of " . date("F d, Y h:i A", strtotime($latest_vitals['date_recorded']));
                                 } else {
                                     echo "No vitals recorded.";
                                 }
