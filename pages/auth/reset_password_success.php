@@ -167,7 +167,9 @@ if (isset($_SESSION['flash'])) {
 <body>
     <header>
         <div class="logo-container">
-            <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128" alt="CHO Koronadal Logo" />
+            <a href="../../index.php" tabindex="0">
+                <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128" alt="CHO Koronadal Logo" />
+            </a>
         </div>
     </header>
 

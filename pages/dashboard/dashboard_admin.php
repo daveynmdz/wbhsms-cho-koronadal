@@ -202,150 +202,360 @@ try {
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/sidebar.css">
     <style>
-        /* Optional: small layout wrapper for content next to sidebar */
-        .content-wrapper {
-            display: block;
-            margin-left: var(--sidebar-width, 260px);
-            /* if your sidebar uses fixed width */
-            padding: 1.25rem;
+        :root {
+            --primary: #007bff;
+            --primary-dark: #0056b3;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --info: #17a2b8;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --white: #ffffff;
+            --border: #dee2e6;
+            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            --border-radius: 0.5rem;
+            --border-radius-lg: 1rem;
+            --transition: all 0.3s ease;
         }
 
-        .content-wrapper h1 {
-            font-size: 1.75rem;
-            font-weight: 600;
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .content-wrapper {
+            margin-left: var(--sidebar-width, 260px);
+            padding: 2rem;
+            min-height: 100vh;
+            transition: var(--transition);
         }
 
         @media (max-width: 960px) {
             .content-wrapper {
                 margin-left: 0;
-            }
-
-            .content-wrapper h1 {
-                font-size: 1.25rem;
-                text-align: center;
+                padding: 1rem;
             }
         }
 
-        .page-title {
-            margin: 0 0 1rem;
+        /* Welcome Header */
+        .welcome-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius-lg);
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
         }
 
-        /* Admin-specific styles */
-        .admin-stats-grid {
+        .welcome-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .welcome-header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+            line-height: 1.2;
+        }
+
+        .welcome-header .subtitle {
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .welcome-header h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* Statistics Grid */
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
             padding: 1.5rem;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
         }
 
-        .stat-card.patients {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--card-color, var(--primary));
         }
 
-        .stat-card.appointments {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        .stat-card.patients { --card-color: #667eea; }
+        .stat-card.appointments { --card-color: #f093fb; }
+        .stat-card.lab { --card-color: #4facfe; }
+        .stat-card.employees { --card-color: #43e97b; }
+        .stat-card.revenue { --card-color: #fa709a; }
+        .stat-card.queue { --card-color: #a8edea; }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
         }
 
-        .stat-card.lab {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
-        .stat-card.employees {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-
-        .stat-card.revenue {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        }
-
-        .stat-card.queue {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        .stat-icon {
+            font-size: 2rem;
+            color: var(--card-color, var(--primary));
+            opacity: 0.8;
         }
 
         .stat-number {
             font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
         }
 
         .stat-label {
             font-size: 0.9rem;
-            opacity: 0.9;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
         }
 
-        .stat-icon {
+        /* Quick Actions */
+        .section-title {
             font-size: 1.5rem;
-            margin-bottom: 1rem;
-            opacity: 0.8;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .admin-actions {
+        .action-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
         .action-card {
-            background: white;
-            border-radius: 12px;
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
             padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
             text-decoration: none;
             color: inherit;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--card-color, var(--primary));
+            transition: var(--transition);
         }
 
         .action-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
             text-decoration: none;
-            color: inherit;
         }
 
-        .action-icon {
-            font-size: 2rem;
+        .action-card:hover::before {
+            width: 8px;
+        }
+
+        .action-card.blue { --card-color: #007bff; }
+        .action-card.purple { --card-color: #6f42c1; }
+        .action-card.orange { --card-color: #fd7e14; }
+        .action-card.teal { --card-color: #20c997; }
+        .action-card.green { --card-color: #28a745; }
+        .action-card.red { --card-color: #dc3545; }
+
+        .action-card .icon {
+            font-size: 2.5rem;
+            color: var(--card-color, var(--primary));
             margin-bottom: 1rem;
-            color: #667eea;
+            display: block;
         }
 
-        .action-title {
-            font-size: 1.1rem;
+        .action-card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.25rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            color: var(--dark);
         }
 
-        .action-description {
+        .action-card p {
+            margin: 0;
+            color: var(--secondary);
             font-size: 0.9rem;
-            color: #666;
         }
 
+        /* Info Layout */
+        .info-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .info-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Sections */
+        .card-section {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .view-more-btn {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .view-more-btn:hover {
+            color: var(--primary-dark);
+            text-decoration: none;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border);
+        }
+
+        .notification-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .notification-table th,
+        .notification-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .notification-table th {
+            background: var(--light);
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .notification-table td {
+            color: var(--secondary);
+        }
+
+        /* Activity Log */
+        .activity-log {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .activity-log li {
+            padding: 0.75rem;
+            border-left: 3px solid var(--primary);
+            background: var(--light);
+            margin-bottom: 0.5rem;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            font-size: 0.9rem;
+            color: var(--secondary);
+        }
+
+        /* Status Badges */
         .alert-badge {
             display: inline-block;
             padding: 0.25rem 0.5rem;
-            border-radius: 12px;
+            border-radius: 1rem;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 500;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .alert-success {
-            background: #d4edda;
-            color: #155724;
+            background: #d1ecf1;
+            color: #0c5460;
         }
 
         .alert-warning {
@@ -364,16 +574,53 @@ try {
         }
 
         .priority-high {
-            color: #dc3545;
+            color: var(--danger);
             font-weight: 600;
         }
 
         .priority-normal {
-            color: #28a745;
+            color: var(--success);
         }
 
         .priority-low {
-            color: #6c757d;
+            color: var(--secondary);
+        }
+
+        /* Empty States */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* System Status */
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -387,117 +634,152 @@ try {
     ?>
 
     <section class="content-wrapper">
-        <h1 style="margin-top:50px;margin-bottom:2rem;">Welcome to the Admin Dashboard, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
-        <p style="margin-bottom:2rem;color:#666;">Role: <strong><?php echo htmlspecialchars($defaults['role']); ?></strong> | Employee ID: <strong><?php echo htmlspecialchars($defaults['employee_number']); ?></strong></p>
+        <!-- Welcome Header -->
+        <div class="welcome-header">
+            <h1>Welcome back, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
+            <p class="subtitle">
+                Admin Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> 
+                • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?>
+            </p>
+        </div>
 
         <!-- Statistics Overview -->
-        <div class="admin-stats-grid">
+        <h2 class="section-title">
+            <i class="fas fa-chart-line"></i>
+            System Overview
+        </h2>
+        <div class="stats-grid">
             <div class="stat-card patients">
-                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['total_patients']); ?></div>
                 <div class="stat-label">Total Patients</div>
             </div>
             <div class="stat-card appointments">
-                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['today_appointments']); ?></div>
                 <div class="stat-label">Today's Appointments</div>
             </div>
             <div class="stat-card lab">
-                <div class="stat-icon"><i class="fas fa-vials"></i></div>
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="fas fa-vials"></i></div>
+                </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['pending_lab_results']); ?></div>
                 <div class="stat-label">Pending Lab Results</div>
             </div>
             <div class="stat-card employees">
-                <div class="stat-icon"><i class="fas fa-user-tie"></i></div>
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="fas fa-user-tie"></i></div>
+                </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['total_employees']); ?></div>
                 <div class="stat-label">Total Employees</div>
             </div>
             <div class="stat-card revenue">
-                <div class="stat-icon"><i class="fas fa-peso-sign"></i></div>
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="fas fa-peso-sign"></i></div>
+                </div>
                 <div class="stat-number">₱<?php echo number_format($defaults['stats']['monthly_revenue'], 2); ?></div>
                 <div class="stat-label">Monthly Revenue</div>
             </div>
             <div class="stat-card queue">
-                <div class="stat-icon"><i class="fas fa-list-ol"></i></div>
+                <div class="stat-header">
+                    <div class="stat-icon"><i class="fas fa-list-ol"></i></div>
+                </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['queue_count']); ?></div>
                 <div class="stat-label">Patients in Queue</div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="card-container" style="margin-bottom: 2rem;">
-            <h2>Quick Actions</h2>
-            <div class="admin-actions">
-                <a href="../patient/patient_management.php" class="action-card">
-                    <div class="action-icon"><i class="fas fa-users"></i></div>
-                    <div class="action-title">Manage Patients</div>
-                    <div class="action-description">Add, edit, or view patient records</div>
-                </a>
-                <a href="../management/admin/appointments_management.php" class="action-card">
-                    <div class="action-icon"><i class="fas fa-calendar-check"></i></div>
-                    <div class="action-title">Schedule Appointments</div>
-                    <div class="action-description">Manage patient appointments and schedules</div>
-                </a>
-                <a href="../user/employee_management.php" class="action-card">
-                    <div class="action-icon"><i class="fas fa-user-tie"></i></div>
-                    <div class="action-title">Manage Staff</div>
-                    <div class="action-description">Add, edit, or manage employee accounts</div>
-                </a>
-                <a href="../reports/reports.php" class="action-card">
-                    <div class="action-icon"><i class="fas fa-chart-bar"></i></div>
-                    <div class="action-title">Generate Reports</div>
-                    <div class="action-description">View analytics and generate reports</div>
-                </a>
-                <a href="../queueing/queue_management.php" class="action-card">
-                    <div class="action-icon"><i class="fas fa-list-ol"></i></div>
-                    <div class="action-title">Manage Queue</div>
-                    <div class="action-description">Control patient flow and queue system</div>
-                </a>
-                <a href="../billing/billing_management.php" class="action-card">
-                    <div class="action-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-                    <div class="action-title">Billing Management</div>
-                    <div class="action-description">Process payments and manage billing</div>
-                </a>
-            </div>
+        <h2 class="section-title">
+            <i class="fas fa-bolt"></i>
+            Quick Actions
+        </h2>
+        <div class="action-grid">
+            <a href="../patient/patient_management.php" class="action-card blue">
+                <i class="fas fa-users icon"></i>
+                <h3>Manage Patients</h3>
+                <p>Add, edit, or view patient records and information</p>
+            </a>
+            <a href="../management/admin/appointments_management.php" class="action-card purple">
+                <i class="fas fa-calendar-check icon"></i>
+                <h3>Schedule Appointments</h3>
+                <p>Manage patient appointments and doctor schedules</p>
+            </a>
+            <a href="../user/employee_management.php" class="action-card orange">
+                <i class="fas fa-user-tie icon"></i>
+                <h3>Manage Staff</h3>
+                <p>Add, edit, or manage employee accounts and roles</p>
+            </a>
+            <a href="../reports/reports.php" class="action-card teal">
+                <i class="fas fa-chart-bar icon"></i>
+                <h3>Generate Reports</h3>
+                <p>View analytics and generate comprehensive reports</p>
+            </a>
+            <a href="../queueing/queue_management.php" class="action-card green">
+                <i class="fas fa-list-ol icon"></i>
+                <h3>Manage Queue</h3>
+                <p>Control patient flow and queue management system</p>
+            </a>
+            <a href="../billing/billing_management.php" class="action-card red">
+                <i class="fas fa-file-invoice-dollar icon"></i>
+                <h3>Billing Management</h3>
+                <p>Process payments and manage billing operations</p>
+            </a>
         </div>
 
+        <!-- Info Layout -->
         <div class="info-layout">
-            <!-- Recent Activities and Pending Tasks -->
+            <!-- Left Column -->
             <div class="left-column">
-                <div class="card-section latest-appointment collapsible">
+                <!-- Recent Activities -->
+                <div class="card-section">
                     <div class="section-header">
-                        <h3>Recent Activities</h3>
+                        <h3><i class="fas fa-history"></i> Recent Activities</h3>
                         <a href="../reports/activity_log.php" class="view-more-btn">
-                            <i class="fas fa-chevron-right"></i> View More
+                            <i class="fas fa-chevron-right"></i> View All
                         </a>
                     </div>
-                    <div class="scroll-wrapper">
-                        <div class="scroll-log">
+                    
+                    <?php if (!empty($defaults['recent_activities'])): ?>
+                        <div class="table-wrapper">
                             <ul class="activity-log">
                                 <?php foreach ($defaults['recent_activities'] as $activity): ?>
-                                    <li><?php echo htmlspecialchars($activity['date']); ?> - <?php echo htmlspecialchars($activity['activity']); ?></li>
+                                    <li>
+                                        <strong><?php echo htmlspecialchars($activity['date']); ?></strong><br>
+                                        <?php echo htmlspecialchars($activity['activity']); ?>
+                                    </li>
                                 <?php endforeach; ?>
                             </ul>
                         </div>
-                        <div class="fade-bottom"></div>
-                    </div>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <p>No recent activities to display</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
-                <div class="card-section activity-log-card">
+                <!-- Pending Tasks -->
+                <div class="card-section">
                     <div class="section-header">
-                        <h3>Pending Tasks</h3>
+                        <h3><i class="fas fa-tasks"></i> Pending Tasks</h3>
                         <a href="../user/admin_tasks.php" class="view-more-btn">
-                            <i class="fas fa-chevron-right"></i> View More
+                            <i class="fas fa-chevron-right"></i> View All
                         </a>
                     </div>
-                    <div class="scroll-wrapper">
-                        <div class="scroll-table">
+                    
+                    <?php if (!empty($defaults['pending_tasks'])): ?>
+                        <div class="table-wrapper">
                             <table class="notification-table">
                                 <thead>
                                     <tr>
-                                        <th scope="col">Task</th>
-                                        <th scope="col">Priority</th>
-                                        <th scope="col">Due Date</th>
+                                        <th>Task</th>
+                                        <th>Priority</th>
+                                        <th>Due Date</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -511,28 +793,34 @@ try {
                                 </tbody>
                             </table>
                         </div>
-                        <div class="fade-bottom"></div>
-                    </div>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle"></i>
+                            <p>No pending tasks</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
-            <!-- System Alerts and System Status -->
+            <!-- Right Column -->
             <div class="right-column">
-                <div class="card-section notification-card">
+                <!-- System Alerts -->
+                <div class="card-section">
                     <div class="section-header">
-                        <h3>System Alerts</h3>
+                        <h3><i class="fas fa-exclamation-triangle"></i> System Alerts</h3>
                         <a href="../notifications/system_alerts.php" class="view-more-btn">
-                            <i class="fas fa-chevron-right"></i> View More
+                            <i class="fas fa-chevron-right"></i> View All
                         </a>
                     </div>
-                    <div class="scroll-wrapper">
-                        <div class="scroll-table">
+                    
+                    <?php if (!empty($defaults['system_alerts'])): ?>
+                        <div class="table-wrapper">
                             <table class="notification-table">
                                 <thead>
                                     <tr>
-                                        <th scope="col">Date</th>
-                                        <th scope="col">Message</th>
-                                        <th scope="col">Type</th>
+                                        <th>Date</th>
+                                        <th>Message</th>
+                                        <th>Type</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -546,27 +834,39 @@ try {
                                 </tbody>
                             </table>
                         </div>
-                        <div class="fade-bottom"></div>
-                    </div>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <i class="fas fa-shield-alt"></i>
+                            <p>No system alerts</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
-                <div class="card-section activity-log-card">
+                <!-- System Status -->
+                <div class="card-section">
                     <div class="section-header">
-                        <h3>System Status</h3>
+                        <h3><i class="fas fa-server"></i> System Status</h3>
                     </div>
-                    <div style="padding: 1rem;">
-                        <div style="margin-bottom: 1rem;">
-                            <strong>Database:</strong> <span class="alert-badge alert-success">Connected</span>
-                        </div>
-                        <div style="margin-bottom: 1rem;">
-                            <strong>Server Status:</strong> <span class="alert-badge alert-success">Online</span>
-                        </div>
-                        <div style="margin-bottom: 1rem;">
-                            <strong>Last Backup:</strong> <span><?php echo date('M d, Y H:i'); ?></span>
-                        </div>
-                        <div>
-                            <strong>System Version:</strong> <span>v1.0.0</span>
-                        </div>
+                    
+                    <div class="status-item">
+                        <strong>Database Connection</strong>
+                        <span class="alert-badge alert-success">Connected</span>
+                    </div>
+                    <div class="status-item">
+                        <strong>Server Status</strong>
+                        <span class="alert-badge alert-success">Online</span>
+                    </div>
+                    <div class="status-item">
+                        <strong>Last Backup</strong>
+                        <span><?php echo date('M d, Y H:i'); ?></span>
+                    </div>
+                    <div class="status-item">
+                        <strong>System Version</strong>
+                        <span>CHO Koronadal v1.0.0</span>
+                    </div>
+                    <div class="status-item">
+                        <strong>Uptime</strong>
+                        <span class="alert-badge alert-success">Running</span>
                     </div>
                 </div>
             </div>

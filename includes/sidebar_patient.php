@@ -26,9 +26,9 @@ if (($needsName || $needsNo) && $patient_id) {
 
     if (isset($pdo)) {
         $stmt = $pdo->prepare("
-            SELECT id, first_name, middle_name, last_name, suffix, username
+            SELECT patient_id as id, first_name, middle_name, last_name, suffix, username
             FROM patients
-            WHERE id = ?
+            WHERE patient_id = ?
             LIMIT 1
         ");
         $stmt->execute([$patient_id]);

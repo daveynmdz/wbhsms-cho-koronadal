@@ -94,8 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('Service temporarily unavailable. Please try again later.');
         }
 
-        // Query patient
-        $stmt = $pdo->prepare('SELECT id, username, password, status FROM patients WHERE username = ? LIMIT 1');
+        // Query patient - using correct column names from database
+        $stmt = $pdo->prepare('SELECT patient_id as id, username, password_hash as password, status FROM patients WHERE username = ? LIMIT 1');
         $stmt->execute([$patient_number]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         

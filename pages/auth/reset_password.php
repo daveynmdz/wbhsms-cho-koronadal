@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         // Update patients.password in the database (adjust column/table if needed)
-        $stmt = $pdo->prepare('UPDATE patients SET password = ? WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE patients SET password_hash = ? WHERE patient_id = ?');
         $stmt->execute([$hash, $userId]);
 
         // If the password is updated, clean up session and set flash message
@@ -312,7 +312,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <header>
         <div class="logo-container">
-            <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128" alt="CHO Koronadal Logo" />
+            <a href="../../index.php" tabindex="0">
+                <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128" alt="CHO Koronadal Logo" />
+            </a>
         </div>
     </header>
 
@@ -366,7 +368,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const backBtn = document.getElementById('backBtn');
 
         backBtn.addEventListener('click', () => {
-            window.location.href = 'patient_login.php';
+            window.location.href = 'forgot_password_otp.php';
         });
 
         // Password visibility toggle

@@ -16,7 +16,7 @@ require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-const OTP_PAGE = '/pages/auth/forgot_password_otp.php?reset=1';
+const OTP_PAGE = 'forgot_password_otp.php?reset=1';
 
 /** Helpers */
 function generateOTP(int $length = 6): string
@@ -36,57 +36,34 @@ $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        // 1) Read & validate
-        $identifier = isset($_POST['identifier']) ? trim((string)$_POST['identifier']) : '';
-        if ($identifier === '') {
-            throw new RuntimeException('Please enter your Patient ID (e.g., P123456) or your registered email.');
+        // 1) Read & validate three required fields
+        $username = isset($_POST['username']) ? trim((string)$_POST['username']) : '';
+        $lastName = isset($_POST['last_name']) ? trim((string)$_POST['last_name']) : '';
+        $email = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
+        
+        if ($username === '' || $lastName === '' || $email === '') {
+            throw new RuntimeException('Please fill in all required fields: Username/Patient ID, Last Name, and Email.');
         }
-        $isPid   = isPatientId($identifier);
-        $isEmail = isEmail($identifier);
-        if (!$isPid && !$isEmail) {
-            throw new RuntimeException('Invalid format. Enter Patient ID like P123456, or a valid email address.');
+        
+        if (!isEmail($email)) {
+            throw new RuntimeException('Please enter a valid email address.');
         }
 
-        // 2) Lookup (make sure $pdo exists in db.php)
-        if ($isPid) {
-            // Case-insensitive compare for username/patient id
-            error_log('[forgot_password] Searching by PID: ' . $identifier);
-            $stmt = $pdo->prepare("
-                SELECT id, email, first_name, last_name
-                FROM patients
-                WHERE UPPER(TRIM(username)) = UPPER(TRIM(?))
-                LIMIT 1
-            ");
-            $stmt->execute([$identifier]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        } else {
-            // Case-insensitive compare for email (primary)
-            error_log('[forgot_password] Searching by EMAIL: ' . $identifier);
-            $stmt = $pdo->prepare("
-                SELECT id, email, first_name, last_name
-                FROM patients
-                WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))
-                LIMIT 1
-            ");
-            $stmt->execute([$identifier]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // Fallback: some rows may store the email in username
-            if (!$user) {
-                error_log('[forgot_password] No row in email column. Trying username=email fallback…');
-                $stmt = $pdo->prepare("
-                    SELECT id, email, first_name, last_name
-                    FROM patients
-                    WHERE LOWER(TRIM(username)) = LOWER(TRIM(?))
-                    LIMIT 1
-                ");
-                $stmt->execute([$identifier]);
-                $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            }
-        }
+        // 2) Three-field verification - all must match exactly
+        error_log('[forgot_password] Three-field verification for: ' . $username);
+        $stmt = $pdo->prepare("
+            SELECT patient_id as id, email, first_name, last_name
+            FROM patients
+            WHERE UPPER(TRIM(username)) = UPPER(TRIM(?))
+            AND UPPER(TRIM(last_name)) = UPPER(TRIM(?))
+            AND LOWER(TRIM(email)) = LOWER(TRIM(?))
+            LIMIT 1
+        ");
+        $stmt->execute([$username, $lastName, $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {
-            throw new RuntimeException('No matching user found.');
+            throw new RuntimeException('The information provided does not match our records. Please verify your Username/Patient ID, Last Name, and Email address, or contact the health center for assistance.');
         }
 
         // 3) Store OTP in session, then close session so next page can read it
@@ -99,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // ✅ Flash message for next page
         $_SESSION['flash'] = [
             'type' => 'success',
-            'msg'  => 'OTP sent to ' . $user['email'] . '. Check your inbox (or spam) and enter the code below.'
+            'msg'  => 'Identity verified! OTP sent to ' . $user['email'] . '. Check your inbox (or spam) and enter the code below.'
         ];
 
         session_write_close(); // important
@@ -353,42 +330,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <header>
         <div class="logo-container">
-            <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128"
-                alt="CHO Koronadal Logo" />
+            <a href="../../index.php" tabindex="0">
+                <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128"
+                    alt="CHO Koronadal Logo" />
+            </a>
         </div>
     </header>
 
     <section class="homepage" style="min-height:100vh; display:grid; place-items:start center; padding:160px 16px 40px;">
-        <div class="registration-box" style="max-width:400px; width:100%;">
+        <div class="registration-box" style="max-width:420px; width:100%;">
             <h2 style="margin:0 0 20px 0;">Forgot Password</h2>
 
             <div id="error-message" class="error" <?= $error ? '' : 'hidden' ?>>
                 <?= htmlspecialchars($error ?? '', ENT_QUOTES, 'UTF-8') ?>
             </div>
 
-            <!-- NORMAL POST submit (no JS fetch) -->
+            <!-- Three-field verification form -->
             <form id="forgotForm"
                 method="POST"
-                action="/pages/auth/forgot_password.php"
+                action="forgot_password.php"
                 autocomplete="off" novalidate>
 
-                <label for="identifier">Enter your Patient ID or Email Address</label>
-                <input type="text" id="identifier" name="identifier" class="input-field" required
-                    placeholder="Patient ID (e.g., P123456) or your email" />
+                <label for="username">Username / Patient ID</label>
+                <input type="text" id="username" name="username" class="input-field" required
+                    placeholder="Enter your username or Patient ID (e.g., P123456)" />
+
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" class="input-field" required
+                    placeholder="Enter your last name exactly as registered" />
+
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" class="input-field" required
+                    placeholder="Enter your registered email address" />
 
                 <div class="reminder" style="font-size: smaller; color:#555; margin:8px 0 16px 0; text-align:justify;">
-                    <strong>Reminder:</strong>
-                    <i>Please type your registered email or your respective Patient ID (e.g. <b>P000001</b>).
-                        If you forgot your email or Patient ID, please contact your administrator or your local health worker for assistance.</i>
+                    <strong>🔐 Security Verification:</strong>
+                    <i>All three fields must match your registration information exactly. This ensures we're sending the password reset to the correct person, even if multiple people share the same email address.</i>
                 </div>
 
                 <div class="form-footer" style="text-align:center; margin-top:18px;">
-                    <a href="/pages/auth/patient_login.php"
+                    <a href="patient_login.php"
                         class="btn" style="background:#eee; color:#333; padding:8px 24px; border-radius:10px; text-decoration:none; display:inline-block; margin-right:8px;">
                         Back to Login
                     </a>
                     <button id="submitBtn" type="submit" class="btn" style="padding:8px 24px; border-radius:10px;">
-                        Send OTP
+                        Verify & Send OTP
                     </button>
                 </div>
             </form>
@@ -398,7 +384,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         (function() {
             const form = document.getElementById('forgotForm');
             const btn = document.getElementById('submitBtn');
+            const usernameInput = document.getElementById('username');
             if (!form || !btn) return;
+
+            // Auto-format Patient ID input
+            usernameInput.addEventListener('input', function(e) {
+                let value = e.target.value;
+                
+                // If it looks like a Patient ID, format it
+                if (/^[Pp]?\d/.test(value)) {
+                    value = value.toUpperCase().replace(/[^P0-9]/g, '');
+                    if (value.length > 0 && value[0] !== 'P') {
+                        value = 'P' + value;
+                    }
+                    if (value.length > 7) {
+                        value = value.substring(0, 7);  
+                    }
+                    e.target.value = value;
+                }
+            });
 
             form.addEventListener('submit', function() {
                 btn.disabled = true;
@@ -406,7 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // lock width to prevent jump
                 const w = btn.getBoundingClientRect().width;
                 btn.style.width = w + 'px';
-                btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Sending…';
+                btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Verifying…';
             }, {
                 once: true
             });

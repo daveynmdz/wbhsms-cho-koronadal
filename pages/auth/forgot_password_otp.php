@@ -321,7 +321,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <header>
         <div class="logo-container">
-            <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128" alt="CHO Koronadal Logo" />
+            <a href="../../index.php" tabindex="0">
+                <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128" alt="CHO Koronadal Logo" />
+            </a>
         </div>
     </header>
 
@@ -340,8 +342,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div style="text-align:center; margin-top:18px;">
                     <div style="display:flex; justify-content:center; gap:12px; margin-top:0;">
                         <button id="backBtn" type="button" class="btn secondary"
-                            style="background:#eee; color:#333;">Back to Login</button>
-                        <button id="reviewBtn" type="button" class="btn" style="background:#ffc107; color:#333;">Change Email / Patient ID</button>
+                            style="background:#eee; color:#333;">← Back</button>
+                        <button id="reviewBtn" type="button" class="btn" style="background:#ffc107; color:#333;">Change Email/ID</button>
                         <button id="submitBtn" type="submit" class="btn">Verify OTP</button>
                     </div>
                 </div>
@@ -370,7 +372,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // --- nav
             backBtn?.addEventListener('click', () => {
-                window.location.href = 'patient_login.php';
+                window.location.href = 'forgot_password.php';
             });
             reviewBtn?.addEventListener('click', () => {
                 window.location.href = 'forgot_password.php';

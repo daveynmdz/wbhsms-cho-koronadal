@@ -162,13 +162,15 @@ html {
 .info-row span:first-child {
     color: #333;
     font-weight: 500;
+    max-width: fit-content;
+    word-wrap: normal;
 }
 
 .info-row span:last-child {
     color: #555;
     text-align: right;
-    max-width: 60%;
-    word-wrap: break-word;
+    max-width: fit-content;
+    word-wrap: normal;
 }
 
 /* RIGHTSIDE */
@@ -422,4 +424,188 @@ html {
 
 .edit-btn:hover {
     background: #0056b3;
+}
+
+/* Profile Completion Card Styles */
+.completion-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 1.5em;
+    margin-bottom: 1.5em;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+}
+
+.completion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1em;
+}
+
+.completion-percentage {
+    font-size: 2em;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1em 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    border-radius: 10px;
+    transition: width 1s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.completion-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8em;
+    margin-top: 1em;
+}
+
+.suggestion-item {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.8em;
+    border-radius: 8px;
+    font-size: 0.9em;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+/* Missing Info Alert */
+.missing-info-alert {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+    padding: 1em;
+    margin: 1em 0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+}
+
+.missing-info-alert .icon {
+    color: #856404;
+    font-size: 1.2em;
+}
+
+.missing-info-alert .content {
+    flex: 1;
+}
+
+.missing-info-alert .title {
+    font-weight: 600;
+    color: #856404;
+    margin-bottom: 0.3em;
+}
+
+.missing-info-alert .description {
+    color: #664d03;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.completion-prompt {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+    border: none;
+    padding: 0.8em 1.5em;
+    border-radius: 25px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.completion-prompt:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: white;
+    text-decoration: none;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.3em 0.8em;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    max-width: fit-content;
+    word-wrap: normal;
+}
+
+/* Completion Badges */
+.completion-badge {
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-missing {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-complete {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Info row completion indicators */
+.info-row.incomplete {
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+    padding-left: 0.8em;
+}
+
+/* Mobile Responsive for Completion Cards */
+@media (max-width: 900px) {
+    .completion-row {
+        flex-direction: column !important;
+        gap: 1.2em !important;
+        align-items: stretch !important;
+    }
+
+    .completion-card,
+    .missing-info-alert {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        margin-bottom: 0.8em !important;
+    }
+
+    .completion-content {
+        flex-direction: column !important;
+        gap: 1em !important;
+    }
+
+    .completion-suggestions {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 0.6em !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
 }
