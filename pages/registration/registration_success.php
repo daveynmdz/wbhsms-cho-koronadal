@@ -1,18 +1,18 @@
 <?php
 session_start();
-require_once '../../config/db.php';
 
-// Get id and email from query string
-$id = isset($_GET['id']) ? intval($_GET['id']) : null;
-$email = isset($_GET['email']) ? $_GET['email'] : null;
-$username = null;
-if ($id && $email) {
-    $stmt = $pdo->prepare('SELECT username FROM patients WHERE id = ? AND email = ? LIMIT 1');
-    $stmt->execute([$id, $email]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($row && isset($row['username'])) {
-        $username = htmlspecialchars($row['username']);
-    }
+// Get username from session (set during OTP verification)
+$username = isset($_SESSION['registration_username']) ? htmlspecialchars($_SESSION['registration_username']) : null;
+
+// Clear the session data since registration is complete
+if (isset($_SESSION['registration_username'])) {
+    unset($_SESSION['registration_username']);
+}
+if (isset($_SESSION['registration_otp'])) {
+    unset($_SESSION['registration_otp']);
+}
+if (isset($_SESSION['registration_data'])) {
+    unset($_SESSION['registration_data']);
 }
 ?>
 

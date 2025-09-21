@@ -7,13 +7,7 @@ error_reporting(E_ALL); // log everything, just don't display in prod
 
 require_once __DIR__ . '/env.php';
 
-if (file_exists(__DIR__ . '/.env.local')) {
-    loadEnv(__DIR__ . '/.env.local');
-} elseif (file_exists(__DIR__ . '/.env')) {
-    loadEnv(__DIR__ . '/.env');
-}
-
-
+// mysqli connection for backward compatibility (some files might still use it)
 $host = $_ENV['DB_HOST'];
 $db   = $_ENV['DB_NAME'];
 $user = $_ENV['DB_USER'];
@@ -24,3 +18,5 @@ $conn = new mysqli($host, $user, $pass, $db, $port);
 if ($conn->connect_error) {
     die('Database connection failed: ' . $conn->connect_error);
 }
+
+// PDO connection is already available from env.php as $pdo

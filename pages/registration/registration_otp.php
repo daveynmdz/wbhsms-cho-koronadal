@@ -60,37 +60,79 @@ if ($isPost) {
         // Insert inside a transaction (safer if you add more steps later)
         $pdo->beginTransaction();
 
+        // First, insert the patient record without username to get the patient_id
         $sql = "INSERT INTO patients
-                (last_name, first_name, middle_name, suffix, barangay, dob, sex, contact_num, email, password)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (first_name, middle_name, last_name, suffix, barangay_id, date_of_birth, sex, contact_number, email, password_hash, isPWD, pwd_id_number, isPhilHealth, philhealth_type, philhealth_id_number, isSenior, senior_citizen_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            $regData['last_name']   ?? null,
             $regData['first_name']  ?? null,
             $regData['middle_name'] ?? null,
+            $regData['last_name']   ?? null,
             $regData['suffix']      ?? null,
-            $regData['barangay']    ?? null,
+            $regData['barangay_id'] ?? null,
             $regData['dob']         ?? null,
             $regData['sex']         ?? null,
             $regData['contact_num'] ?? null,
             $regData['email']       ?? null,
-            $hashedPassword
+            $hashedPassword,
+            $regData['isPWD']       ?? 0,
+            $regData['pwd_id_number'] ?? null,
+            $regData['isPhilHealth'] ?? 0,
+            $regData['philhealth_type'] ?? null,
+            $regData['philhealth_id_number'] ?? null,
+            $regData['isSenior']    ?? 0,
+            $regData['senior_citizen_id'] ?? null
         ]);
 
         $patientId = $pdo->lastInsertId();
 
-        // Generate username as PXXXXXX and update patient record
+        // Now generate and update the username based on the patient_id
         $generatedUsername = 'P' . str_pad($patientId, 6, '0', STR_PAD_LEFT);
-        $stmtUpdate = $pdo->prepare("UPDATE patients SET username = ? WHERE id = ?");
-        $stmtUpdate->execute([$generatedUsername, $patientId]);
+        $updateSql = "UPDATE patients SET username = ? WHERE patient_id = ?";
+        $updateStmt = $pdo->prepare($updateSql);
+        $updateResult = $updateStmt->execute([$generatedUsername, $patientId]);
+        
+        if (!$updateResult) {
+            throw new PDOException('Failed to set username for patient');
+        }
+        
+        // Verify the username was set correctly
+        $verifySql = "SELECT username FROM patients WHERE patient_id = ?";
+        $verifyStmt = $pdo->prepare($verifySql);
+        $verifyStmt->execute([$patientId]);
+        $verifyResult = $verifyStmt->fetchColumn();
+        
+        if ($verifyResult !== $generatedUsername) {
+            throw new PDOException('Username verification failed after update');
+        }
+
+        // Check if patient is a minor and has emergency contact data
+        if (!empty($regData['emergency_first_name']) && !empty($regData['emergency_last_name'])) {
+            $emergencyContactSql = "INSERT INTO emergency_contact 
+                                   (patient_id, emergency_first_name, emergency_last_name, emergency_relationship, emergency_contact_number) 
+                                   VALUES (?, ?, ?, ?, ?)";
+            $emergencyStmt = $pdo->prepare($emergencyContactSql);
+            $emergencyResult = $emergencyStmt->execute([
+                $patientId,
+                $regData['emergency_first_name'] ?? null,
+                $regData['emergency_last_name'] ?? null,
+                $regData['emergency_relationship'] ?? null,
+                $regData['emergency_contact_number'] ?? null
+            ]);
+            
+            if (!$emergencyResult) {
+                throw new PDOException('Failed to insert emergency contact information');
+            }
+        }
 
         $pdo->commit();
 
         // Cleanup OTP + registration payload
         unset($_SESSION['otp'], $_SESSION['otp_expiry'], $_SESSION['registration']);
 
-        // You can stash username in session to show on success page if you like
-        $_SESSION['registered_username'] = $generatedUsername;
+        // Store username in session to show on success page
+        $_SESSION['registration_username'] = $generatedUsername;
 
         respond($isAjax, true, [
             'message'  => 'Registration successful.',
@@ -277,6 +319,12 @@ if ($isPost) {
             <div class="otp-instructions">
                 Please enter the One-Time Password (OTP) sent to your email to complete your registration.
             </div>
+            
+            <?php if (isset($_SESSION['dev_message'])): ?>
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px; border-radius: 8px; margin: 10px 0; font-weight: bold;">
+                    <?php echo htmlspecialchars($_SESSION['dev_message'], ENT_QUOTES, 'UTF-8'); unset($_SESSION['dev_message']); ?>
+                </div>
+            <?php endif; ?>
 
             <form class="otp-form" id="otpForm" autocomplete="one-time-code" novalidate>
                 <input type="text" maxlength="6" class="otp-input" id="otp" name="otp" placeholder="Enter OTP" required

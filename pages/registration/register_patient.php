@@ -86,7 +86,23 @@ try {
         $password    = isset($_POST['password']) ? (string)$_POST['password'] : '';
         $sex         = isset($_POST['sex']) ? trim((string)$_POST['sex']) : '';
         $agree_terms = isset($_POST['agree_terms']); // checkbox
-        $email       = strtolower($email);
+        
+        // Additional information fields
+        $isPWD = isset($_POST['isPWD']) ? 1 : 0;
+        $pwd_id_number = isset($_POST['pwd_id_number']) ? trim((string)$_POST['pwd_id_number']) : '';
+        $isPhilHealth = isset($_POST['isPhilHealth']) ? 1 : 0;
+        $philhealth_type = isset($_POST['philhealth_type']) ? trim((string)$_POST['philhealth_type']) : '';
+        $philhealth_id_number = isset($_POST['philhealth_id_number']) ? trim((string)$_POST['philhealth_id_number']) : '';
+        $isSenior = isset($_POST['isSenior']) ? 1 : 0;
+        $senior_citizen_id = isset($_POST['senior_citizen_id']) ? trim((string)$_POST['senior_citizen_id']) : '';
+        
+        // Emergency contact fields (for minors)
+        $emergency_first_name = isset($_POST['emergency_first_name']) ? trim((string)$_POST['emergency_first_name']) : '';
+        $emergency_last_name = isset($_POST['emergency_last_name']) ? trim((string)$_POST['emergency_last_name']) : '';
+        $emergency_relationship = isset($_POST['emergency_relationship']) ? trim((string)$_POST['emergency_relationship']) : '';
+        $emergency_contact_number = isset($_POST['emergency_contact_number']) ? trim((string)$_POST['emergency_contact_number']) : '';
+        
+        $email = strtolower($email);
 
         // Pre-stash for repopulation on error (no passwords)
         $_SESSION['registration'] = [
@@ -99,6 +115,17 @@ try {
             'sex'         => $sex,
             'contact_num' => $contact_num, // keep as typed for UI; we store normalized later on success
             'email'       => $email,
+            'isPWD'       => $isPWD,
+            'pwd_id_number' => $pwd_id_number,
+            'isPhilHealth' => $isPhilHealth,
+            'philhealth_type' => $philhealth_type,
+            'philhealth_id_number' => $philhealth_id_number,
+            'isSenior'    => $isSenior,
+            'senior_citizen_id' => $senior_citizen_id,
+            'emergency_first_name' => $emergency_first_name,
+            'emergency_last_name' => $emergency_last_name,
+            'emergency_relationship' => $emergency_relationship,
+            'emergency_contact_number' => $emergency_contact_number
         ];
 
 
@@ -121,37 +148,20 @@ try {
             back_with_error('Please enter a valid email address.');
         }
 
-        // --- Barangay whitelist ---
-        $allowed_barangays = [
-            'Brgy. Assumption',
-            'Brgy. Avanceña',
-            'Brgy. Cacub',
-            'Brgy. Caloocan',
-            'Brgy. Carpenter Hill',
-            'Brgy. Concepcion',
-            'Brgy. Esperanza',
-            'Brgy. General Paulino Santos',
-            'Brgy. Mabini',
-            'Brgy. Magsaysay',
-            'Brgy. Mambucal',
-            'Brgy. Morales',
-            'Brgy. Namnama',
-            'Brgy. New Pangasinan',
-            'Brgy. Paraiso',
-            'Brgy. Rotonda',
-            'Brgy. San Isidro',
-            'Brgy. San Roque',
-            'Brgy. San Jose',
-            'Brgy. Sta. Cruz',
-            'Brgy. Sto. Niño',
-            'Brgy. Saravia',
-            'Brgy. Topland',
-            'Brgy. Zone 1',
-            'Brgy. Zone 2',
-            'Brgy. Zone 3',
-            'Brgy. Zone 4'
-        ];
-        if (!in_array($barangay, $allowed_barangays, true)) {
+        // --- Barangay validation - load from database ---
+        $barangay_valid = false;
+        try {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM barangay WHERE barangay_name = ? AND status = ?');
+            if ($stmt && $stmt->execute([$barangay, 'active'])) {
+                $result = $stmt->fetchColumn();
+                if ($result && (int)$result > 0) {
+                    $barangay_valid = true;
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('Barangay validation error: ' . $e->getMessage());
+        }
+        if (!$barangay_valid) {
             back_with_error('Please select a valid barangay.');
         }
 
@@ -198,12 +208,97 @@ try {
             back_with_error('Password must be at least 8 characters with uppercase, lowercase, and a number.');
         }
 
+        // --- Additional information validation ---
+        // PWD validation
+        if ($isPWD && empty($pwd_id_number)) {
+            back_with_error('PWD ID Number is required when PWD is selected.');
+        }
+
+        // PhilHealth validation
+        if ($isPhilHealth) {
+            if (empty($philhealth_type) || !in_array($philhealth_type, ['Member', 'Beneficiary'], true)) {
+                back_with_error('Valid PhilHealth membership type is required.');
+            }
+            if (empty($philhealth_id_number)) {
+                back_with_error('PhilHealth ID Number is required when PhilHealth is selected.');
+            }
+            // Validate PhilHealth ID format (12 digits)
+            $philhealth_digits = preg_replace('/\D/', '', $philhealth_id_number);
+            if (strlen($philhealth_digits) !== 12) {
+                back_with_error('PhilHealth ID must be 12 digits.');
+            }
+            $philhealth_id_number = $philhealth_digits; // Store normalized
+        }
+
+        // Senior Citizen validation
+        if ($isSenior) {
+            if (empty($senior_citizen_id)) {
+                back_with_error('Senior Citizen ID is required when Senior Citizen is selected.');
+            }
+            
+            // Validate age for senior citizen (60+)
+            $dobDate = DateTimeImmutable::createFromFormat('!Y-m-d', $dob);
+            if ($dobDate) {
+                $today = new DateTimeImmutable('today');
+                $age = $today->diff($dobDate)->y;
+                if ($age < 60) {
+                    back_with_error('You must be 60 years or older to register as a Senior Citizen.');
+                }
+            }
+        }
+
+        // Emergency contact validation for minors
+        $dobDate = DateTimeImmutable::createFromFormat('!Y-m-d', $dob);
+        if ($dobDate) {
+            $today = new DateTimeImmutable('today');
+            $age = $today->diff($dobDate)->y;
+            
+            if ($age < 18) {
+                if (empty($emergency_first_name)) {
+                    back_with_error('Guardian first name is required for patients under 18.');
+                }
+                if (empty($emergency_last_name)) {
+                    back_with_error('Guardian last name is required for patients under 18.');
+                }
+                if (empty($emergency_relationship)) {
+                    back_with_error('Guardian relationship is required for patients under 18.');
+                }
+                if (empty($emergency_contact_number)) {
+                    back_with_error('Guardian contact number is required for patients under 18.');
+                }
+                
+                // Validate emergency contact number format
+                $emergency_digits = preg_replace('/\D+/', '', $emergency_contact_number);
+                if (!preg_match('/^9\d{9}$/', $emergency_digits)) {
+                    back_with_error('Guardian contact number must be a valid PH mobile number.');
+                }
+                $emergency_contact_number = $emergency_digits; // Store normalized
+            }
+        }
+
+
+        // --- Get barangay_id from barangay name ---
+        $barangay_id = null;
+        try {
+            $stmt = $pdo->prepare('SELECT barangay_id FROM barangay WHERE barangay_name = ?');
+            if ($stmt && $stmt->execute([$barangay])) {
+                $result = $stmt->fetchColumn();
+                if ($result !== false) {
+                    $barangay_id = (int)$result;
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('Barangay lookup error: ' . $e->getMessage());
+        }
+        if (!$barangay_id) {
+            back_with_error('Invalid barangay selected.');
+        }
 
         // --- Duplicate check ---
         $count = 0;
         try {
-            $stmt = $pdo->prepare('SELECT COUNT(*) FROM patients WHERE first_name = ? AND last_name = ? AND dob = ? AND barangay = ?');
-            if ($stmt && $stmt->execute([$first_name, $last_name, $dob, $barangay])) {
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM patients WHERE first_name = ? AND last_name = ? AND date_of_birth = ? AND barangay_id = ?');
+            if ($stmt && $stmt->execute([$first_name, $last_name, $dob, $barangay_id])) {
                 $result = $stmt->fetchColumn();
                 if ($result !== false) {
                     $count = (int)$result;
@@ -224,6 +319,11 @@ try {
         $otp         = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $otp_expiry  = time() + 300; // 5 minutes
 
+        // Calculate age for session storage
+        $dobDate = DateTimeImmutable::createFromFormat('!Y-m-d', $dob);
+        $today = new DateTimeImmutable('today');
+        $age = $dobDate ? $today->diff($dobDate)->y : 999; // Default to adult if DOB parsing fails
+
         // --- Store registration data & OTP in session (NO plaintext password) ---
         $_SESSION['registration'] = [
             'first_name'   => $first_name,
@@ -231,16 +331,40 @@ try {
             'middle_name'  => isset($_POST['middle_name']) ? trim((string)$_POST['middle_name']) : '',
             'suffix'       => isset($_POST['suffix']) ? trim((string)$_POST['suffix']) : '',
             'barangay'     => $barangay,
+            'barangay_id'  => $barangay_id,
             'dob'          => isset($_POST['dob']) ? trim((string)$_POST['dob']) : '',
             'sex'          => $sex,
             'contact_num'  => $normalizedContactNum, // <- use normalized digits
             'email'        => $email,                // already lowercased
-            'password'     => $hashed // store hashed only
+            'password'     => $hashed,               // store hashed only
+            'isPWD'        => $isPWD,
+            'pwd_id_number' => $pwd_id_number,
+            'isPhilHealth' => $isPhilHealth,
+            'philhealth_type' => $philhealth_type,
+            'philhealth_id_number' => $philhealth_id_number,
+            'isSenior'     => $isSenior,
+            'senior_citizen_id' => $senior_citizen_id,
+            // Only store emergency contact data if patient is a minor
+            'emergency_first_name' => $age < 18 ? $emergency_first_name : '',
+            'emergency_last_name' => $age < 18 ? $emergency_last_name : '',
+            'emergency_relationship' => $age < 18 ? $emergency_relationship : '',
+            'emergency_contact_number' => $age < 18 ? $emergency_contact_number : ''
         ];
         $_SESSION['otp'] = $otp;
         $_SESSION['otp_expiry'] = $otp_expiry;
 
         // --- Send OTP via PHPMailer ---
+        // For development: bypass email if SMTP_PASS is empty or 'disabled'
+        $bypassEmail = empty($_ENV['SMTP_PASS']) || $_ENV['SMTP_PASS'] === 'disabled';
+        
+        if ($bypassEmail) {
+            // Development mode: show OTP directly and redirect immediately
+            error_log("DEVELOPMENT MODE: OTP for {$email} is: {$otp}");
+            $_SESSION['dev_message'] = "DEVELOPMENT MODE: Your OTP is {$otp}";
+            header('Location: ' . $otp_page, true, 303);
+            exit;
+        }
+        
         $mail = new PHPMailer(true);
         $mail->CharSet  = 'UTF-8';
         $mail->Encoding = 'base64';
@@ -255,6 +379,13 @@ try {
             $mail->Port       = $_ENV['SMTP_PORT'] ?? 587;
             $fromEmail        = $_ENV['SMTP_FROM'] ?? 'cityhealthofficeofkoronadal@gmail.com';
             $fromName         = $_ENV['SMTP_FROM_NAME'] ?? 'City Health Office of Koronadal';
+            
+            // Add debugging for development
+            if (($debug ?? false)) {
+                $mail->SMTPDebug = 2;
+                $mail->Debugoutput = 'error_log';
+            }
+            
             $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($email, $first_name . ' ' . $last_name);
             $mail->isHTML(true);
@@ -268,9 +399,22 @@ try {
             header('Location: ' . $otp_page, true, 303);
             exit;
         } catch (Exception $e) {
-            error_log('PHPMailer error: ' . $mail->ErrorInfo . ' Exception: ' . $e->getMessage());
+            // Log detailed error information
+            $errorDetails = 'PHPMailer error: ' . $mail->ErrorInfo . ' Exception: ' . $e->getMessage();
+            error_log($errorDetails);
+            
+            // For development, also log to mail_error.log
+            $logEntry = date('Y-m-d H:i:s') . ' | ' . $errorDetails . PHP_EOL;
+            file_put_contents(__DIR__ . '/tools/mail_error.log', $logEntry, FILE_APPEND | LOCK_EX);
+            
             unset($_SESSION['otp'], $_SESSION['otp_expiry']);
-            back_with_error('Could not send OTP email. Please try again.');
+            
+            // More specific error message
+            if (strpos($e->getMessage(), 'authenticate') !== false) {
+                back_with_error('Email service is currently unavailable. Please contact the administrator or try again later.');
+            } else {
+                back_with_error('Could not send OTP email. Please check your email address and try again.');
+            }
         }
     } else {
         back_with_error('Invalid request method.', 303);

@@ -1,9 +1,51 @@
 <?php // patient_registration.php 
 session_start();
+require_once '../../config/env.php'; // Load database connection
+
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 $csrf_token = $_SESSION['csrf_token'];
+
+// Load barangays from database
+$barangays = [];
+try {
+    $stmt = $pdo->prepare("SELECT barangay_id, barangay_name FROM barangay WHERE status = 'active' ORDER BY barangay_name");
+    $stmt->execute();
+    $barangays = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log('Failed to load barangays: ' . $e->getMessage());
+    // Fallback to hardcoded list if database fails
+    $barangays = [
+        ['barangay_id' => 1, 'barangay_name' => 'Brgy. Assumption'],
+        ['barangay_id' => 2, 'barangay_name' => 'Brgy. Avanceña'],
+        ['barangay_id' => 3, 'barangay_name' => 'Brgy. Cacub'],
+        ['barangay_id' => 4, 'barangay_name' => 'Brgy. Caloocan'],
+        ['barangay_id' => 5, 'barangay_name' => 'Brgy. Carpenter Hill'],
+        ['barangay_id' => 6, 'barangay_name' => 'Brgy. Concepcion'],
+        ['barangay_id' => 7, 'barangay_name' => 'Brgy. Esperanza'],
+        ['barangay_id' => 8, 'barangay_name' => 'Brgy. General Paulino Santos'],
+        ['barangay_id' => 9, 'barangay_name' => 'Brgy. Mabini'],
+        ['barangay_id' => 10, 'barangay_name' => 'Brgy. Magsaysay'],
+        ['barangay_id' => 11, 'barangay_name' => 'Brgy. Mambucal'],
+        ['barangay_id' => 12, 'barangay_name' => 'Brgy. Morales'],
+        ['barangay_id' => 13, 'barangay_name' => 'Brgy. Namnama'],
+        ['barangay_id' => 14, 'barangay_name' => 'Brgy. New Pangasinan'],
+        ['barangay_id' => 15, 'barangay_name' => 'Brgy. Paraiso'],
+        ['barangay_id' => 16, 'barangay_name' => 'Brgy. Rotonda'],
+        ['barangay_id' => 17, 'barangay_name' => 'Brgy. San Isidro'],
+        ['barangay_id' => 18, 'barangay_name' => 'Brgy. San Roque'],
+        ['barangay_id' => 19, 'barangay_name' => 'Brgy. San Jose'],
+        ['barangay_id' => 20, 'barangay_name' => 'Brgy. Sta. Cruz'],
+        ['barangay_id' => 21, 'barangay_name' => 'Brgy. Sto. Niño'],
+        ['barangay_id' => 22, 'barangay_name' => 'Brgy. Saravia'],
+        ['barangay_id' => 23, 'barangay_name' => 'Brgy. Topland'],
+        ['barangay_id' => 24, 'barangay_name' => 'Brgy. Zone 1'],
+        ['barangay_id' => 25, 'barangay_name' => 'Brgy. Zone 2'],
+        ['barangay_id' => 26, 'barangay_name' => 'Brgy. Zone 3'],
+        ['barangay_id' => 27, 'barangay_name' => 'Brgy. Zone 4']
+    ];
+}
 
 // --- Error message and repopulation logic ---
 $errorMsg = '';
@@ -20,7 +62,18 @@ $formData = [
     'sex' => '',
     'dob' => '',
     'contact_num' => '',
-    'email' => ''
+    'email' => '',
+    'isPWD' => false,
+    'pwd_id_number' => '',
+    'isPhilHealth' => false,
+    'philhealth_type' => '',
+    'philhealth_id_number' => '',
+    'isSenior' => false,
+    'senior_citizen_id' => '',
+    'emergency_first_name' => '',
+    'emergency_last_name' => '',
+    'emergency_relationship' => '',
+    'emergency_contact_number' => ''
 ];
 if (isset($_SESSION['registration']) && is_array($_SESSION['registration'])) {
     foreach ($formData as $k => $v) {
@@ -479,6 +532,140 @@ unset($_SESSION['registration']);
             grid-column: 1 / span 2;
         }
 
+        /* Additional Information Section */
+        .additional-info-section {
+            margin: 24px 0;
+            padding: 20px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .additional-info-section h3 {
+            margin: 0 0 16px 0;
+            font-size: 1.1rem;
+            color: var(--text);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* Contact Information Section */
+        .contact-info-section {
+            margin: 24px 0;
+            padding: 20px;
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 12px;
+        }
+
+        /* Emergency Contact Section */
+        .emergency-contact-section {
+            margin: 16px 0;
+            padding: 16px;
+            background: #fff7ed;
+            border: 1px solid #fb923c;
+            border-radius: 10px;
+        }
+
+        .emergency-contact-fields {
+            margin-top: 8px;
+        }
+
+        .emergency-contact-fields .grid {
+            margin-bottom: 0;
+        }
+
+        /* Checkbox Groups */
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .checkbox-item:hover {
+            border-color: var(--brand);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--brand);
+            margin: 0;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .checkbox-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .checkbox-label {
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .checkbox-description {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin: 0;
+        }
+
+        /* Conditional Fields */
+        .conditional-field {
+            display: none;
+            margin-top: 8px;
+        }
+
+        .conditional-field.show {
+            display: block;
+        }
+
+        .conditional-field label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .conditional-field .input-field,
+        .conditional-field select {
+            height: 36px;
+            font-size: 0.9rem;
+        }
+
+        /* PhilHealth Type Specific */
+        .philhealth-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .checkbox-item {
+                padding: 10px;
+            }
+            
+            .checkbox-group {
+                gap: 12px;
+            }
+        }
+
         /* ------------------ Loading Overlay ------------------ */
         .logo {
             transition: none;
@@ -565,38 +752,9 @@ unset($_SESSION['registration']);
                         <select id="barangay" name="barangay" class="input-field" required>
                             <option value="" disabled <?php echo $formData['barangay'] === '' ? 'selected' : '' ?>>Select your barangay</option>
                             <?php
-                            $barangays = [
-                                'Brgy. Assumption',
-                                'Brgy. Avanceña',
-                                'Brgy. Cacub',
-                                'Brgy. Caloocan',
-                                'Brgy. Carpenter Hill',
-                                'Brgy. Concepcion',
-                                'Brgy. Esperanza',
-                                'Brgy. General Paulino Santos',
-                                'Brgy. Mabini',
-                                'Brgy. Magsaysay',
-                                'Brgy. Mambucal',
-                                'Brgy. Morales',
-                                'Brgy. Namnama',
-                                'Brgy. New Pangasinan',
-                                'Brgy. Paraiso',
-                                'Brgy. Rotonda',
-                                'Brgy. San Isidro',
-                                'Brgy. San Roque',
-                                'Brgy. San Jose',
-                                'Brgy. Sta. Cruz',
-                                'Brgy. Sto. Niño',
-                                'Brgy. Saravia',
-                                'Brgy. Topland',
-                                'Brgy. Zone 1',
-                                'Brgy. Zone 2',
-                                'Brgy. Zone 3',
-                                'Brgy. Zone 4'
-                            ];
-                            foreach ($barangays as $b) {
-                                $selected = ($formData['barangay'] === $b) ? 'selected' : '';
-                                $label = htmlspecialchars($b, ENT_QUOTES, 'UTF-8');
+                            foreach ($barangays as $brgy) {
+                                $selected = ($formData['barangay'] === $brgy['barangay_name']) ? 'selected' : '';
+                                $label = htmlspecialchars($brgy['barangay_name'], ENT_QUOTES, 'UTF-8');
                                 echo '<option value="' . $label . '" ' . $selected . '>' . $label . '</option>';
                             }
                             ?>
@@ -638,44 +796,153 @@ unset($_SESSION['registration']);
                             min="1900-01-01" max="<?php echo date('Y-m-d'); ?>"
                             value="<?php echo htmlspecialchars($formData['dob'] ?? '', ENT_QUOTES); ?>" />
                     </div>
+                </div>
 
-                    <div>
-                        <label for="contact-number">Contact No.*</label>
-                        <div class="contact-input-wrapper">
-                            <span class="prefix">+63</span>
-                            <input type="tel" id="contact-number" name="contact_num" class="input-field contact-number" placeholder="### ### ####" maxlength="13" inputmode="numeric" autocomplete="tel-national" required value="<?php echo $formData['contact_num']; ?>" />
+                <!-- Additional Information Section -->
+                <div class="additional-info-section">
+                    <h3>Additional Information</h3>
+                    <div class="checkbox-group">
+                        <!-- PWD Section -->
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="isPWD" name="isPWD" value="1" <?php echo $formData['isPWD'] ? 'checked' : ''; ?> />
+                            <div class="checkbox-content">
+                                <label for="isPWD" class="checkbox-label">Person with Disability (PWD)</label>
+                                <p class="checkbox-description">Check this if you are a registered person with disability</p>
+                                <div class="conditional-field" id="pwd-field">
+                                    <label for="pwd_id_number">PWD ID Number</label>
+                                    <input type="text" id="pwd_id_number" name="pwd_id_number" class="input-field" 
+                                           placeholder="Enter PWD ID Number" value="<?php echo $formData['pwd_id_number']; ?>" />
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="span-2">
-                        <label for="email">Email*</label>
-                        <input type="email" id="email" name="email" class="input-field" required autocomplete="email" value="<?php echo $formData['email']; ?>" />
-                    </div>
+                        <!-- PhilHealth Section -->
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="isPhilHealth" name="isPhilHealth" value="1" <?php echo $formData['isPhilHealth'] ? 'checked' : ''; ?> />
+                            <div class="checkbox-content">
+                                <label for="isPhilHealth" class="checkbox-label">PhilHealth Member</label>
+                                <p class="checkbox-description">Check this if you have PhilHealth coverage</p>
+                                <div class="conditional-field philhealth-fields" id="philhealth-fields">
+                                    <div>
+                                        <label for="philhealth_type">Membership Type</label>
+                                        <select id="philhealth_type" name="philhealth_type" class="input-field">
+                                            <option value="">Select Type</option>
+                                            <option value="Member" <?php echo $formData['philhealth_type'] === 'Member' ? 'selected' : ''; ?>>Member</option>
+                                            <option value="Beneficiary" <?php echo $formData['philhealth_type'] === 'Beneficiary' ? 'selected' : ''; ?>>Beneficiary</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="philhealth_id_number">PhilHealth ID Number</label>
+                                        <input type="text" id="philhealth_id_number" name="philhealth_id_number" class="input-field" 
+                                               placeholder="Enter PhilHealth ID (12 digits)" maxlength="12" 
+                                               value="<?php echo $formData['philhealth_id_number']; ?>" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div class="password-wrapper">
-                        <label for="password">Password*</label>
-                        <input type="password" id="password" name="password" class="input-field" required autocomplete="new-password" aria-describedby="pw-req" />
-                        <i class="fa-solid fa-eye toggle-password" role="button" tabindex="0" aria-label="Toggle password visibility" aria-hidden="true"></i>
-                    </div>
+                        <!-- Senior Citizen Section (auto-shown if 60+ years old) -->
+                        <div class="checkbox-item" id="senior-citizen-section" style="display: none;">
+                            <input type="checkbox" id="isSenior" name="isSenior" value="1" <?php echo $formData['isSenior'] ? 'checked' : ''; ?> />
+                            <div class="checkbox-content">
+                                <label for="isSenior" class="checkbox-label">Senior Citizen</label>
+                                <p class="checkbox-description">You are eligible for Senior Citizen benefits (60+ years old)</p>
+                                <div class="conditional-field" id="senior-field">
+                                    <label for="senior_citizen_id">Senior Citizen ID</label>
+                                    <input type="text" id="senior_citizen_id" name="senior_citizen_id" class="input-field" 
+                                           placeholder="Enter Senior Citizen ID" value="<?php echo $formData['senior_citizen_id']; ?>" />
+                                </div>
+                            </div>
+                        </div>
 
-                    <div class="password-wrapper">
-                        <label for="confirm-password">Confirm Password*</label>
-                        <input type="password" id="confirm-password" name="confirm_password" class="input-field" required autocomplete="new-password" />
-                        <i class="fa-solid fa-eye toggle-password" aria-hidden="true"></i>
+                        <!-- Emergency Contact Section (auto-shown if under 18 years old) -->
+                        <div class="emergency-contact-section" id="emergency-contact-section" style="display: none;">
+                            <div class="checkbox-content">
+                                <label class="checkbox-label">Emergency Contact (Parent/Guardian)</label>
+                                <p class="checkbox-description">Required for patients under 18 years old</p>
+                                <div class="emergency-contact-fields">
+                                    <div class="grid" style="margin-bottom: 0;">
+                                        <div>
+                                            <label for="emergency_first_name">Guardian First Name*</label>
+                                            <input type="text" id="emergency_first_name" name="emergency_first_name" class="input-field" 
+                                                   placeholder="Enter guardian's first name" value="<?php echo $formData['emergency_first_name']; ?>" />
+                                        </div>
+                                        <div>
+                                            <label for="emergency_last_name">Guardian Last Name*</label>
+                                            <input type="text" id="emergency_last_name" name="emergency_last_name" class="input-field" 
+                                                   placeholder="Enter guardian's last name" value="<?php echo $formData['emergency_last_name']; ?>" />
+                                        </div>
+                                        <div>
+                                            <label for="emergency_relationship">Relationship*</label>
+                                            <select id="emergency_relationship" name="emergency_relationship" class="input-field">
+                                                <option value="">Select Relationship</option>
+                                                <option value="Mother" <?php echo $formData['emergency_relationship'] === 'Mother' ? 'selected' : ''; ?>>Mother</option>
+                                                <option value="Father" <?php echo $formData['emergency_relationship'] === 'Father' ? 'selected' : ''; ?>>Father</option>
+                                                <option value="Guardian" <?php echo $formData['emergency_relationship'] === 'Guardian' ? 'selected' : ''; ?>>Guardian</option>
+                                                <option value="Grandmother" <?php echo $formData['emergency_relationship'] === 'Grandmother' ? 'selected' : ''; ?>>Grandmother</option>
+                                                <option value="Grandfather" <?php echo $formData['emergency_relationship'] === 'Grandfather' ? 'selected' : ''; ?>>Grandfather</option>
+                                                <option value="Aunt" <?php echo $formData['emergency_relationship'] === 'Aunt' ? 'selected' : ''; ?>>Aunt</option>
+                                                <option value="Uncle" <?php echo $formData['emergency_relationship'] === 'Uncle' ? 'selected' : ''; ?>>Uncle</option>
+                                                <option value="Other" <?php echo $formData['emergency_relationship'] === 'Other' ? 'selected' : ''; ?>>Other</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="emergency_contact_number">Guardian Contact No.*</label>
+                                            <div class="contact-input-wrapper">
+                                                <span class="prefix">+63</span>
+                                                <input type="tel" id="emergency_contact_number" name="emergency_contact_number" 
+                                                       class="input-field contact-number" placeholder="### ### ####" maxlength="13" 
+                                                       inputmode="numeric" value="<?php echo $formData['emergency_contact_number']; ?>" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="password-requirements-wrapper">
-                    <h4 id="pw-req" style="text-align: justify;">Password Requirements:</h4>
-                    <ul class="password-requirements" id="password-requirements">
-                        <li id="length"><i class="fa-solid fa-circle-xmark icon red"></i> At least 8 characters</li>
-                        <li id="uppercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one uppercase letter
-                        </li>
-                        <li id="lowercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one lowercase letter
-                        </li>
-                        <li id="number"><i class="fa-solid fa-circle-xmark icon red"></i> At least one number</li>
-                        <li id="match"><i class="fa-solid fa-circle-xmark icon red"></i> Passwords match</li>
-                    </ul>
+                <!-- Contact Information Section -->
+                <div class="contact-info-section">
+                    <div class="grid">
+                        <div>
+                            <label for="contact-number">Contact No.*</label>
+                            <div class="contact-input-wrapper">
+                                <span class="prefix">+63</span>
+                                <input type="tel" id="contact-number" name="contact_num" class="input-field contact-number" placeholder="### ### ####" maxlength="13" inputmode="numeric" autocomplete="tel-national" required value="<?php echo $formData['contact_num']; ?>" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="email">Email*</label>
+                            <input type="email" id="email" name="email" class="input-field" required autocomplete="email" value="<?php echo $formData['email']; ?>" />
+                        </div>
+
+                        <div class="password-wrapper">
+                            <label for="password">Password*</label>
+                            <input type="password" id="password" name="password" class="input-field" required autocomplete="new-password" aria-describedby="pw-req" />
+                            <i class="fa-solid fa-eye toggle-password" role="button" tabindex="0" aria-label="Toggle password visibility" aria-hidden="true"></i>
+                        </div>
+
+                        <div class="password-wrapper">
+                            <label for="confirm-password">Confirm Password*</label>
+                            <input type="password" id="confirm-password" name="confirm_password" class="input-field" required autocomplete="new-password" />
+                            <i class="fa-solid fa-eye toggle-password" aria-hidden="true"></i>
+                        </div>
+                    </div>
+
+                    <div class="password-requirements-wrapper">
+                        <h4 id="pw-req" style="text-align: justify;">Password Requirements:</h4>
+                        <ul class="password-requirements" id="password-requirements">
+                            <li id="length"><i class="fa-solid fa-circle-xmark icon red"></i> At least 8 characters</li>
+                            <li id="uppercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one uppercase letter
+                            </li>
+                            <li id="lowercase"><i class="fa-solid fa-circle-xmark icon red"></i> At least one lowercase letter
+                            </li>
+                            <li id="number"><i class="fa-solid fa-circle-xmark icon red"></i> At least one number</li>
+                            <li id="match"><i class="fa-solid fa-circle-xmark icon red"></i> Passwords match</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="terms-checkbox">
@@ -815,6 +1082,138 @@ unset($_SESSION['registration']);
         pw.addEventListener('input', updateAllPwReqs);
         confirmPw.addEventListener('input', updateAllPwReqs);
 
+        // --- Conditional fields for additional information ---
+        const pwdCheckbox = $('#isPWD');
+        const pwdField = $('#pwd-field');
+        const philhealthCheckbox = $('#isPhilHealth');
+        const philhealthFields = $('#philhealth-fields');
+        const seniorCheckbox = $('#isSenior');
+        const seniorField = $('#senior-field');
+        const seniorSection = $('#senior-citizen-section');
+        const emergencySection = $('#emergency-contact-section');
+
+        // Age calculation function
+        function calculateAge(birthDate) {
+            const today = new Date();
+            const birth = new Date(birthDate);
+            let age = today.getFullYear() - birth.getFullYear();
+            const monthDiff = today.getMonth() - birth.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            
+            return age;
+        }
+
+        // Check age and show appropriate sections
+        function checkAgeAndShowSections() {
+            const dobValue = $('#dob').value;
+            
+            if (!dobValue) {
+                // Hide both sections if no DOB
+                seniorSection.style.display = 'none';
+                emergencySection.style.display = 'none';
+                return;
+            }
+            
+            const age = calculateAge(dobValue);
+            
+            // Show Senior Citizen section if 60 or older
+            if (age >= 60) {
+                seniorSection.style.display = 'block';
+                emergencySection.style.display = 'none';
+            }
+            // Show Emergency Contact section if under 18
+            else if (age < 18) {
+                emergencySection.style.display = 'block';
+                seniorSection.style.display = 'none';
+                // Make emergency contact fields required
+                $('#emergency_first_name').required = true;
+                $('#emergency_last_name').required = true;
+                $('#emergency_relationship').required = true;
+                $('#emergency_contact_number').required = true;
+            }
+            // Hide both sections if age is between 18-59
+            else {
+                seniorSection.style.display = 'none';
+                emergencySection.style.display = 'none';
+                // Remove required from emergency contact fields
+                $('#emergency_first_name').required = false;
+                $('#emergency_last_name').required = false;
+                $('#emergency_relationship').required = false;
+                $('#emergency_contact_number').required = false;
+            }
+        }
+
+        // PWD conditional field
+        function togglePwdField() {
+            if (pwdCheckbox.checked) {
+                pwdField.classList.add('show');
+            } else {
+                pwdField.classList.remove('show');
+                $('#pwd_id_number').value = '';
+            }
+        }
+
+        // PhilHealth conditional fields
+        function togglePhilhealthFields() {
+            if (philhealthCheckbox.checked) {
+                philhealthFields.classList.add('show');
+            } else {
+                philhealthFields.classList.remove('show');
+                $('#philhealth_type').value = '';
+                $('#philhealth_id_number').value = '';
+            }
+        }
+
+        // Senior Citizen conditional field
+        function toggleSeniorField() {
+            if (seniorCheckbox.checked) {
+                seniorField.classList.add('show');
+            } else {
+                seniorField.classList.remove('show');
+                $('#senior_citizen_id').value = '';
+            }
+        }
+
+        // Emergency contact number formatter (same as main contact)
+        const emergencyContactInput = $('#emergency_contact_number');
+        if (emergencyContactInput) {
+            emergencyContactInput.addEventListener('input', function() {
+                let value = this.value.replace(/\D/g, '');
+                if (value.startsWith('0')) value = value.substring(1); // remove leading 0
+                if (value.length > 10) value = value.slice(0, 10);
+                const formatted =
+                    value.substring(0, 3) +
+                    (value.length > 3 ? ' ' + value.substring(3, 6) : '') +
+                    (value.length > 6 ? ' ' + value.substring(6, 10) : '');
+                this.value = formatted.trim();
+            });
+        }
+
+        // Initial setup and event listeners
+        pwdCheckbox.addEventListener('change', togglePwdField);
+        philhealthCheckbox.addEventListener('change', togglePhilhealthFields);
+        seniorCheckbox.addEventListener('change', toggleSeniorField);
+        
+        // Add DOB change listener for age-based sections
+        $('#dob').addEventListener('change', checkAgeAndShowSections);
+
+        // Initialize conditional fields on page load
+        togglePwdField();
+        togglePhilhealthFields();
+        toggleSeniorField();
+        checkAgeAndShowSections();
+
+        // PhilHealth ID formatting (numbers only)
+        const philhealthIdInput = $('#philhealth_id_number');
+        philhealthIdInput.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, '');
+            if (value.length > 12) value = value.slice(0, 12);
+            this.value = value;
+        });
+
         // --- Terms modal wiring ---
         const termsModal = $('#terms-modal');
         const showTermsBtn = $('#show-terms');
@@ -864,7 +1263,12 @@ unset($_SESSION['registration']);
 
         // --- Barangay whitelist & UX improvement ---
         const validBarangays = new Set([
-            'Brgy. Assumption', 'Brgy. Avanceña', 'Brgy. Cacub', 'Brgy. Caloocan', 'Brgy. Carpenter Hill', 'Brgy. Concepcion', 'Brgy. Esperanza', 'Brgy. General Paulino Santos', 'Brgy. Mabini', 'Brgy. Magsaysay', 'Brgy. Mambucal', 'Brgy. Morales', 'Brgy. Namnama', 'Brgy. New Pangasinan', 'Brgy. Paraiso', 'Brgy. Rotonda', 'Brgy. San Isidro', 'Brgy. San Roque', 'Brgy. San Jose', 'Brgy. Sta. Cruz', 'Brgy. Sto. Niño', 'Brgy. Saravia', 'Brgy. Topland', 'Brgy. Zone 1', 'Brgy. Zone 2', 'Brgy. Zone 3', 'Brgy. Zone 4'
+            <?php 
+            $jsBarangays = array_map(function($brgy) {
+                return "'" . addslashes($brgy['barangay_name']) . "'";
+            }, $barangays);
+            echo implode(', ', $jsBarangays);
+            ?>
         ]);
         const barangaySelect = $('#barangay');
         barangaySelect.addEventListener('change', function() {
@@ -968,6 +1372,82 @@ unset($_SESSION['registration']);
                 return showError('Contact number must start with 9 (PH mobile numbers).');
             }
 
+            // Additional information validation
+            // PWD validation
+            if (pwdCheckbox.checked) {
+                const pwdId = $('#pwd_id_number').value.trim();
+                if (!pwdId) {
+                    e.preventDefault();
+                    return showError('PWD ID Number is required when PWD is checked.');
+                }
+            }
+
+            // PhilHealth validation
+            if (philhealthCheckbox.checked) {
+                const philhealthType = $('#philhealth_type').value;
+                const philhealthId = $('#philhealth_id_number').value.trim();
+                
+                if (!philhealthType) {
+                    e.preventDefault();
+                    return showError('PhilHealth membership type is required when PhilHealth is checked.');
+                }
+                
+                if (!philhealthId) {
+                    e.preventDefault();
+                    return showError('PhilHealth ID Number is required when PhilHealth is checked.');
+                }
+                
+                // PhilHealth ID should be 12 digits
+                const philhealthDigits = philhealthId.replace(/\D/g, '');
+                if (philhealthDigits.length !== 12) {
+                    e.preventDefault();
+                    return showError('PhilHealth ID must be 12 digits.');
+                }
+            }
+
+            // Age-based validation
+            const dobValue = dobInput.value;
+            if (dobValue) {
+                const age = calculateAge(dobValue);
+                
+                // Senior Citizen validation (age-based, not checkbox-based)
+                if (age >= 60 && seniorCheckbox.checked) {
+                    const seniorId = $('#senior_citizen_id').value.trim();
+                    if (!seniorId) {
+                        e.preventDefault();
+                        return showError('Senior Citizen ID is required when Senior Citizen is checked.');
+                    }
+                }
+                
+                // Emergency contact validation for minors
+                if (age < 18) {
+                    const emergencyFirstName = $('#emergency_first_name').value.trim();
+                    const emergencyLastName = $('#emergency_last_name').value.trim();
+                    const emergencyRelationship = $('#emergency_relationship').value;
+                    const emergencyContact = $('#emergency_contact_number').value.replace(/\D/g, '');
+                    
+                    if (!emergencyFirstName) {
+                        e.preventDefault();
+                        return showError('Guardian first name is required for patients under 18.');
+                    }
+                    
+                    if (!emergencyLastName) {
+                        e.preventDefault();
+                        return showError('Guardian last name is required for patients under 18.');
+                    }
+                    
+                    if (!emergencyRelationship) {
+                        e.preventDefault();
+                        return showError('Guardian relationship is required for patients under 18.');
+                    }
+                    
+                    if (!emergencyContact || emergencyContact.length !== 10 || !emergencyContact.startsWith('9')) {
+                        e.preventDefault();
+                        return showError('Valid guardian contact number is required for patients under 18.');
+                    }
+                }
+            }
+
             // Email basic pattern & normalize to lowercase
             const emailEl = $('#email');
             emailEl.value = emailEl.value.trim().toLowerCase();
@@ -999,6 +1479,22 @@ unset($_SESSION['registration']);
             // store contact as digits only (server should expect this)
             $('#contact-number').value = digits;
 
+            // Normalize emergency contact fields if they exist and are visible
+            const emergencyFirstNameEl = $('#emergency_first_name');
+            const emergencyLastNameEl = $('#emergency_last_name');
+            const emergencyContactEl = $('#emergency_contact_number');
+            
+            if (emergencyFirstNameEl && emergencyFirstNameEl.value) {
+                emergencyFirstNameEl.value = capitalizeWords(emergencyFirstNameEl.value.trim());
+            }
+            if (emergencyLastNameEl && emergencyLastNameEl.value) {
+                emergencyLastNameEl.value = capitalizeWords(emergencyLastNameEl.value.trim());
+            }
+            if (emergencyContactEl && emergencyContactEl.value) {
+                const emergencyDigits = emergencyContactEl.value.replace(/\D/g, '');
+                emergencyContactEl.value = emergencyDigits;
+            }
+
             // Optional: store non-sensitive fields in sessionStorage
             const registrationData = {
                 last_name: $('#last-name').value,
@@ -1009,7 +1505,18 @@ unset($_SESSION['registration']);
                 sex: $('#sex').value,
                 dob: $('#dob').value,
                 contact_num: $('#contact-number').value,
-                email: $('#email').value
+                email: $('#email').value,
+                isPWD: pwdCheckbox.checked ? 1 : 0,
+                pwd_id_number: pwdCheckbox.checked ? $('#pwd_id_number').value : '',
+                isPhilHealth: philhealthCheckbox.checked ? 1 : 0,
+                philhealth_type: philhealthCheckbox.checked ? $('#philhealth_type').value : '',
+                philhealth_id_number: philhealthCheckbox.checked ? $('#philhealth_id_number').value : '',
+                isSenior: seniorCheckbox.checked ? 1 : 0,
+                senior_citizen_id: seniorCheckbox.checked ? $('#senior_citizen_id').value : '',
+                emergency_first_name: emergencyFirstNameEl ? emergencyFirstNameEl.value : '',
+                emergency_last_name: emergencyLastNameEl ? emergencyLastNameEl.value : '',
+                emergency_relationship: $('#emergency_relationship') ? $('#emergency_relationship').value : '',
+                emergency_contact_number: emergencyContactEl ? emergencyContactEl.value : ''
             };
             try {
                 sessionStorage.setItem('registrationData', JSON.stringify(registrationData));

@@ -8,6 +8,13 @@ ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Lax'); // or 'Strict' if flows allow
 ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
 error_reporting(E_ALL); // log everything, just don't display in prod
+
+// Hide errors in production
+if (!$debug) {
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
+}
+
 session_start();
 
 include_once __DIR__ . '/../../config/db.php';
@@ -30,31 +37,103 @@ if (isset($_GET['expired'])) {
     exit;
 }
 
+// CSRF token generation and validation
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrf_token = $_SESSION['csrf_token'];
+
+// Enhanced login rate limiting with IP tracking
+$client_ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rate_limit_key = 'patient_login_attempts_' . hash('sha256', $client_ip);
+
+if (!isset($_SESSION[$rate_limit_key])) $_SESSION[$rate_limit_key] = 0;
+if (!isset($_SESSION['patient_last_login_attempt'])) $_SESSION['patient_last_login_attempt'] = 0;
+
+$max_attempts = 5;
+$block_seconds = 300; // 5 minutes block
+
 // Handle POST
 $error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $patient_number = strtoupper(trim($_POST['username'] ?? '')); // normalize to uppercase
-    $patient_number = preg_replace('/\s+/', '', $patient_number); // remove spaces just in case
-    $password = $_POST['password'] ?? '';
+$patient_number = '';
 
-    if ($patient_number === '' || $password === '') {
-        $error = 'Please enter both Patient Number and Password.';
-    } elseif (!preg_match('/^P\d{6}\z/', $patient_number)) {
-        usleep(300000);
-        $error = 'Invalid Patient Number or Password.';
-    } else {
-        $stmt = $pdo->prepare('SELECT id, password FROM patients WHERE username = ?');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        // Enhanced rate limiting check
+        if ($_SESSION[$rate_limit_key] >= $max_attempts && (time() - $_SESSION['patient_last_login_attempt']) < $block_seconds) {
+            $remaining = $block_seconds - (time() - $_SESSION['patient_last_login_attempt']);
+            throw new RuntimeException("Too many failed attempts. Please wait " . ceil($remaining / 60) . " minutes before trying again.");
+        }
+
+        $patient_number = strtoupper(trim($_POST['username'] ?? '')); // normalize to uppercase
+        $patient_number = preg_replace('/\s+/', '', $patient_number); // remove spaces just in case
+        $password = $_POST['password'] ?? '';
+        $posted_csrf = $_POST['csrf_token'] ?? '';
+
+        $_SESSION['patient_last_login_attempt'] = time();
+
+        // Validate CSRF token
+        if (!hash_equals($csrf_token, $posted_csrf)) {
+            throw new RuntimeException("Invalid session. Please refresh the page and try again.");
+        }
+
+        // Validate inputs
+        if ($patient_number === '' || $password === '') {
+            throw new RuntimeException('Please enter both Patient Number and Password.');
+        } 
+        
+        if (!preg_match('/^P\d{6}\z/', $patient_number)) {
+            usleep(500000); // Delay for invalid format
+            $_SESSION[$rate_limit_key]++;
+            throw new RuntimeException('Invalid Patient Number or Password.');
+        }
+
+        // Database connection check
+        if (!$pdo) {
+            error_log('[patient_login] Database connection failed');
+            throw new RuntimeException('Service temporarily unavailable. Please try again later.');
+        }
+
+        // Query patient
+        $stmt = $pdo->prepare('SELECT id, username, password, status FROM patients WHERE username = ? LIMIT 1');
         $stmt->execute([$patient_number]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($row && password_verify($password, $row['password'])) {
-            session_regenerate_id(true);
-            $_SESSION['patient_id'] = $row['id'];
-            header('Location: ../dashboard/dashboard_patient.php');
-            exit;
+        
+        if ($row) {
+            // Check if account is active
+            if (isset($row['status']) && strtolower($row['status']) !== 'active') {
+                $_SESSION[$rate_limit_key]++;
+                throw new RuntimeException('Account is inactive. Please contact your healthcare provider.');
+            }
+
+            if (password_verify($password, $row['password'])) {
+                // Successful login - reset rate limit
+                unset($_SESSION[$rate_limit_key], $_SESSION['patient_last_login_attempt']);
+                
+                // Prevent session fixation
+                session_regenerate_id(true);
+                
+                $_SESSION['patient_id'] = $row['id'];
+                $_SESSION['patient_username'] = $row['username'];
+                $_SESSION['login_time'] = time();
+                
+                header('Location: ../dashboard/dashboard_patient.php');
+                exit;
+            } else {
+                $_SESSION[$rate_limit_key]++;
+                usleep(500000); // Delay for failed authentication
+                throw new RuntimeException('Invalid Patient Number or Password.');
+            }
         } else {
-            usleep(300000);
-            $error = 'Invalid Patient Number or Password.';
+            $_SESSION[$rate_limit_key]++;
+            usleep(500000); // Delay for non-existent user
+            throw new RuntimeException('Invalid Patient Number or Password.');
         }
+    } catch (RuntimeException $e) {
+        $error = $e->getMessage();
+    } catch (Exception $e) {
+        error_log('[patient_login] Unexpected error: ' . $e->getMessage());
+        $error = "Service temporarily unavailable. Please try again later.";
     }
 }
 
@@ -120,8 +199,10 @@ $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error]
 <body>
     <header class="site-header">
         <div class="logo-container" role="banner">
-            <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128"
-                alt="City Health Office Koronadal logo" width="100" height="100" decoding="async" />
+            <a href="../../index.php" tabindex="0">
+                <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128"
+                    alt="City Health Office Koronadal logo" width="100" height="100" decoding="async" />
+            </a>
         </div>
     </header>
 
@@ -130,6 +211,9 @@ $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error]
             <h1 id="login-title" class="visually-hidden">Patient Login</h1>
 
             <form class="form active" action="patient_login.php" method="POST" novalidate>
+                <!-- CSRF Protection -->
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                
                 <div class="form-header">
                     <h2>Patient Login</h2>
                 </div>
@@ -147,6 +231,7 @@ $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error]
                     pattern="^P\d{6}$"
                     title="Format: capital P followed by 6 digits (e.g., P000001)"
                     maxlength="7"
+                    value="<?php echo htmlspecialchars($patient_number); ?>"
                     required
                     autofocus />
                 <small class="input-help">
