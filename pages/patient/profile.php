@@ -121,11 +121,11 @@ $patient = [
     "philhealth_id" => $personal_information['philhealth_id'] ?? '',
     "address" => $personal_information['street'] ?? '',
     "emergency" => [
-        "name" => trim(($emergency_contact['first_name'] ?? '') . ' ' .
-            ($emergency_contact['middle_name'] ?? '') . ' ' .
-            ($emergency_contact['last_name'] ?? '')),
-        "relationship" => $emergency_contact['relation'] ?? '',
-        "contact" => $emergency_contact['contact_num'] ?? ''
+        "name" => trim(($emergency_contact['emergency_first_name'] ?? '') . ' ' .
+            ($emergency_contact['emergency_middle_name'] ?? '') . ' ' .
+            ($emergency_contact['emergency_last_name'] ?? '')),
+        "relationship" => $emergency_contact['emergency_relationship'] ?? '',
+        "contact" => $emergency_contact['emergency_contact_number'] ?? ''
     ],
     "lifestyle" => [
         "smoking" => $lifestyle_info['smoking_status'] ?? '',
@@ -151,7 +151,7 @@ foreach ($basic_fields as $field) {
 }
 
 // Personal details (weight: 20%)
-$personal_fields = ['blood_type', 'civil_status', 'religion', 'occupation', 'philhealth_id', 'address'];
+$personal_fields = ['blood_type', 'civil_status', 'religion', 'occupation'];
 $personal_completed = 0;
 foreach ($personal_fields as $field) {
     $total_fields++;
@@ -185,7 +185,7 @@ foreach ($lifestyle_fields as $field) {
 
 // Medical history (weight: 20%)
 $medical_completed = 0;
-$medical_sections = ['allergies', 'current_medications', 'past_conditions', 'chronic_illnesses', 'immunizations'];
+$medical_sections = ['allergies', 'current_medications', 'past_conditions', 'chronic_illnesses', 'immunizations','surgical_history','family_history'];
 foreach ($medical_sections as $section) {
     $total_fields++;
     if (!empty($medical_history[$section])) {
@@ -897,6 +897,10 @@ if (isset($_GET['logout'])) {
                                         <span class="status-badge" style="background: #fff3cd; color: #856404;">
                                             <i class="fas fa-child"></i> Minor
                                         </span>
+                                    <?php elseif ($patient['age_category'] === 'Adult'): ?>
+                                        <span class="status-badge" style="background: #e3f2fd; color: #1565c0;">
+                                            <i class="fas fa-user"></i> Adult
+                                        </span>
                                     <?php elseif ($patient['age_category'] === 'Senior Citizen'): ?>
                                         <span class="status-badge" style="background: #d4edda; color: #155724;">
                                             <i class="fas fa-user-friends"></i> Senior Citizen
@@ -916,11 +920,9 @@ if (isset($_GET['logout'])) {
                         </div>
 
                     </div>
-                </div>
-                <!-- Personal Information -->
-                <div class="profile-card">
-                    <div class="section-header">
-                        <h3>Personal Information</h3>
+                    
+                    <!-- Edit Profile Button -->
+                    <div class="profile-actions">
                         <a href="profile_edit.php" class="btn edit-btn">
                             <svg xmlns="http://www.w3.org/2000/svg"
                                 style="height:1em;width:1em;margin-right:0.5em;vertical-align:middle;" fill="none"
@@ -928,8 +930,14 @@ if (isset($_GET['logout'])) {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M11 5h2m-1-1v2m10.54 1.46a2.12 2.12 0 00-3 0l-9 9a2 2 0 00-.51 1.07l-1 5a1 1 0 001.21 1.21l5-1a2 2 0 001.07-.51l9-9a2.12 2.12 0 000-3z" />
                             </svg>
-                            Edit
+                            Edit Profile
                         </a>
+                    </div>
+                </div>
+                <!-- Personal Information -->
+                <div class="profile-card">
+                    <div class="section-header">
+                        <h3>Personal Information</h3>
                     </div>
                     <div class="info-section">
                         <?php
@@ -938,7 +946,6 @@ if (isset($_GET['logout'])) {
                         $personal_field_labels = [
                             // From patients table
                             'age' => 'AGE',
-                            'age_category' => 'AGE CATEGORY',
                             'sex' => 'SEX',
                             'dob' => 'DATE OF BIRTH',
                             'contact' => 'CONTACT NUMBER',
@@ -964,16 +971,16 @@ if (isset($_GET['logout'])) {
                             if ($field === 'age_category' && !empty($value)) {
                                 // Add badge styling for age category
                                 if ($value === 'Minor') {
-                                    $value = '<span class="status-badge" style="background: #fff3cd; color: #856404;">' . $value . '</span>';
+                                    $value = '<span class="status-badge" style="background: #fff3cd; color: #856404; max-width: fit-content; word-wrap: normal;">' . $value . '</span>';
                                 } elseif ($value === 'Senior Citizen') {
-                                    $value = '<span class="status-badge" style="background: #d4edda; color: #155724;">' . $value . '</span>';
+                                    $value = '<span class="status-badge" style="background: #d4edda; color: #155724; max-width: fit-content; word-wrap: normal;">' . $value . '</span>';
                                 } else {
-                                    $value = '<span class="status-badge" style="background: #e2e3e5; color: #495057;">' . $value . '</span>';
+                                    $value = '<span class="status-badge" style="background: #e2e3e5; color: #495057; max-width: fit-content; word-wrap: normal;">' . $value . '</span>';
                                 }
                             } elseif ($field === 'is_pwd') {
                                 // Handle PWD status - only show if TRUE
                                 if (strtolower($value) === 'yes' || $value === '1' || strtolower($value) === 'true') {
-                                    $value = '<span class="status-badge" style="background: #cce5ff; color: #004085;">PWD</span>';
+                                    $value = '<span class="status-badge" style="background: #cce5ff; color: #004085; max-width: fit-content; word-wrap: normal;">PWD</span>';
                                 } else {
                                     // Skip this field if not PWD - don't count as missing
                                     continue;
@@ -1011,7 +1018,7 @@ if (isset($_GET['logout'])) {
                                 <span><?= $label ?>:</span>
                                 <span>
                                     <?php if ($is_missing): ?>
-                                        <span class="completion-badge badge-missing">
+                                        <span class="completion-badge badge-missing" style="max-width: fit-content; word-wrap: normal;">
                                             <i class="fas fa-exclamation-triangle"></i> Missing
                                         </span>
                                     <?php else: ?>
@@ -1061,7 +1068,7 @@ if (isset($_GET['logout'])) {
                                 <span><?= $label ?>:</span>
                                 <span>
                                     <?php if ($is_missing): ?>
-                                        <span class="completion-badge badge-missing">
+                                        <span class="completion-badge badge-missing" style="max-width: fit-content; word-wrap: normal;">
                                             <i class="fas fa-exclamation-triangle"></i> Missing
                                         </span>
                                     <?php else: ?>
@@ -1112,7 +1119,7 @@ if (isset($_GET['logout'])) {
                                 <span><?= $label ?>:</span>
                                 <span>
                                     <?php if ($is_missing): ?>
-                                        <span class="completion-badge badge-missing">
+                                        <span class="completion-badge badge-missing " style="max-width: fit-content; word-wrap: normal;">
                                             <i class="fas fa-exclamation-triangle"></i> Missing
                                         </span>
                                     <?php else: ?>

@@ -201,8 +201,6 @@ body {
    7. FORM ROWS & FIELDS
    ============================= */
 .form-row {
-    display: flex;
-    flex-wrap: wrap;
     gap: 1rem;
     margin-bottom: 1.1rem;
 }
@@ -294,7 +292,6 @@ body {
 }
 
 .edit-profile-form .form-row {
-    display: flex;
     gap: 1rem;
     margin-bottom: 1rem;
 }

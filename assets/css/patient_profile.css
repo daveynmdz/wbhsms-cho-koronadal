@@ -101,7 +101,7 @@ html {
 }
 
 .profile-header {
-    display: flex;
+    display: grid;
     align-items: center;
     background: #ffffff;
     padding: 1rem 1.5rem;
@@ -370,7 +370,7 @@ html {
 }
 
 .profile-header {
-    display: flex;
+    display: grid;
     align-items: center;
     background: #ffffff;
     padding: 1rem 1.5rem;
@@ -378,6 +378,7 @@ html {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     margin-bottom: 1rem;
     gap: 1.5rem;
+    justify-content: space-between;
 }
 
 /* Container for name/number + edit btn */
@@ -424,6 +425,148 @@ html {
 
 .edit-btn:hover {
     background: #0056b3;
+}
+
+/* Profile Header Responsive Styles */
+.profile-header {
+    flex-wrap: wrap;
+}
+
+.profile-photo {
+    flex-shrink: 0;
+}
+
+.profile-info {
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* Status badges container */
+.profile-info > div:last-child {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+    margin-top: 0.8em;
+}
+
+/* Mobile responsive styles for profile header */
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    .profile-photo {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .profile-info {
+        width: 100%;
+        align-items: center;
+    }
+    
+    .profile-name-number {
+        align-items: center;
+    }
+    
+    .profile-name-number h2 {
+        font-size: 1.1rem;
+    }
+    
+    .profile-name-number p {
+        font-size: 0.9rem;
+    }
+    
+    .profile-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .edit-btn {
+        padding: 0.7rem 1.5rem;
+        font-size: 0.95rem;
+        border-radius: 8px;
+        min-width: 140px;
+        justify-content: center;
+    }
+    
+    /* Status badges on mobile */
+    .profile-info > div:last-child {
+        justify-content: center;
+        margin-top: 0.5em;
+    }
+    
+    .status-badge {
+        font-size: 0.75em;
+        padding: 0.3em 0.7em;
+    }
+}
+
+/* Small mobile styles */
+@media (max-width: 480px) {
+    .profile-header {
+        padding: 0.8rem;
+        gap: 0.8rem;
+    }
+    
+    .profile-photo {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .profile-name-number h2 {
+        font-size: 1rem;
+    }
+    
+    .profile-name-number p {
+        font-size: 0.85rem;
+    }
+    
+    .edit-btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        min-width: 120px;
+    }
+    
+    .status-badge {
+        font-size: 0.7em;
+        padding: 0.25em 0.6em;
+    }
+}
+
+/* Large screens - better spacing */
+@media (min-width: 1200px) {
+    .profile-header {
+        padding: 1.5rem 2rem;
+        gap: 2rem;
+    }
+    
+    .profile-photo {
+        width: 90px;
+        height: 90px;
+    }
+    
+    .profile-name-number h2 {
+        font-size: 1.4rem;
+    }
+    
+    .edit-btn {
+        padding: 0.7rem 1.5rem;
+        font-size: 1rem;
+    }
 }
 
 /* Profile Completion Card Styles */
