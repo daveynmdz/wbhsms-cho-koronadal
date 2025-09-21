@@ -162,6 +162,12 @@
         /* =====================
    5. USER PROFILE SECTION
    ===================== */
+
+        /* =====================
+           5. USER PROFILE SECTION
+           ===================== */
+
+        /* --- Container --- */
         .user-profile {
             padding-top: 20px;
             margin-top: 20px;
@@ -171,31 +177,65 @@
             gap: 12px;
         }
 
+        /* --- User Info Row --- */
         .user-info {
-            position: relative;
             display: flex;
             align-items: center;
             padding: 10px 12px;
             border-radius: 8px;
             gap: 10px;
-            transition: background 0.3s ease;
-            cursor: pointer;
+            position: relative;
         }
 
         .user-info:hover {
             background-color: #ffffff;
-            color: #03045e;
             transform: translateX(4px);
+            }
+
+            /* Ensure child text elements change color on hover */
+            .user-info:hover .user-name,
+            .user-info:hover .user-id,
+            .user-info:hover .user-text strong,
+            .user-info:hover .user-text small {
+                color: #03045e;
         }
 
-        /* Tooltip (optional if not using native title attr) */
+        /* --- User Name --- */
+        .user-name {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.2;
+            color: #fff;
+            transition: color 0.2s;
+        }
+
+
+        /* --- User ID --- */
+        .user-id {
+            font-size: 13px;
+            font-weight: 400;
+            color: #e0e0e0;
+            margin-top: 2px;
+            letter-spacing: 1px;
+            transition: color 0.2s;
+        }
+
+
+        /* --- Profile Photo --- */
+        .user-profile-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        /* --- Tooltip --- */
         .user-info .tooltip {
             position: absolute;
             top: -28px;
             left: 50%;
             transform: translateX(-50%);
             background-color: rgba(255, 255, 255, 0.9);
-            color: #03045e;
             font-size: 12px;
             font-weight: 600;
             padding: 4px 8px;
@@ -211,7 +251,7 @@
             opacity: 1;
         }
 
-
+        /* --- Profile Image --- */
         .user-info img {
             width: 45px;
             height: 45px;
@@ -220,6 +260,7 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
+        /* --- User Text --- */
         .user-text {
             display: flex;
             flex-direction: column;
@@ -237,6 +278,7 @@
             font-size: 12px;
         }
 
+        /* --- User Actions --- */
         .user-actions {
             display: flex;
             flex-direction: column;

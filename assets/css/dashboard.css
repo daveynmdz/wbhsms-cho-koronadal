@@ -191,16 +191,16 @@
             align-self: center;
             background-color: #0077b6;
             color: #fff;
-            border-radius: 8px;
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            display: inline-flex;
+            border: none;
+            padding: 0.6em 1.2em;
+            border-radius: 6px;
+            font-weight: 600;
+            display: flex;
             align-items: center;
-            gap: 6px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            text-decoration: none;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            gap: 0.5em;
+            box-shadow: 0 2px 8px rgba(243, 156, 18, 0.08);
+            cursor: pointer;
+            transition: background 0.18s;
         }
 
         .view-more-btn i {

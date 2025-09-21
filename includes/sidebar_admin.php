@@ -1,6 +1,6 @@
 <?php
-// sidebar_patient.php
-// Expected (optional) from caller: $activePage, $defaults['name'], $defaults['patient_number'], $patient_id
+// sidebar_admin.php
+// Expected (optional) from caller: $activePage, $defaults['name'], $defaults['employee_number'], $employee_id
 // This file does NOT open/close <html> or <body>.
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -8,31 +8,34 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 $activePage = $activePage ?? '';
-$patient_id = $patient_id ?? ($_SESSION['patient_id'] ?? null);
+$employee_id = $employee_id ?? ($_SESSION['employee_id'] ?? null);
 
 // Initial display values from caller/session; will be refined from DB if needed.
-$displayName = $defaults['name'] ?? ($_SESSION['patient_name'] ?? 'Patient');
-$patientNo   = $defaults['patient_number'] ?? '';
+$displayName = $defaults['name'] ?? ($_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name'] ?? 'Admin');
+$employeeNo = $defaults['employee_number'] ?? ($_SESSION['employee_number'] ?? '');
+$role = $_SESSION['role'] ?? 'Admin';
 
 // If we don't have good display values yet, pull from DB (only if we have an id)
-$needsName = empty($displayName) || $displayName === 'Patient';
-$needsNo   = empty($patientNo);
+$needsName = empty($displayName) || $displayName === 'Admin';
+$needsNo = empty($employeeNo);
 
-if (($needsName || $needsNo) && $patient_id) {
-    // Ensure $pdo exists; adjust the path if your config lives elsewhere
-    if (!isset($pdo)) {
+if (($needsName || $needsNo) && $employee_id) {
+    // Ensure $conn exists; adjust the path if your config lives elsewhere
+    if (!isset($conn)) {
         require_once __DIR__ . '/../config/db.php';
     }
 
-    if (isset($pdo)) {
-        $stmt = $pdo->prepare("
-            SELECT id, first_name, middle_name, last_name, suffix, username
-            FROM patients
-            WHERE id = ?
+    if (isset($conn)) {
+        $stmt = $conn->prepare("
+            SELECT employee_id, first_name, middle_name, last_name, employee_number, role
+            FROM employees
+            WHERE employee_id = ?
             LIMIT 1
         ");
-        $stmt->execute([$patient_id]);
-        if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $stmt->bind_param("i", $employee_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
             if ($needsName) {
                 $parts = [];
                 if (!empty($row['first_name'])) {
@@ -45,15 +48,16 @@ if (($needsName || $needsNo) && $patient_id) {
                     $parts[] = $row['last_name'];
                 }
                 $full = trim(implode(' ', $parts));
-                if (!empty($row['suffix'])) {
-                    $full .= ' ' . $row['suffix'];
-                }
-                $displayName = $full ?: 'Patient';
+                $displayName = $full ?: 'Admin';
             }
-            if ($needsNo && !empty($row['username'])) {
-                $patientNo = $row['username'];
+            if ($needsNo && !empty($row['employee_number'])) {
+                $employeeNo = $row['employee_number'];
+            }
+            if (!empty($row['role'])) {
+                $role = $row['role'];
             }
         }
+        $stmt->close();
     }
 }
 ?>
@@ -62,7 +66,7 @@ if (($needsName || $needsNo) && $patient_id) {
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="../dashboard/dashboard_patient.php">
+    <a href="../dashboard/dashboard_admin.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
@@ -70,45 +74,69 @@ if (($needsName || $needsNo) && $patient_id) {
     <i id="menuIcon" class="fas fa-bars"></i>
 </button>
 <!-- Sidebar -->
-<nav class="nav" id="sidebarNav" aria-label="Patient sidebar">
+<nav class="nav" id="sidebarNav" aria-label="Admin sidebar">
     <button class="close-btn" type="button" onclick="closeNav()" aria-label="Close navigation">
         <i class="fas fa-times"></i>
     </button>
 
-    <a href="../dashboard/dashboard_patient.php">
+    <a href="../dashboard/dashboard_admin.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
     <div class="menu" role="menu">
-        <a href="../dashboard/dashboard_patient.php"
+        <a href="../dashboard/dashboard_admin.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="../appointment/appointments.php"
+        <a href="../patient/patient_management.php"
+            class="<?= $activePage === 'patients' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-users"></i> Patient Management
+        </a>
+       <a href="../management/admin/appointments_management.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments
         </a>
-        <a href="../prescription/prescriptions.php"
-            class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-prescription-bottle-alt"></i> Prescription
+        <a href="../user/employee_management.php"
+            class="<?= $activePage === 'employees' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-user-tie"></i> Employee Management
         </a>
-        <a href="../laboratory/lab_tests.php"
+        <a href="../clinical/clinical_management.php"
+            class="<?= $activePage === 'clinical' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-stethoscope"></i> Clinical Records
+        </a>
+        <a href="../laboratory/lab_management.php"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-vials"></i> Laboratory
         </a>
-        <a href="../billing/billing.php"
+        <a href="../billing/billing_management.php"
             class="<?= $activePage === 'billing' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-file-invoice-dollar"></i> Billing
+            <i class="fas fa-file-invoice-dollar"></i> Billing Management
+        </a>
+        <a href="../reports/reports.php"
+            class="<?= $activePage === 'reports' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-chart-bar"></i> Reports
+        </a>
+        <a href="../queueing/queue_management.php"
+            class="<?= $activePage === 'queueing' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-list-ol"></i> Queue Management
+        </a>
+        <a href="../management/admin/referrals_management.php"
+            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-share"></i> Referrals
+        </a>
+        <a href="../notifications/notifications.php"
+            class="<?= $activePage === 'notifications' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-bell"></i> Notifications
         </a>
     </div>
 
-    <a href="../patient/profile.php"
+    <a href="../user/admin_profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
             <div class="user-info">
                 <img class="user-profile-photo"
-                    src="<?= $patient_id
-                                ? '../../vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
+                    src="<?= $employee_id
+                                ? '../../vendor/employee_photo_controller.php?employee_id=' . urlencode((string)$employee_id)
                                 : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
                     alt="User photo"
                     onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
@@ -117,7 +145,10 @@ if (($needsName || $needsNo) && $patient_id) {
                         <?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?>
                     </div>
                     <div class="user-id">
-                        <i class="fas fa-id-card" style="margin-right:5px;color:#90e0ef;"></i>: <span style="font-weight:500;"><?= htmlspecialchars($patientNo, ENT_QUOTES, 'UTF-8') ?></span>
+                        <i class="fas fa-id-badge" style="margin-right:5px;color:#90e0ef;"></i>: <span style="font-weight:500;"><?= htmlspecialchars($employeeNo, ENT_QUOTES, 'UTF-8') ?></span>
+                    </div>
+                    <div class="user-role" style="font-size:11px;color:#b3d9ff;margin-top:2px;">
+                        <i class="fas fa-user-shield" style="margin-right:3px;"></i><?= htmlspecialchars($role, ENT_QUOTES, 'UTF-8') ?>
                     </div>
                 </div>
                 <span class="tooltip">View Profile</span>
@@ -126,7 +157,7 @@ if (($needsName || $needsNo) && $patient_id) {
     </a>
 
     <div class="user-actions">
-        <a href="../patient/user_settings.php"><i class="fas fa-cog"></i> Settings</a>
+        <a href="../user/admin_settings.php"><i class="fas fa-cog"></i> Settings</a>
         <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>
