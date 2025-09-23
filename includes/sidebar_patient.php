@@ -4,7 +4,8 @@
 // This file does NOT open/close <html> or <body>.
 
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    // Include patient session configuration
+    require_once __DIR__ . '/../config/session/patient_session.php';
 }
 
 $activePage = $activePage ?? '';
@@ -62,7 +63,7 @@ if (($needsName || $needsNo) && $patient_id) {
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="../dashboard/dashboard_patient.php">
+    <a href="../patient/dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
@@ -75,12 +76,12 @@ if (($needsName || $needsNo) && $patient_id) {
         <i class="fas fa-times"></i>
     </button>
 
-    <a href="../dashboard/dashboard_patient.php">
+    <a href="../patient/dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
     <div class="menu" role="menu">
-        <a href="../dashboard/dashboard_patient.php"
+        <a href="../patient/dashboard.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>

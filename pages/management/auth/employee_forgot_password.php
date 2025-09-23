@@ -1,11 +1,6 @@
 <?php
 // Employee forgot password with enhanced security
 $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
-ini_set('session.use_only_cookies', '1');
-ini_set('session.use_strict_mode', '1');
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax');
-ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
 error_reporting(E_ALL);
 
 // Hide errors in production
@@ -14,7 +9,8 @@ if (!$debug) {
     ini_set('log_errors', '1');
 }
 
-session_start();
+// Include employee session configuration
+require_once __DIR__ . '/../../../config/session/employee_session.php';
 
 require_once __DIR__ . '/../../../config/db.php';
 require_once __DIR__ . '/../../../vendor/autoload.php';
@@ -30,7 +26,8 @@ header('X-XSS-Protection: 1; mode=block');
 
 // Redirect if already logged in
 if (!empty($_SESSION['employee_id'])) {
-    header('Location: ../dashboard/dashboard_' . strtolower($_SESSION['role']) . '.php');
+    $role = strtolower($_SESSION['role']);
+    header('Location: ../' . $role . '/dashboard.php');
     exit;
 }
 

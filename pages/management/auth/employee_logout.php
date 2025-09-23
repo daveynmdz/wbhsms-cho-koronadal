@@ -1,11 +1,6 @@
 <?php
 // Employee logout with enhanced security
 $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
-ini_set('session.use_only_cookies', '1');
-ini_set('session.use_strict_mode', '1');
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax');
-ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
 error_reporting(E_ALL);
 
 // Hide errors in production
@@ -14,7 +9,8 @@ if (!$debug) {
     ini_set('log_errors', '1');
 }
 
-session_start();
+// Include employee session configuration
+require_once __DIR__ . '/../../../config/session/employee_session.php';
 
 // Security headers
 header('X-Content-Type-Options: nosniff');
@@ -25,10 +21,35 @@ header('X-XSS-Protection: 1; mode=block');
 $expected_token = $_SESSION['csrf_token'] ?? '';
 $provided_token = $_POST['csrf_token'] ?? $_GET['token'] ?? '';
 
+// Dynamic base URL function - same as in sidebar_admin.php
+function getBaseUrl() {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $host = $_SERVER['HTTP_HOST'];
+    $requestUri = $_SERVER['REQUEST_URI'];
+    $uriParts = explode('/', trim($requestUri, '/'));
+    
+    $baseFolder = '';
+    if (count($uriParts) > 0) {
+        if (strpos($requestUri, '/management/') !== false || 
+            strpos($requestUri, '/dashboard/') !== false ||
+            strpos($requestUri, '/pages/') !== false) {
+            $baseFolder = $uriParts[0];
+        }
+    }
+    
+    $baseUrl = $protocol . $host;
+    if (!empty($baseFolder)) {
+        $baseUrl .= '/' . $baseFolder;
+    }
+    
+    return $baseUrl;
+}
+
 // Check if user is logged in
 if (empty($_SESSION['employee_id'])) {
-    // Not logged in, redirect to login
-    header('Location: employee_login.php');
+    // Not logged in, redirect to login - using dynamic path
+    $baseUrl = getBaseUrl();
+    header('Location: ' . $baseUrl . '/pages/management/auth/employee_login.php');
     exit;
 }
 
@@ -40,26 +61,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (!empty($provided_token) && hash_eq
         error_log('[employee_logout] User logged out: ' . $_SESSION['employee_username'] . ' from IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
     }
     
-    // Clear all session data
-    $_SESSION = array();
-    
-    // Delete the session cookie if it exists
-    if (ini_get("session.use_cookies")) {
-        $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000,
-            $params["path"], $params["domain"],
-            $params["secure"], $params["httponly"]
-        );
-    }
-    
-    // Destroy the session
-    session_destroy();
+    // Use the employee session clear function
+    clear_employee_session();
     
     // Start a new session for the flash message
     session_start();
     
-    // Redirect to login with success message
-    header('Location: employee_login.php?logged_out=1');
+    // Use dynamic path to ensure this works in both local and production
+    $baseUrl = getBaseUrl();
+    header('Location: ' . $baseUrl . '/pages/management/auth/employee_login.php?logged_out=1');
     exit;
 }
 
@@ -134,7 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (!empty($provided_token) && hash_eq
                 <button type="submit" class="btn btn-primary">Yes, Logout</button>
             </form>
             
-            <a href="../dashboard/dashboard_<?php echo strtolower($_SESSION['role'] ?? 'employee'); ?>.php" class="btn btn-secondary">Cancel</a>
+            <?php 
+            $role = strtolower($_SESSION['role'] ?? 'admin');
+            $baseUrl = getBaseUrl();
+            $dashboardPath = $baseUrl . "/pages/management/{$role}/dashboard.php";
+            ?>
+            <a href="<?php echo $dashboardPath; ?>" class="btn btn-secondary">Cancel</a>
         </div>
     </div>
 </body>

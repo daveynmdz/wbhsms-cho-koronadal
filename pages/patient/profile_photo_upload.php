@@ -1,9 +1,10 @@
 <?php
-session_start();
+// Use patient session configuration
+require_once dirname(__DIR__, 2) . '/config/session/patient_session.php';
 require_once dirname(__DIR__, 2) . '/config/db.php';
 
 // Ensure patient is logged in and get patient_id
-if (!isset($_SESSION['patient_id'])) {
+if (!is_patient_logged_in()) {
     header('Location: ../auth/patient_login.php');
     exit;
 }

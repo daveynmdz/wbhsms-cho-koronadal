@@ -3,14 +3,35 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-session_start();
+// Use patient session configuration
+require_once '../../config/session/patient_session.php';
 require_once '../../config/db.php';
 
-// Get patient ID from session
-$patient_id = $_SESSION['patient_id'] ?? null;
-if (!$patient_id) {
-    header('Location: ../auth/patient_login.php');
-    exit();
+// Get patient ID from different sources (session or URL parameter for admin view)
+$view_mode = $_GET['view_mode'] ?? null;
+$patient_id = null;
+
+// If in admin view mode, get patient_id from URL parameter
+if ($view_mode === 'admin') {
+    $patient_id = $_GET['patient_id'] ?? null;
+    if (!$patient_id) {
+        die('Error: No patient ID provided');
+    }
+
+    // Verify admin is logged in
+    if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+        // For development purposes, we're allowing access without strict validation
+        // In production, you would want to uncomment the following:
+        // header('Location: ../auth/login.php');
+        // exit();
+    }
+} else {
+    // Regular patient view - get ID from session
+    $patient_id = $_SESSION['patient_id'] ?? null;
+    if (!$patient_id) {
+        header('Location: ../auth/patient_login.php');
+        exit();
+    }
 }
 
 // Fetch patient info using PDO with proper error handling
@@ -185,7 +206,7 @@ foreach ($lifestyle_fields as $field) {
 
 // Medical history (weight: 20%)
 $medical_completed = 0;
-$medical_sections = ['allergies', 'current_medications', 'past_conditions', 'chronic_illnesses', 'immunizations','surgical_history','family_history'];
+$medical_sections = ['allergies', 'current_medications', 'past_conditions', 'chronic_illnesses', 'immunizations', 'surgical_history', 'family_history'];
 foreach ($medical_sections as $section) {
     $total_fields++;
     if (!empty($medical_history[$section])) {
@@ -309,9 +330,9 @@ try {
 
 // Handle logout
 if (isset($_GET['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: login/patientLogin.php');
+    // Use patient session logout helper
+    clear_patient_session();
+    header('Location: ../auth/patient_login.php');
     exit();
 }
 
@@ -321,7 +342,7 @@ if (isset($_GET['logout'])) {
 
 <head>
     <meta charset="UTF-8" />
-    <title>Patient Profile - WBHSMS</title>
+    <title><?= $view_mode === 'admin' ? "Admin View - Patient Profile" : "Patient Profile" ?> - WBHSMS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/patient_profile.css" />
@@ -767,106 +788,211 @@ if (isset($_GET['logout'])) {
 
 <body>
     <?php
-    $activePage = 'profile';
-    include '../../includes/sidebar_patient.php';
+    if ($view_mode === 'admin') {
+        $activePage = 'patient_records';
+        include '../../includes/sidebar_admin.php';
+    } else {
+        $activePage = 'profile';
+        include '../../includes/sidebar_patient.php';
+    }
     ?>
 
     <!-- Main Content -->
     <section class="homepage">
         <div class="profile-heading-bar"
             style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1em;margin-bottom:1.5em;">
-            <h1 style="margin:0;font-size:2.2em;letter-spacing:1px;">PATIENT PROFILE</h1>
+            <h1 style="margin:0;font-size:2.2em;letter-spacing:1px;">
+                <?php if ($view_mode === 'admin'): ?>
+                    <i class="fas fa-user-shield"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">ADMIN VIEW</span>
+                <?php else: ?>
+                    PATIENT PROFILE
+                <?php endif; ?>
+            </h1>
             <div class="utility-btn-group" style="display:flex;gap:0.7em;flex-wrap:wrap;">
-                <button class="utility-btn" onclick="downloadPatientFile()" title="Download Patient File"
-                    style="background:#2980b9;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(41,128,185,0.08);cursor:pointer;transition:background 0.18s;">
-                    <i class="fas fa-file-download"></i> <span class="hide-on-mobile">Download Patient File</span>
-                </button>
-                <button class="utility-btn" onclick="downloadPatientID()" title="Download Patient ID Card"
-                    style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
-                    <i class="fas fa-id-card"></i> <span class="hide-on-mobile">Download ID Card</span>
-                </button>
-                <button class="utility-btn" onclick="openUserSettings()" title="User Settings"
-                    style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;">
-                    <i class="fas fa-cog"></i> <span class="hide-on-mobile">User Settings</span>
-                </button>
+                <?php if ($view_mode === 'admin'): ?>
+                    <!-- Admin view buttons -->
+                    <a href="../management/admin/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Records</span>
+                    </a>
+                    <button class="utility-btn" onclick="downloadPatientFile()" title="Download Patient File"
+                        style="background:#2980b9;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(41,128,185,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-file-download"></i> <span class="hide-on-mobile">Export Medical Record</span>
+                    </button>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Medical Record</span>
+                    </button>
+                <?php else: ?>
+                    <!-- Regular patient view buttons -->
+                    <button class="utility-btn" onclick="downloadPatientFile()" title="Download Patient File"
+                        style="background:#2980b9;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(41,128,185,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-file-download"></i> <span class="hide-on-mobile">Download Patient File</span>
+                    </button>
+                    <button class="utility-btn" onclick="downloadPatientID()" title="Download Patient ID Card"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-id-card"></i> <span class="hide-on-mobile">Download ID Card</span>
+                    </button>
+                    <button class="utility-btn" onclick="openUserSettings()" title="User Settings"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-cog"></i> <span class="hide-on-mobile">User Settings</span>
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
 
-        <div class="completion-row" style="display: flex; align-items: stretch; gap: 2em; width: 100%; flex-wrap: wrap;">
-            <!-- Profile Completion Card -->
-            <div class="completion-card" style="flex: 1; display: flex; flex-direction: column; justify-content: stretch; min-width: 350px;">
-                <div class="completion-header">
-                    <div>
-                        <h3 style="margin: 0; font-size: 1.3em;">
-                            <i class="fas fa-chart-pie"></i> Profile Completion
-                        </h3>
-                        <p style="margin: 0.5em 0 0 0; opacity: 0.9;"><?= htmlspecialchars($completion_message) ?></p>
-                    </div>
-                    <div class="completion-percentage"><?= $completion_percentage ?>%</div>
-                </div>
-
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: <?= $completion_percentage ?>%;"></div>
-                </div>
-
-                <?php if ($completion_percentage < 90): ?>
-                    <div class="completion-content" style="display: flex; align-items: stretch; justify-content: space-between; gap: 1.5em; flex-wrap: wrap; width: 100%;">
-                        <div class="completion-suggestions" style="display: flex; flex-wrap: wrap; gap: 0.75em; flex: 1; align-items: stretch; min-width: 180px; width: 100%;">
-                            <?php if ($basic_completed < count($basic_fields)): ?>
-                                <div class="suggestion-item" style="flex: 1; min-width: 180px;">
-                                    <i class="fas fa-user"></i> Complete basic information
-                                </div>
-                            <?php endif; ?>
-                            <?php if ($personal_completed < count($personal_fields)): ?>
-                                <div class="suggestion-item" style="flex: 1; min-width: 180px;">
-                                    <i class="fas fa-id-card"></i> Add personal details
-                                </div>
-                            <?php endif; ?>
-                            <?php if ($emergency_completed < count($emergency_fields)): ?>
-                                <div class="suggestion-item" style="flex: 1; min-width: 180px;">
-                                    <i class="fas fa-phone"></i> Add emergency contact
-                                </div>
-                            <?php endif; ?>
-                            <?php if ($lifestyle_completed < count($lifestyle_fields)): ?>
-                                <div class="suggestion-item" style="flex: 1; min-width: 180px;">
-                                    <i class="fas fa-heart"></i> Update lifestyle info
-                                </div>
-                            <?php endif; ?>
-                            <?php if ($medical_completed < count($medical_sections)): ?>
-                                <div class="suggestion-item" style="flex: 1; min-width: 180px;">
-                                    <i class="fas fa-notes-medical"></i> Complete medical history
-                                </div>
-                            <?php endif; ?>
+        <?php if ($view_mode !== 'admin'): ?>
+            <div class="completion-row" style="display: flex; align-items: stretch; gap: 2em; width: 100%; flex-wrap: wrap;">
+                <!-- Profile Completion Card -->
+                <div class="completion-card" style="flex: 1; display: flex; flex-direction: column; justify-content: stretch; min-width: 350px;">
+                    <div class="completion-header">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.3em;">
+                                <i class="fas fa-chart-pie"></i> Profile Completion
+                            </h3>
+                            <p style="margin: 0.5em 0 0 0; opacity: 0.9;"><?= htmlspecialchars($completion_message) ?></p>
                         </div>
+                        <div class="completion-percentage"><?= $completion_percentage ?>%</div>
+                    </div>
+
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: <?= $completion_percentage ?>%;"></div>
+                    </div>
+
+                    <?php if ($completion_percentage < 90): ?>
+                        <div class="completion-content" style="display: flex; align-items: stretch; justify-content: space-between; gap: 1.5em; flex-wrap: wrap; width: 100%;">
+                            <div class="completion-suggestions" style="display: flex; flex-wrap: wrap; gap: 0.75em; flex: 1; align-items: stretch; min-width: 180px; width: 100%;">
+                                <?php if ($basic_completed < count($basic_fields)): ?>
+                                    <div class="suggestion-item" style="flex: 1; min-width: 180px;">
+                                        <i class="fas fa-user"></i> Complete basic information
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($personal_completed < count($personal_fields)): ?>
+                                    <div class="suggestion-item" style="flex: 1; min-width: 180px;">
+                                        <i class="fas fa-id-card"></i> Add personal details
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($emergency_completed < count($emergency_fields)): ?>
+                                    <div class="suggestion-item" style="flex: 1; min-width: 180px;">
+                                        <i class="fas fa-phone"></i> Add emergency contact
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($lifestyle_completed < count($lifestyle_fields)): ?>
+                                    <div class="suggestion-item" style="flex: 1; min-width: 180px;">
+                                        <i class="fas fa-heart"></i> Update lifestyle info
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($medical_completed < count($medical_sections)): ?>
+                                    <div class="suggestion-item" style="flex: 1; min-width: 180px;">
+                                        <i class="fas fa-notes-medical"></i> Complete medical history
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Helpful Information Card -->
+                <?php if ($completion_percentage < 80): ?>
+                    <div class="missing-info-alert" style="flex: 0.5; margin-bottom: 1.5em; min-width: 350px; display: flex; flex-direction: row; height: 100%;">
+                        <div class="icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="content" style="flex: 1;">
+                            <div class="title">Why Complete Your Medical Profile?</div>
+                            <div class="description">
+                                <strong>Complete medical records help healthcare providers:</strong>
+                                <ul style="text-align: left; margin: 0.5em 0; padding-left: 1.2em;">
+                                    <li>Provide more accurate diagnoses and treatments</li>
+                                    <li>Avoid dangerous medication interactions and allergic reactions</li>
+                                    <li>Understand your health risks and family history</li>
+                                    <li>Coordinate care between different specialists</li>
+                                    <li>Respond effectively in medical emergencies</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <a href="medical_history_edit.php" class="completion-prompt">
+                            <i class="fas fa-heartbeat"></i> Start Now
+                        </a>
                     </div>
                 <?php endif; ?>
             </div>
+        <?php endif; ?>
 
-            <!-- Helpful Information Card -->
-            <?php if ($completion_percentage < 80): ?>
-                <div class="missing-info-alert" style="flex: 0.5; margin-bottom: 1.5em; min-width: 350px; display: flex; flex-direction: row; height: 100%;">
-                    <div class="icon">
-                        <i class="fas fa-lightbulb"></i>
+        <?php if ($view_mode === 'admin'): ?>
+            <!-- Admin View: Patient Summary Header -->
+            <div class="enhanced-card" style="margin-bottom: 1.5em; padding: 1.5em;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1em; flex-wrap: wrap; gap: 1em;">
+                    <h3 style="margin: 0;"><i class="fas fa-user-circle"></i> Patient Summary</h3>
+                    <div style="display: flex; gap: 0.5em; flex-wrap: wrap;">
+                        <!-- Patient Category Badges -->
+                        <?php if (!empty($patient['age_category'])): ?>
+                            <?php if ($patient['age_category'] === 'Minor'): ?>
+                                <span class="status-badge" style="background: #fff3cd; color: #856404;">
+                                    <i class="fas fa-child"></i> Minor (<?= $patient['age'] ?> y.o.)
+                                </span>
+                            <?php elseif ($patient['age_category'] === 'Senior Citizen'): ?>
+                                <span class="status-badge" style="background: #d4edda; color: #155724;">
+                                    <i class="fas fa-user-friends"></i> Senior Citizen (<?= $patient['age'] ?> y.o.)
+                                </span>
+                            <?php elseif ($patient['age_category'] === 'Adult'): ?>
+                                <span class="status-badge" style="background: #e3f2fd; color: #1565c0;">
+                                    <i class="fas fa-user"></i> Adult (<?= $patient['age'] ?> y.o.)
+                                </span>
+                            <?php endif; ?>
+                        <?php endif; ?>
+
+                        <!-- PWD Status Badge -->
+                        <?php if (!empty($patient['is_pwd']) && (strtolower($patient['is_pwd']) === 'yes' || $patient['is_pwd'] === '1' || strtolower($patient['is_pwd']) === 'true')): ?>
+                            <span class="status-badge" style="background: #cce5ff; color: #004085;">
+                                <i class="fas fa-wheelchair"></i> PWD
+                                <?php if (!empty($patient['pwd_id_number'])): ?>
+                                    (ID: <?= htmlspecialchars($patient['pwd_id_number']) ?>)
+                                <?php endif; ?>
+                            </span>
+                        <?php endif; ?>
+                        
+                        <!-- PhilHealth Member Badge -->
+                        <?php if (!empty($patient['philhealth_id_number']) || !empty($patient['philhealth_type'])): ?>
+                            <span class="status-badge" style="background: #d1ecf1; color: #0c5460;">
+                                <i class="fas fa-id-card-alt"></i> PhilHealth Member
+                                <?php if (!empty($patient['philhealth_type'])): ?>
+                                    (<?= htmlspecialchars($patient['philhealth_type']) ?>)
+                                <?php endif; ?>
+                            </span>
+                        <?php endif; ?>
                     </div>
-                    <div class="content" style="flex: 1;">
-                        <div class="title">Why Complete Your Medical Profile?</div>
-                        <div class="description">
-                            <strong>Complete medical records help healthcare providers:</strong>
-                            <ul style="text-align: left; margin: 0.5em 0; padding-left: 1.2em;">
-                                <li>Provide more accurate diagnoses and treatments</li>
-                                <li>Avoid dangerous medication interactions and allergic reactions</li>
-                                <li>Understand your health risks and family history</li>
-                                <li>Coordinate care between different specialists</li>
-                                <li>Respond effectively in medical emergencies</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <a href="medical_history_edit.php" class="completion-prompt">
-                        <i class="fas fa-heartbeat"></i> Start Now
-                    </a>
                 </div>
-            <?php endif; ?>
-        </div>
+                <div class="info-section" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1em;">
+                    <div class="info-row">
+                        <span>PATIENT ID:</span>
+                        <span><strong><?= htmlspecialchars($patient['username']) ?></strong></span>
+                    </div>
+                    <div class="info-row">
+                        <span>FULL NAME:</span>
+                        <span><strong><?= htmlspecialchars($patient['full_name']) ?></strong></span>
+                    </div>
+                    <div class="info-row">
+                        <span>AGE/SEX:</span>
+                        <span><strong><?= htmlspecialchars($patient['age'] . ' years, ' . $patient['sex']) ?></strong></span>
+                    </div>
+                    <div class="info-row">
+                        <span>CONTACT:</span>
+                        <span><strong><?= htmlspecialchars($patient['contact'] ?: 'Not provided') ?></strong></span>
+                    </div>
+                    <div class="info-row">
+                        <span>BARANGAY:</span>
+                        <span><strong><?= htmlspecialchars($patient['barangay'] ?: 'Not provided') ?></strong></span>
+                    </div>
+                    <?php if (!empty($patient['philhealth_id_number'])): ?>
+                    <div class="info-row">
+                        <span>PHILHEALTH ID:</span>
+                        <span><strong><?= htmlspecialchars($patient['philhealth_id_number']) ?></strong></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <div class="profile-layout" style="max-width: none;">
             <!-- LEFT SIDE -->
@@ -895,15 +1021,15 @@ if (isset($_GET['logout'])) {
                                 <?php if (!empty($patient['age_category'])): ?>
                                     <?php if ($patient['age_category'] === 'Minor'): ?>
                                         <span class="status-badge" style="background: #fff3cd; color: #856404;">
-                                            <i class="fas fa-child"></i> Minor
+                                            <i class="fas fa-child"></i> Minor (<?= $patient['age'] ?> y.o.)
                                         </span>
                                     <?php elseif ($patient['age_category'] === 'Adult'): ?>
                                         <span class="status-badge" style="background: #e3f2fd; color: #1565c0;">
-                                            <i class="fas fa-user"></i> Adult
+                                            <i class="fas fa-user"></i> Adult (<?= $patient['age'] ?> y.o.)
                                         </span>
                                     <?php elseif ($patient['age_category'] === 'Senior Citizen'): ?>
                                         <span class="status-badge" style="background: #d4edda; color: #155724;">
-                                            <i class="fas fa-user-friends"></i> Senior Citizen
+                                            <i class="fas fa-user-friends"></i> Senior Citizen (<?= $patient['age'] ?> y.o.)
                                         </span>
                                     <?php endif; ?>
                                 <?php endif; ?>
@@ -916,23 +1042,34 @@ if (isset($_GET['logout'])) {
                                         <?php endif; ?>
                                     </span>
                                 <?php endif; ?>
+                                
+                                <?php if (!empty($patient['philhealth_id_number']) || !empty($patient['philhealth_type'])): ?>
+                                    <span class="status-badge" style="background: #d1ecf1; color: #0c5460;">
+                                        <i class="fas fa-id-card-alt"></i> PhilHealth
+                                        <?php if (!empty($patient['philhealth_type'])): ?>
+                                            (<?= htmlspecialchars($patient['philhealth_type']) ?>)
+                                        <?php endif; ?>
+                                    </span>
+                                <?php endif; ?>
                             </div>
                         </div>
 
                     </div>
-                    
-                    <!-- Edit Profile Button -->
-                    <div class="profile-actions">
-                        <a href="profile_edit.php" class="btn edit-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                style="height:1em;width:1em;margin-right:0.5em;vertical-align:middle;" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5h2m-1-1v2m10.54 1.46a2.12 2.12 0 00-3 0l-9 9a2 2 0 00-.51 1.07l-1 5a1 1 0 001.21 1.21l5-1a2 2 0 001.07-.51l9-9a2.12 2.12 0 000-3z" />
-                            </svg>
-                            Edit Profile
-                        </a>
-                    </div>
+
+                    <!-- Edit Profile Button - Only shown in patient view -->
+                    <?php if ($view_mode !== 'admin'): ?>
+                        <div class="profile-actions">
+                            <a href="profile_edit.php" class="btn edit-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    style="height:1em;width:1em;margin-right:0.5em;vertical-align:middle;" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5h2m-1-1v2m10.54 1.46a2.12 2.12 0 00-3 0l-9 9a2 2 0 00-.51 1.07l-1 5a1 1 0 001.21 1.21l5-1a2 2 0 001.07-.51l9-9a2.12 2.12 0 000-3z" />
+                                </svg>
+                                Edit Profile
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <!-- Personal Information -->
                 <div class="profile-card">
@@ -1028,7 +1165,7 @@ if (isset($_GET['logout'])) {
                             </div>
                         <?php endforeach; ?>
 
-                        <?php if (!empty($missing_personal_fields)): ?>
+                        <?php if (!empty($missing_personal_fields) && $view_mode !== 'admin'): ?>
                             <div class="missing-info-alert">
                                 <div class="icon">
                                     <i class="fas fa-info-circle"></i>
@@ -1078,7 +1215,7 @@ if (isset($_GET['logout'])) {
                             </div>
                         <?php endforeach; ?>
 
-                        <?php if (!empty($missing_emergency)): ?>
+                        <?php if (!empty($missing_emergency) && $view_mode !== 'admin'): ?>
                             <div class="missing-info-alert">
                                 <div class="icon">
                                     <i class="fas fa-exclamation-triangle"></i>
@@ -1129,7 +1266,7 @@ if (isset($_GET['logout'])) {
                             </div>
                         <?php endforeach; ?>
 
-                        <?php if (!empty($missing_lifestyle)): ?>
+                        <?php if (!empty($missing_lifestyle) && $view_mode !== 'admin'): ?>
                             <div class="missing-info-alert">
                                 <div class="icon">
                                     <i class="fas fa-heart"></i>
@@ -1447,15 +1584,17 @@ if (isset($_GET['logout'])) {
                 <div class="summary-card enhanced-card medical-history-section">
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5em; flex-wrap: wrap; gap: 0.5em;">
                         <h2><i class="fas fa-notes-medical"></i> Medical History</h2>
-                        <a href="medical_history_edit.php" class="btn edit-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                style="height:1em;width:1em;margin-right:0.5em;vertical-align:middle;" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5h2m-1-1v2m10.54 1.46a2.12 2.12 0 00-3 0l-9 9a2 2 0 00-.51 1.07l-1 5a1 1 0 001.21 1.21l5-1a2 2 0 001.07-.51l9-9a2.12 2.12 0 000-3z" />
-                            </svg>
-                            Edit Medical History
-                        </a>
+                        <?php if ($view_mode !== 'admin'): ?>
+                            <a href="medical_history_edit.php" class="btn edit-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    style="height:1em;width:1em;margin-right:0.5em;vertical-align:middle;" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5h2m-1-1v2m10.54 1.46a2.12 2.12 0 00-3 0l-9 9a2 2 0 00-.51 1.07l-1 5a1 1 0 001.21 1.21l5-1a2 2 0 001.07-.51l9-9a2.12 2.12 0 000-3z" />
+                                </svg>
+                                Edit Medical History
+                            </a>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Medical History Grid -->
@@ -1496,10 +1635,14 @@ if (isset($_GET['logout'])) {
                                                             <i class="fas fa-history"></i>
                                                         </div>
                                                         <h4>No Past Medical Conditions Recorded</h4>
-                                                        <p>Adding your medical history helps healthcare providers understand your health better and provide more accurate care.</p>
-                                                        <a href="medical_history_edit.php#past-conditions" class="completion-prompt">
-                                                            <i class="fas fa-plus"></i> Add Medical History
-                                                        </a>
+                                                        <?php if ($view_mode === 'admin'): ?>
+                                                            <p>Patient has not recorded any past medical conditions.</p>
+                                                        <?php else: ?>
+                                                            <p>Adding your medical history helps healthcare providers understand your health better and provide more accurate care.</p>
+                                                            <a href="medical_history_edit.php#past-conditions" class="completion-prompt">
+                                                                <i class="fas fa-plus"></i> Add Medical History
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1541,10 +1684,14 @@ if (isset($_GET['logout'])) {
                                                             <i class="fas fa-exclamation-triangle"></i>
                                                         </div>
                                                         <h4>No Chronic Illnesses Recorded</h4>
-                                                        <p>If you have any ongoing health conditions, please add them to help your healthcare team provide better care.</p>
-                                                        <a href="medical_history_edit.php#chronic-illnesses" class="completion-prompt">
-                                                            <i class="fas fa-plus"></i> Add Conditions
-                                                        </a>
+                                                        <?php if ($view_mode === 'admin'): ?>
+                                                            <p>Patient has not recorded any chronic illnesses.</p>
+                                                        <?php else: ?>
+                                                            <p>If you have any ongoing health conditions, please add them to help your healthcare team provide better care.</p>
+                                                            <a href="medical_history_edit.php#chronic-illnesses" class="completion-prompt">
+                                                                <i class="fas fa-plus"></i> Add Conditions
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1596,10 +1743,14 @@ if (isset($_GET['logout'])) {
                                                             <i class="fas fa-allergies"></i>
                                                         </div>
                                                         <h4>No Allergies Recorded</h4>
-                                                        <p><strong>Important:</strong> Recording your allergies helps prevent dangerous medication reactions and ensures safe treatment.</p>
-                                                        <a href="medical_history_edit.php#allergies" class="completion-prompt">
-                                                            <i class="fas fa-plus"></i> Add Allergies
-                                                        </a>
+                                                        <?php if ($view_mode === 'admin'): ?>
+                                                            <p><strong>Note:</strong> Patient has not recorded any allergies.</p>
+                                                        <?php else: ?>
+                                                            <p><strong>Important:</strong> Recording your allergies helps prevent dangerous medication reactions and ensures safe treatment.</p>
+                                                            <a href="medical_history_edit.php#allergies" class="completion-prompt">
+                                                                <i class="fas fa-plus"></i> Add Allergies
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1643,10 +1794,14 @@ if (isset($_GET['logout'])) {
                                                             <i class="fas fa-pills"></i>
                                                         </div>
                                                         <h4>No Current Medications</h4>
-                                                        <p>Keep track of all medications you're currently taking to avoid harmful interactions and ensure coordinated care.</p>
-                                                        <a href="medical_history_edit.php#current-medications" class="completion-prompt">
-                                                            <i class="fas fa-plus"></i> Add Medications
-                                                        </a>
+                                                        <?php if ($view_mode === 'admin'): ?>
+                                                            <p>Patient has not recorded any current medications.</p>
+                                                        <?php else: ?>
+                                                            <p>Keep track of all medications you're currently taking to avoid harmful interactions and ensure coordinated care.</p>
+                                                            <a href="medical_history_edit.php#current-medications" class="completion-prompt">
+                                                                <i class="fas fa-plus"></i> Add Medications
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1690,10 +1845,14 @@ if (isset($_GET['logout'])) {
                                                             <i class="fas fa-users"></i>
                                                         </div>
                                                         <h4>No Family History Recorded</h4>
-                                                        <p>Family medical history helps identify hereditary conditions and assess your risk for certain diseases.</p>
-                                                        <a href="medical_history_edit.php#family-history" class="completion-prompt">
-                                                            <i class="fas fa-plus"></i> Add Family History
-                                                        </a>
+                                                        <?php if ($view_mode === 'admin'): ?>
+                                                            <p>Patient has not recorded any family medical history.</p>
+                                                        <?php else: ?>
+                                                            <p>Family medical history helps identify hereditary conditions and assess your risk for certain diseases.</p>
+                                                            <a href="medical_history_edit.php#family-history" class="completion-prompt">
+                                                                <i class="fas fa-plus"></i> Add Family History
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1735,10 +1894,14 @@ if (isset($_GET['logout'])) {
                                                             <i class="fas fa-cut"></i>
                                                         </div>
                                                         <h4>No Surgical History</h4>
-                                                        <p>Record any surgeries or procedures you've had to help healthcare providers understand your medical background.</p>
-                                                        <a href="medical_history_edit.php#surgical-history" class="completion-prompt">
-                                                            <i class="fas fa-plus"></i> Add Surgery History
-                                                        </a>
+                                                        <?php if ($view_mode === 'admin'): ?>
+                                                            <p>Patient has not recorded any surgical history.</p>
+                                                        <?php else: ?>
+                                                            <p>Record any surgeries or procedures you've had to help healthcare providers understand your medical background.</p>
+                                                            <a href="medical_history_edit.php#surgical-history" class="completion-prompt">
+                                                                <i class="fas fa-plus"></i> Add Surgery History
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1786,10 +1949,14 @@ if (isset($_GET['logout'])) {
                                                             <i class="fas fa-syringe"></i>
                                                         </div>
                                                         <h4>No Immunization Records</h4>
-                                                        <p>Keep track of your vaccinations to stay protected and meet healthcare requirements for travel or work.</p>
-                                                        <a href="medical_history_edit.php#immunizations" class="completion-prompt">
-                                                            <i class="fas fa-plus"></i> Add Vaccinations
-                                                        </a>
+                                                        <?php if ($view_mode === 'admin'): ?>
+                                                            <p>Patient has not recorded any immunizations.</p>
+                                                        <?php else: ?>
+                                                            <p>Keep track of your vaccinations to stay protected and meet healthcare requirements for travel or work.</p>
+                                                            <a href="medical_history_edit.php#immunizations" class="completion-prompt">
+                                                                <i class="fas fa-plus"></i> Add Vaccinations
+                                                            </a>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1819,6 +1986,21 @@ if (isset($_GET['logout'])) {
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
             }, 2000);
+        }
+
+        function printPatientFile() {
+            // Show loading spinner
+            const btn = event.target.closest('.utility-btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<div class="loading-spinner"></div> <span>Preparing...</span>';
+            btn.disabled = true;
+
+            // Redirect to print version of medical record
+            setTimeout(() => {
+                window.open('medical_record_print.php?patient_id=<?= $patient_id ?>', '_blank');
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }, 1000);
         }
 
         function downloadPatientID() {

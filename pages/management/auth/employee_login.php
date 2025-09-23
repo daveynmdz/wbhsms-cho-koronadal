@@ -2,11 +2,6 @@
 // Main entry point for employee authentication
 // At the VERY TOP of your PHP file (before session_start or other code)
 $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
-ini_set('session.use_only_cookies', '1');
-ini_set('session.use_strict_mode', '1');
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax'); // or 'Strict' if flows allow
-ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
 error_reporting(E_ALL);
 
 // Hide errors in production
@@ -15,7 +10,8 @@ if (!$debug) {
     ini_set('log_errors', '1');
 }
 
-session_start();
+// Include employee session configuration
+require_once __DIR__ . '/../../../config/session/employee_session.php';
 
 include_once __DIR__ . '/../../../config/db.php';
 
@@ -23,17 +19,22 @@ include_once __DIR__ . '/../../../config/db.php';
 if (!empty($_SESSION['employee_id'])) {
     $role = strtolower(trim($_SESSION['role'] ?? ''));
     $dashboardMap = [
-        'admin' => '../../dashboard/dashboard_admin.php',
-        'doctor' => '../../dashboard/dashboard_doctor.php',
-        'nurse' => '../../dashboard/dashboard_nurse.php',
-        'pharmacist' => '../../dashboard/dashboard_pharmacist.php',
-        'bhw' => '../../dashboard/dashboard_bhw.php',
-        'dho' => '../../dashboard/dashboard_dho.php',
-        'records officer' => '../../dashboard/dashboard_records_officer.php',
-        'cashier' => '../../dashboard/dashboard_cashier.php',
-        'laboratory tech.' => '../../dashboard/dashboard_laboratory_tech.php'
+        'admin' => '../admin/dashboard.php',
+        'administrator' => '../admin/dashboard.php',
+        'doctor' => '../doctor/dashboard.php',
+        'nurse' => '../nurse/dashboard.php',
+        'pharmacist' => '../pharmacist/dashboard.php',
+        'bhw' => '../bhw/dashboard.php',
+        'barangay health worker' => '../bhw/dashboard.php',
+        'dho' => '../dho/dashboard.php',
+        'district health officer' => '../dho/dashboard.php',
+        'records officer' => '../records_officer/dashboard.php',
+        'cashier' => '../cashier/dashboard.php',
+        'laboratory tech.' => '../laboratory_tech/dashboard.php',
+        'laboratory technician' => '../laboratory_tech/dashboard.php',
+        'lab tech' => '../laboratory_tech/dashboard.php'
     ];
-    $redirect = $dashboardMap[$role] ?? '../../dashboard/dashboard_admin.php';
+    $redirect = $dashboardMap[$role] ?? '../dashboard/dashboard_admin.php';
     header('Location: ' . $redirect);
     exit;
 }
@@ -41,8 +42,7 @@ if (!empty($_SESSION['employee_id'])) {
 // Handle flashes from redirects
 if (isset($_GET['logged_out'])) {
     $_SESSION['flash'] = array('type' => 'success', 'msg' => 'You have signed out successfully.');
-    header('Location: employee_login.php');
-    exit;
+    // Don't redirect again, just continue with the current page load
 }
 if (isset($_GET['expired'])) {
     $_SESSION['flash'] = array('type' => 'error', 'msg' => 'Your session expired. Please log in again.');
@@ -106,8 +106,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('Service temporarily unavailable. Please try again later.');
         }
 
-        // Query employee
-        $stmt = $conn->prepare("SELECT employee_id, employee_number, first_name, middle_name, last_name, role, password, status FROM employees WHERE employee_number = ? LIMIT 1");
+        // Query employee information
+        $stmt = $conn->prepare("
+            SELECT 
+                employee_id, 
+                employee_number, 
+                first_name, 
+                middle_name, 
+                last_name, 
+                password, 
+                status,
+                role_id
+            FROM employees 
+            WHERE employee_number = ? 
+            LIMIT 1
+        ");
         if (!$stmt) {
             error_log('[employee_login] Prepare failed: ' . $conn->error);
             throw new RuntimeException('Service temporarily unavailable. Please try again later.');
@@ -135,6 +148,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($isPasswordValid) {
+                // Check if role_id exists
+                if (empty($row['role_id'])) {
+                    error_log('[employee_login] No role_id found for user: ' . $employee_number);
+                    throw new RuntimeException("Role not configured. Please contact administrator.");
+                }
+
+                // Map role_id to role name (adjust these mappings based on your actual role_id values)
+                $roleMap = [
+                    1 => 'admin',
+                    2 => 'doctor', 
+                    3 => 'nurse',
+                    4 => 'pharmacist',
+                    5 => 'bhw',
+                    6 => 'dho',
+                    7 => 'records officer',
+                    8 => 'cashier',
+                    9 => 'laboratory tech'
+                ];
+                
+                $role = $roleMap[$row['role_id']] ?? 'admin'; // Default to admin if role_id not found
+
                 // Successful login - reset rate limit
                 unset($_SESSION[$rate_limit_key], $_SESSION['last_login_attempt']);
                 
@@ -147,29 +181,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['employee_last_name'] = $row['last_name'];
                 $_SESSION['employee_first_name'] = $row['first_name'];
                 $_SESSION['employee_middle_name'] = $row['middle_name'];
-                $_SESSION['role'] = $row['role'];
+                
+                // Create full name for dashboard compatibility
+                $full_name = $row['first_name'];
+                if (!empty($row['middle_name'])) $full_name .= ' ' . $row['middle_name'];
+                $full_name .= ' ' . $row['last_name'];
+                $_SESSION['employee_name'] = trim($full_name);
+                
+                $_SESSION['role'] = $role;
+                $_SESSION['role_id'] = $row['role_id'];
                 $_SESSION['login_time'] = time();
+                $_SESSION['user_type'] = $role; // For compatibility
+                $_SESSION['user_id'] = $row['employee_id']; // For admin dashboard compatibility
 
                 // Role-based dashboard redirection
-                $role = strtolower(trim($row['role']));
                 $dashboardMap = [
-                    'admin' => '../../dashboard/dashboard_admin.php',
-                    'doctor' => '../../dashboard/dashboard_doctor.php',
-                    'nurse' => '../../dashboard/dashboard_nurse.php',
-                    'pharmacist' => '../../dashboard/dashboard_pharmacist.php',
-                    'bhw' => '../../dashboard/dashboard_bhw.php',
-                    'dho' => '../../dashboard/dashboard_dho.php',
-                    'records officer' => '../../dashboard/dashboard_records_officer.php',
-                    'cashier' => '../../dashboard/dashboard_cashier.php',
-                    'laboratory tech.' => '../../dashboard/dashboard_laboratory_tech.php'
+                    'admin' => '../admin/dashboard.php',
+                    'administrator' => '../admin/dashboard.php',
+                    'doctor' => '../doctor/dashboard.php',
+                    'nurse' => '../nurse/dashboard.php',
+                    'pharmacist' => '../pharmacist/dashboard.php',
+                    'bhw' => '../bhw/dashboard.php',
+                    'barangay health worker' => '../bhw/dashboard.php',
+                    'dho' => '../dho/dashboard.php',
+                    'district health officer' => '../dho/dashboard.php',
+                    'records officer' => '../records_officer/dashboard.php',
+                    'cashier' => '../cashier/dashboard.php',
+                    'laboratory tech' => '../laboratory_tech/dashboard.php',
+                    'laboratory technician' => '../laboratory_tech/dashboard.php',
+                    'lab tech' => '../laboratory_tech/dashboard.php'
                 ];
                 
                 if (array_key_exists($role, $dashboardMap)) {
                     header('Location: ' . $dashboardMap[$role]);
                     exit();
                 } else {
-                    error_log('[employee_login] Unknown role: ' . $role . ' for user: ' . $employee_number);
-                    throw new RuntimeException("Unknown role. Please contact administrator.");
+                    error_log('[employee_login] Unknown role: ' . $role . ' (role_id: ' . $row['role_id'] . ') for user: ' . $employee_number);
+                    // Default to admin dashboard for unrecognized roles but log it
+                    header('Location: ../admin/dashboard.php');
+                    exit();
                 }
             } else {
                 $_SESSION[$rate_limit_key]++;

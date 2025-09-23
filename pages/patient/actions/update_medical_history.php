@@ -1,12 +1,18 @@
 <?php
 // update_medical_history.php
 session_start();
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../../config/db.php';
+
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Set content type for JSON response
+header('Content-Type: application/json');
 
 if (!isset($_SESSION['patient_id'])) {
     http_response_code(403);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized - No patient session']);
     exit();
 }
 $patient_id = $_SESSION['patient_id'];
@@ -17,11 +23,20 @@ function get_post($key)
     return isset($_POST[$key]) ? trim($_POST[$key]) : '';
 }
 
+// Debug: Log received data
+error_log("Update request - Received POST data: " . print_r($_POST, true));
+
 $table = get_post('table');
 $id = get_post('id');
 
+if (!$id) {
+    error_log("Update failed: Missing ID");
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Missing record ID']);
+    exit();
+}
+
 // Only allow updates for known tables
-// Add immunizations to allowed tables
 $allowed_tables = [
     'allergies',
     'past_medical_conditions',
@@ -31,10 +46,18 @@ $allowed_tables = [
     'current_medications',
     'immunizations'
 ];
+
 if (!in_array($table, $allowed_tables)) {
+    error_log("Update failed: Invalid table - " . $table);
     http_response_code(400);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Invalid table']);
+    echo json_encode(['success' => false, 'error' => 'Invalid table: ' . $table]);
+    exit();
+}
+
+// Check if PDO connection exists
+if (!isset($pdo)) {
+    error_log("Database connection not found");
+    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
     exit();
 }
 
@@ -103,20 +126,36 @@ try {
         default:
             throw new Exception('Invalid table');
     }
+    
+    error_log("Executing update SQL: " . $sql);
+    error_log("Update parameters: " . print_r($params, true));
+    
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => true]);
+    $result = $stmt->execute($params);
+    
+    if (!$result) {
+        error_log("SQL execution failed: " . print_r($stmt->errorInfo(), true));
+        throw new Exception('Database execution failed');
+    }
+    
+    if ($stmt->rowCount() === 0) {
+        error_log("No rows affected - record may not exist or no changes made");
+        throw new Exception('Record not found or no changes made');
+    }
+    
+    echo json_encode(['success' => true, 'message' => 'Record updated successfully']);
     exit();
 } catch (Exception $e) {
+    error_log("Exception in update_medical_history.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
     http_response_code(400);
-    header('Content-Type: application/json');
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage(),
-        'code' => $e->getCode(),
         'table' => $table,
-        'fields' => $_POST
+        'id' => $id,
+        'debug_data' => $_POST
     ]);
     exit();
 }

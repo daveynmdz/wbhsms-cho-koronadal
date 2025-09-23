@@ -14,7 +14,7 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 // Check if role is authorized
 $authorized_roles = ['Doctor', 'BHW', 'DHO', 'Records Officer', 'Admin'];
 if (!in_array($_SESSION['role'], $authorized_roles)) {
-    header('Location: ../../dashboard/dashboard_admin.php');
+    header('Location: ../admin/dashboard.php');
     exit();
 }
 
@@ -828,7 +828,7 @@ try {
     <section class="content-wrapper">
         <!-- Breadcrumb Navigation -->
         <div class="breadcrumb" style="margin-top: 50px;">
-            <a href="../../dashboard/dashboard_admin.php"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="../admin/dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
             <i class="fas fa-chevron-right"></i>
             <span>Referrals Management</span>
         </div>

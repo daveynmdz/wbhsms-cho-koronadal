@@ -1,13 +1,12 @@
-/* ===========================================================
-   PatientEditMedHistory.php Stylesheet
-   -----------------------------------------------------------
-   Organized and updated for grid-based multi-card layout,
-   strict equal sizing, responsive design, and clarity.
-   =========================================================== */
+/* Medical History Edit Responsive Styles - Based on Profile Edit */
 
-/* ==============================
-   1. GLOBAL/BODY/BACKGROUND
-   ============================== */
+/* =============================
+   1. RESET AND BASE STYLES
+   ============================= */
+* {
+    box-sizing: border-box;
+}
+
 html,
 body {
     height: 100%;
@@ -20,35 +19,582 @@ body {
     background-repeat: no-repeat;
     font-family: 'Segoe UI', Arial, sans-serif;
     color: #222;
-}
-
-* {
-    box-sizing: border-box;
-}
-
-/* ==============================
-   2. MAIN PAGE LAYOUT
-   ============================== */
-.homepage {
-    margin-left: 250px;
-    padding: 30px;
-    color: #03045e;
-    font-family: "Segoe UI", Arial, sans-serif;
-    font-size: 14px;
-    background: transparent;
-    box-sizing: border-box;
-    min-height: 0;
-    width: auto;
     overflow-y: auto;
-    outline: none;
 }
 
-@media screen and (max-width: 768px) {
+/* =============================
+   2. MAIN LAYOUT
+   ============================= */
+.homepage {
+    min-height: calc(100vh - 80px);
+    padding: 20px;
+}
+
+.profile-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: calc(100vh - 80px);
+}
+
+/* =============================
+   3. FLOATING BACK BUTTON
+   ============================= */
+.edit-profile-toolbar-flex {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.floating-back-btn {
+    background: #fd79a8;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(253, 121, 168, 0.3);
+    min-width: 120px;
+    font-weight: 600;
+}
+
+.floating-back-btn:hover {
+    background: #e84393;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(253, 121, 168, 0.4);
+}
+
+/* =============================
+   4. REMINDERS BOX
+   ============================= */
+.reminders-box {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.reminders-box strong {
+    color: #856404;
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1.1em;
+}
+
+.reminders-box ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #6c5ce7;
+}
+
+.reminders-box li {
+    margin: 4px 0;
+    font-size: 0.95em;
+}
+
+/* =============================
+   5. GRID LAYOUT FOR CARDS
+   ============================= */
+.profile-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.profile-row {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.profile-row.three-cols {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
+
+.profile-row.two-cols {
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+}
+
+.profile-photo-col {
+    width: 100%;
+}
+
+/* =============================
+   6. PROFILE CARDS
+   ============================= */
+.profile-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+    border: 1px solid #e1e8ed;
+    transition: box-shadow 0.3s ease;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+}
+
+.profile-card:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
+}
+
+.profile-card h3 {
+    margin: 0 0 20px 0;
+    color: #1877f2;
+    font-size: 1.4em;
+    font-weight: 600;
+    border-bottom: 2px solid #74b9ff;
+    padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.2px;
+}
+
+/* =============================
+   7. MEDICAL HISTORY TABLES
+   ============================= */
+.medical-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.medical-history-table thead tr {
+    background: #f8f9fa !important;
+    color: #2d3436;
+    font-weight: 600;
+}
+
+.medical-history-table th,
+.medical-history-table td {
+    padding: 12px 8px;
+    text-align: left;
+    border-bottom: 1px solid #e1e8ed;
+    vertical-align: middle;
+}
+
+.medical-history-table th {
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #636e72;
+}
+
+.medical-history-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.medical-history-table tbody tr:hover {
+    background-color: #f8f9ff;
+}
+
+.medical-history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Table Action Buttons */
+.table-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0 2px;
+    font-weight: 500;
+}
+
+.table-btn.edit-btn {
+    background: #74b9ff;
+    color: white;
+}
+
+.table-btn.edit-btn:hover {
+    background: #0984e3;
+    transform: translateY(-1px);
+}
+
+.table-btn.delete-btn {
+    background: #fd79a8;
+    color: white;
+}
+
+.table-btn.delete-btn:hover {
+    background: #e84393;
+    transform: translateY(-1px);
+}
+
+.table-btn.save-btn {
+    background: #00b894;
+    color: white;
+}
+
+.table-btn.save-btn:hover {
+    background: #00a085;
+}
+
+.table-btn.cancel-btn {
+    background: #ddd;
+    color: #636e72;
+}
+
+.table-btn.cancel-btn:hover {
+    background: #b2bec3;
+}
+
+/* =============================
+   8. ADD FORMS
+   ============================= */
+.neat-add-form {
+    background: #f8f9ff;
+    border: 1px solid #e3f2fd;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+}
+
+.neat-add-form h4 {
+    margin: 0 0 16px 0;
+    color: #1877f2;
+    font-size: 1.1em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.neat-add-form h4::before {
+    content: "➕";
+    font-size: 0.9em;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #2d3436;
+    margin-bottom: 6px;
+    font-size: 0.95em;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccd0d5;
+    border-radius: 6px;
+    font-size: 0.95em;
+    background: #ffffff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #1877f2;
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+}
+
+.form-group input::placeholder {
+    color: #a0a0a0;
+}
+
+/* Add Form Buttons */
+.neat-add-form button[type="submit"] {
+    background: linear-gradient(90deg, #00b894, #00cec9);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.neat-add-form button[type="submit"]:hover {
+    background: linear-gradient(90deg, #00a085, #00b894);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+}
+
+.neat-add-form button[type="submit"]::before {
+    content: "✓";
+    font-size: 0.9em;
+}
+
+/* =============================
+   9. MODAL STYLES
+   ============================= */
+.custom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.custom-modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.custom-modal-content h3 {
+    margin: 0 0 16px 0;
+    color: #2d3436;
+    font-weight: 600;
+}
+
+.custom-modal-content p {
+    margin: 0 0 20px 0;
+    color: #636e72;
+    line-height: 1.5;
+}
+
+.custom-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.custom-modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#deleteConfirmYesBtn {
+    background: #fd79a8;
+    color: white;
+}
+
+#deleteConfirmYesBtn:hover {
+    background: #e84393;
+}
+
+#deleteConfirmCancelBtn {
+    background: #ddd;
+    color: #2d3436;
+}
+
+#deleteConfirmCancelBtn:hover {
+    background: #b2bec3;
+}
+
+/* Success Modal */
+#successModal .custom-modal-content {
+    border-top: 4px solid #00b894;
+}
+
+#successModal h3 {
+    color: #00b894 !important;
+}
+
+/* =============================
+   10. EMPTY STATE STYLES
+   ============================= */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #636e72;
+}
+
+.empty-state i {
+    font-size: 3em;
+    color: #ddd;
+    margin-bottom: 16px;
+}
+
+.empty-state h4 {
+    margin: 0 0 8px 0;
+    color: #2d3436;
+    font-size: 1.1em;
+}
+
+.empty-state p {
+    margin: 0 0 20px 0;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.empty-state .table-btn {
+    padding: 10px 20px;
+    font-size: 0.9em;
+}
+
+/* =============================
+   11. RESPONSIVE DESIGN
+   ============================= */
+@media (max-width: 768px) {
     .homepage {
-        margin-left: 0;
-        min-width: 0;
-        max-width: 100vw;
+        padding: 10px;
     }
+    
+    .profile-wrapper {
+        padding: 16px;
+    }
+    
+    .profile-card {
+        padding: 16px;
+    }
+    
+    .profile-row.three-cols {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-row.two-cols {
+        grid-template-columns: 1fr;
+    }
+    
+    .medical-history-table {
+        font-size: 0.8em;
+    }
+    
+    .medical-history-table th,
+    .medical-history-table td {
+        padding: 8px 4px;
+    }
+    
+    .table-btn {
+        padding: 4px 8px;
+        font-size: 0.75em;
+    }
+    
+    .neat-add-form {
+        padding: 16px;
+    }
+    
+    .custom-modal-content {
+        padding: 20px;
+        margin: 16px;
+    }
+    
+    .custom-modal-actions {
+        flex-direction: column;
+    }
+    
+    .floating-back-btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-wrapper {
+        padding: 12px;
+    }
+    
+    .profile-card {
+        padding: 12px;
+    }
+    
+    .profile-card h3 {
+        font-size: 1.2em;
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
+    
+    .medical-history-table {
+        font-size: 0.75em;
+    }
+    
+    .neat-add-form {
+        padding: 12px;
+    }
+    
+    .neat-add-form h4 {
+        font-size: 1em;
+    }
+    
+    .floating-back-btn {
+        font-size: 0.85em;
+        padding: 8px 16px;
+    }
+}
+
+/* =============================
+   12. ACCESSIBILITY
+   ============================= */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.table-btn:focus {
+    outline: 2px solid #74b9ff;
+    outline-offset: 2px;
+}
+
+/* =============================
+   13. ANIMATIONS
+   ============================= */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.profile-card {
+    animation: fadeIn 0.5s ease;
+}
+
+/* =============================
+   14. SNACKBAR STYLES
+   ============================= */
+#snackbar {
+    font-size: 1em !important;
+    padding: 12px 16px !important;
+    max-width: 90vw;
+    word-wrap: break-word;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #323232;
+    color: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
 }
 
 .profile-wrapper {

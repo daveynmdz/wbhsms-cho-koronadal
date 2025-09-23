@@ -1,5 +1,6 @@
 <?php
-session_start();
+// Use patient session configuration
+require_once __DIR__ . '/../../config/session/patient_session.php';
 require_once __DIR__ . '/../../config/db.php';
 
 // Only allow logged-in patients
@@ -209,6 +210,8 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="../../assets/css/topbar.css" />
     <link rel="stylesheet" href="../../assets/css/profile-edit-responsive.css" />
+    <link rel="stylesheet" href="../../assets/css/profile-edit.css" />
+    <link rel="stylesheet" href="../../assets/css/edit.css">
     <link rel="stylesheet" href="../../vendor/cropper-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
@@ -700,12 +703,16 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
                 backBtn.addEventListener('click', function() {
                     modal.style.display = 'flex';
                 });
+                
                 modalCancel.addEventListener('click', function() {
-                    window.location.href = 'profile.php';
+                    modal.style.display = 'none';
+                    window.location.href = "profile.php";
                 });
+                
                 modalStay.addEventListener('click', function() {
                     modal.style.display = 'none';
                 });
+                
                 // Close modal on outside click
                 modal.addEventListener('click', function(e) {
                     if (e.target === modal) modal.style.display = 'none';
@@ -715,6 +722,7 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
             // Uneditable fields popup logic
             const uneditablePopup = document.getElementById('uneditablePopup');
             const closeUneditablePopup = document.getElementById('closeUneditablePopup');
+            
             if (uneditablePopup && closeUneditablePopup) {
                 document.querySelectorAll('.readonly-field').forEach(function(field) {
                     field.addEventListener('focus', showUneditablePopup);
@@ -727,9 +735,11 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
                 function showUneditablePopup() {
                     uneditablePopup.style.display = 'flex';
                 }
+                
                 closeUneditablePopup.addEventListener('click', function() {
                     uneditablePopup.style.display = 'none';
                 });
+                
                 uneditablePopup.addEventListener('click', function(e) {
                     if (e.target === uneditablePopup) uneditablePopup.style.display = 'none';
                 });

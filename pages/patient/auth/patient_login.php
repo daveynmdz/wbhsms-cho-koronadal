@@ -2,11 +2,6 @@
 // Main entry point for the website
 // At the VERY TOP of your PHP file (before session_start or other code)
 $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
-ini_set('session.use_only_cookies', '1');
-ini_set('session.use_strict_mode', '1');
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax'); // or 'Strict' if flows allow
-ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
 error_reporting(E_ALL); // log everything, just don't display in prod
 
 // Hide errors in production
@@ -15,13 +10,14 @@ if (!$debug) {
     ini_set('log_errors', '1');
 }
 
-session_start();
+// Include patient session configuration
+require_once __DIR__ . '/../../config/session/patient_session.php';
 
 include_once __DIR__ . '/../../config/db.php';
 
 // If already logged in, redirect to dashboard
-if (!empty($_SESSION['patient_id'])) {
-    header('Location: ../dashboard/dashboard_patient.php');
+if (is_patient_logged_in()) {
+    header('Location: ../patient/dashboard.php');
     exit;
 }
 

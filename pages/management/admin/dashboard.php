@@ -1,9 +1,11 @@
 <?php
 // dashboard_admin.php
-session_start();
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
+
+// Include employee session configuration
+require_once '../../../config/session/employee_session.php';
 
 // If user is not logged in or not an admin, bounce to login
 if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
@@ -12,13 +14,13 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 }
 
 // DB
-require_once '../../config/db.php'; // adjust relative path if needed
+require_once '../../../config/db.php'; // adjust relative path if needed
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
 // -------------------- Data bootstrap (Admin Dashboard) --------------------
 $defaults = [
-    'name' => $_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name'],
+    'name' => $_SESSION['employee_name'] ?? 'Unknown User',
     'employee_number' => $_SESSION['employee_number'] ?? '-',
     'role' => $employee_role,
     'stats' => [
@@ -35,7 +37,7 @@ $defaults = [
 ];
 
 // Get employee info
-$stmt = $conn->prepare('SELECT first_name, middle_name, last_name, employee_number, role FROM employees WHERE employee_id = ?');
+$stmt = $conn->prepare('SELECT first_name, middle_name, last_name, employee_number, role_id FROM employees WHERE employee_id = ?');
 $stmt->bind_param("i", $employee_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -46,7 +48,20 @@ if ($row) {
     $full_name .= ' ' . $row['last_name'];
     $defaults['name'] = trim($full_name);
     $defaults['employee_number'] = $row['employee_number'];
-    $defaults['role'] = $row['role'];
+    
+    // Map role_id to role names
+    $role_mapping = [
+        1 => 'admin',
+        2 => 'doctor', 
+        3 => 'nurse',
+        4 => 'laboratory_tech',
+        5 => 'pharmacist',
+        6 => 'cashier',
+        7 => 'records_officer',
+        8 => 'bhw',
+        9 => 'dho'
+    ];
+    $defaults['role'] = $role_mapping[$row['role_id']] ?? 'unknown';
 }
 $stmt->close();
 
@@ -199,8 +214,8 @@ try {
     <title>CHO Koronadal — Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <!-- Reuse your existing styles -->
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/sidebar.css">
+    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
         :root {
             --primary: #007bff;
@@ -223,14 +238,6 @@ try {
 
         * {
             box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
         }
 
         .content-wrapper {
@@ -630,7 +637,7 @@ try {
     <?php
     // Tell the sidebar which menu item to highlight
     $activePage = 'dashboard';
-    include '../../includes/sidebar_admin.php';
+    include '../../../includes/sidebar_admin.php';
     ?>
 
     <section class="content-wrapper">
@@ -699,7 +706,7 @@ try {
             Quick Actions
         </h2>
         <div class="action-grid">
-            <a href="../patient/patient_management.php" class="action-card blue">
+            <a href="patient_records_management.php" class="action-card blue">
                 <i class="fas fa-users icon"></i>
                 <h3>Manage Patients</h3>
                 <p>Add, edit, or view patient records and information</p>

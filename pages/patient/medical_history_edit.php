@@ -1,16 +1,17 @@
 <?php
-session_start();
+// Use patient session configuration
+require_once __DIR__ . '/../../config/session/patient_session.php';
 require_once __DIR__ . '/../../config/db.php';
 
 // Only allow logged-in patients
 $patient_id = isset($_SESSION['patient_id']) ? $_SESSION['patient_id'] : null;
 if (!$patient_id) {
-    header('Location: patientLogin.html');
+    header('Location: /wbhsms-cho-koronadal/pages/auth/patient_login.php');
     exit();
 }
 
 // Fetch patient info
-$stmt = $pdo->prepare("SELECT * FROM patients WHERE id = ?");
+$stmt = $pdo->prepare("SELECT * FROM patients WHERE patient_id = ?");
 $stmt->execute([$patient_id]);
 $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$patient) {
@@ -123,6 +124,11 @@ function h($v)
     </header>
 
     <section class="homepage">
+
+        <!-- Snackbar notification -->
+        <div id="snackbar" style="display:none;position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#323232;color:#fff;padding:1em 2em;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:1.1em;z-index:99999;opacity:0;transition:opacity 0.3s;">
+            <span id="snackbar-text"></span>
+        </div>
 
         <!-- Go Back to Patient Profile Button -->
         <div class="edit-profile-toolbar-flex">
@@ -1438,6 +1444,30 @@ function h($v)
     </div>
 
     <script src="actions/medicalHistory.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle back/cancel button
+            const backBtn = document.getElementById('backCancelBtn');
+            const modal = document.getElementById('backCancelModal');
+            const modalCancel = document.getElementById('modalCancelBtn');
+            const modalStay = document.getElementById('modalStayBtn');
+            
+            if (backBtn && modal && modalCancel && modalStay) {
+                backBtn.addEventListener('click', function() {
+                    modal.style.display = 'block';
+                });
+                
+                modalCancel.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                    window.location.href = "profile.php";
+                });
+                
+                modalStay.addEventListener('click', function() {
+                    modal.style.display = 'none';
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

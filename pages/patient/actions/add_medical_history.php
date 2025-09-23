@@ -1,11 +1,19 @@
 <?php
 // add_medical_history.php
 session_start();
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../../config/db.php';
+
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Set content type for JSON response
+header('Content-Type: application/json');
 
 if (!isset($_SESSION['patient_id'])) {
     http_response_code(403);
-    exit('Unauthorized');
+    echo json_encode(['success' => false, 'error' => 'Unauthorized - No patient session']);
+    exit();
 }
 $patient_id = $_SESSION['patient_id'];
 
@@ -13,6 +21,9 @@ function get_post($key)
 {
     return isset($_POST[$key]) ? trim($_POST[$key]) : '';
 }
+
+// Debug: Log received data
+error_log("Received POST data: " . print_r($_POST, true));
 
 $table = get_post('table');
 
@@ -25,10 +36,18 @@ $allowed_tables = [
     'current_medications',
     'immunizations'
 ];
+
 if (!in_array($table, $allowed_tables)) {
+    error_log("Invalid table attempted: " . $table);
     http_response_code(400);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'error' => 'Invalid table']);
+    echo json_encode(['success' => false, 'error' => 'Invalid table: ' . $table]);
+    exit();
+}
+
+// Check if PDO connection exists
+if (!isset($pdo)) {
+    error_log("Database connection not found");
+    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
     exit();
 }
 
@@ -68,9 +87,9 @@ try {
             $params = [$patient_id, $family_member, $condition, $age_diagnosed, $current_status];
             break;
         case 'surgical_history':
-            $surgery = get_post('surgery');
+            $surgery = get_post('surgery_dropdown') === 'Others' ? get_post('surgery_other') : get_post('surgery_dropdown');
             $year = get_post('year');
-            $hospital = get_post('hospital');
+            $hospital = get_post('hospital_dropdown') === 'Others' ? get_post('hospital_other') : get_post('hospital_dropdown');
             if (!$surgery || !$year || !$hospital) throw new Exception('Missing fields');
             $sql = "INSERT INTO surgical_history (patient_id, surgery, year, hospital) VALUES (?, ?, ?, ?)";
             $params = [$patient_id, $surgery, $year, $hospital];
@@ -79,7 +98,7 @@ try {
             $medication = get_post('medication_dropdown') === 'Others' ? get_post('medication_other') : get_post('medication_dropdown');
             $dosage = get_post('dosage');
             $frequency = get_post('frequency_dropdown') === 'Others' ? get_post('frequency_other') : get_post('frequency_dropdown');
-            $prescribed_by = get_post('prescribed_by');
+            $prescribed_by = get_post('prescribed_by_dropdown') === 'Others' ? get_post('prescribed_by_other') : get_post('prescribed_by_dropdown');
             if (!$medication || !$dosage || !$frequency) throw new Exception('Missing fields');
             $sql = "INSERT INTO current_medications (patient_id, medication, dosage, frequency, prescribed_by) VALUES (?, ?, ?, ?, ?)";
             $params = [$patient_id, $medication, $dosage, $frequency, $prescribed_by ?: null];
@@ -97,19 +116,30 @@ try {
         default:
             throw new Exception('Invalid table');
     }
+    
+    error_log("Executing SQL: " . $sql);
+    error_log("Parameters: " . print_r($params, true));
+    
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => true]);
+    $result = $stmt->execute($params);
+    
+    if (!$result) {
+        error_log("SQL execution failed: " . print_r($stmt->errorInfo(), true));
+        throw new Exception('Database execution failed');
+    }
+    
+    echo json_encode(['success' => true, 'message' => 'Record added successfully']);
     exit();
 } catch (Exception $e) {
+    error_log("Exception in add_medical_history.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
     http_response_code(400);
-    header('Content-Type: application/json');
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage(),
         'table' => $table,
-        'fields' => $_POST
+        'debug_data' => $_POST
     ]);
     exit();
 }

@@ -14,6 +14,38 @@
  */
 
 // ===============================
+// Utility function to show snackbar notifications
+// ===============================
+function showSnackbar(message, type = 'success') {
+    const snackbar = document.getElementById('snackbar');
+    const snackbarText = document.getElementById('snackbar-text');
+    
+    if (snackbar && snackbarText) {
+        snackbarText.textContent = message;
+        
+        // Set background color based on type
+        if (type === 'error') {
+            snackbar.style.backgroundColor = '#f44336';
+        } else if (type === 'warning') {
+            snackbar.style.backgroundColor = '#ff9800';
+        } else {
+            snackbar.style.backgroundColor = '#4caf50';
+        }
+        
+        snackbar.style.display = 'block';
+        snackbar.style.opacity = '1';
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            snackbar.style.opacity = '0';
+            setTimeout(() => {
+                snackbar.style.display = 'none';
+            }, 300);
+        }, 3000);
+    }
+}
+
+// ===============================
 // 1. Back/Cancel Modal Logic
 // ===============================
 document.addEventListener('DOMContentLoaded', function () {
@@ -115,25 +147,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ===============================
-    // 5. Universal Success Modal
+    // 5. Universal Success Modal (Updated to use Snackbar)
     // ===============================
-    window.showSuccessModal = function (message) {
-        var modal = document.getElementById('successModal');
-        var msg = document.getElementById('successModalMsg');
-        msg.textContent = message || 'Action completed successfully.';
-        modal.style.display = 'flex';
-        modal.setAttribute('aria-hidden', 'false');
-        modal.querySelector('button').focus();
-
-        window._successModalTimeout = setTimeout(function () {
-            closeSuccessModal();
-        }, 5000);
+    window.showSuccessModal = function (message, type = 'success') {
+        // Use snackbar for better user experience
+        showSnackbar(message, type);
     };
 
     window.closeSuccessModal = function () {
+        // Legacy function kept for compatibility
         var modal = document.getElementById('successModal');
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
         if (window._successModalTimeout) clearTimeout(window._successModalTimeout);
     };
 
@@ -183,34 +210,106 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ===============================
-    // 7. AJAX Delete Logic (all tables)
+    // 7. AJAX Delete Logic with Password Confirmation (all tables)
     // ===============================
     window.proceedDelete = function (table, id, btn) {
+        // Show password confirmation modal
+        showPasswordConfirmModal(table, id, btn);
+    };
+
+    // Password confirmation modal for delete
+    function showPasswordConfirmModal(table, id, btn) {
+        const modal = document.createElement('div');
+        modal.className = 'custom-modal';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+            <div class="custom-modal-content">
+                <h3>Confirm Deletion</h3>
+                <p>Please enter your password to confirm deletion of this record:</p>
+                <div class="form-group">
+                    <input type="password" id="deletePassword" placeholder="Enter your password" style="width: 100%; margin-bottom: 16px; padding: 10px;">
+                </div>
+                <div class="custom-modal-actions">
+                    <button type="button" id="confirmDeleteBtn" style="background: #fd79a8; color: white; padding: 10px 20px; border: none; border-radius: 6px; margin-right: 8px;">Delete</button>
+                    <button type="button" id="cancelDeleteBtn" style="background: #ddd; color: #2d3436; padding: 10px 20px; border: none; border-radius: 6px;">Cancel</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const passwordInput = modal.querySelector('#deletePassword');
+        const confirmBtn = modal.querySelector('#confirmDeleteBtn');
+        const cancelBtn = modal.querySelector('#cancelDeleteBtn');
+        
+        passwordInput.focus();
+        
+        confirmBtn.onclick = function() {
+            const password = passwordInput.value;
+            if (!password) {
+                alert('Please enter your password.');
+                passwordInput.focus();
+                return;
+            }
+            
+            performDelete(table, id, btn, password, modal);
+        };
+        
+        cancelBtn.onclick = function() {
+            document.body.removeChild(modal);
+            btn.disabled = false;
+        };
+        
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                confirmBtn.click();
+            }
+        });
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+                btn.disabled = false;
+            }
+        });
+    }
+
+    function performDelete(table, id, btn, password, modal) {
         btn.disabled = true;
-    fetch('actions/delete_medical_history.php', {
+        
+        fetch('actions/delete_medical_history.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `table=${encodeURIComponent(table)}&id=${encodeURIComponent(id)}`
+            body: `table=${encodeURIComponent(table)}&id=${encodeURIComponent(id)}&password=${encodeURIComponent(password)}`
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const row = btn.closest('tr');
-                    if (row) row.remove();
-                    showSuccessModal('Record deleted successfully!');
-                } else {
-                    alert('Delete failed: ' + (data.error || 'Unknown error'));
-                    btn.disabled = false;
-                }
-            })
-            .catch(() => {
-                alert('Delete failed due to network error.');
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const row = btn.closest('tr');
+                if (row) row.remove();
+                showSuccessModal('Record deleted successfully!');
+                document.body.removeChild(modal);
+                // Refresh the page to show updated table
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                alert('Delete failed: ' + (data.error || 'Unknown error'));
                 btn.disabled = false;
-            })
-            .finally(() => {
-                window.closeCustomDeletePopup();
-            });
-    };
+                const passwordInput = modal.querySelector('#deletePassword');
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        })
+        .catch(() => {
+            alert('Delete failed due to network error.');
+            btn.disabled = false;
+            const passwordInput = modal.querySelector('#deletePassword');
+            passwordInput.value = '';
+            passwordInput.focus();
+        })
+        .finally(() => {
+            window.closeCustomDeletePopup();
+        });
+    }
 
     // ===============================
     // 8. General Edit Modal Utility (Opener & Closer)
@@ -297,24 +396,55 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(addAllergyForm);
             const params = new URLSearchParams();
             for (const pair of formData) { params.append(pair[0], pair[1]); }
-            fetch('actions/add_medical_history.php', {
+            
+            console.log('Submitting allergy form with data:', params.toString());
+            
+            // First test the connection
+            fetch('actions/test_connection.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: params.toString()
             })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showSuccessModal('Allergy added successfully!');
-                        setTimeout(() => window.location.reload(), 1200);
-                        addAllergyForm.reset();
-                    } else {
-                        alert('Add failed: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(() => {
-                    alert('Add failed due to network error.');
+            .then(res => res.json())
+            .then(testData => {
+                console.log('Connection test result:', testData);
+                
+                // Now try the actual add operation
+                return fetch('actions/add_medical_history.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
                 });
+            })
+            .then(res => {
+                console.log('Response status:', res.status);
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.text(); // Get as text first to debug
+            })
+            .then(text => {
+                console.log('Raw response:', text);
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    throw new Error('Invalid JSON response: ' + text);
+                }
+                if (data.success) {
+                    showSuccessModal('Allergy added successfully!');
+                    setTimeout(() => window.location.reload(), 1200);
+                    addAllergyForm.reset();
+                } else {
+                    console.error('Server error:', data);
+                    alert('Add failed: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch((error) => {
+                console.error('Fetch error:', error);
+                alert('Add failed due to network error: ' + error.message);
+            });
         });
     }
     // AJAX Edit Allergy
