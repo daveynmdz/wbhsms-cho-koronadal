@@ -10,10 +10,11 @@ if (!$debug) {
     ini_set('log_errors', '1');
 }
 
-// Include patient session configuration
-require_once __DIR__ . '/../../../config/session/patient_session.php';
+// Include patient session configuration - Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/patient_session.php';
 
-include_once __DIR__ . '/../../../config/db.php';
+include_once $root_path . '/config/db.php';
 
 // If already logged in, redirect to dashboard
 if (is_patient_logged_in()) {

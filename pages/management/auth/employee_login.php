@@ -10,10 +10,11 @@ if (!$debug) {
     ini_set('log_errors', '1');
 }
 
-// Include employee session configuration
-require_once __DIR__ . '/../../../config/session/employee_session.php';
+// Include employee session configuration - Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
 
-include_once __DIR__ . '/../../../config/db.php';
+include_once $root_path . '/config/db.php';
 
 // If already logged in, redirect to appropriate dashboard
 if (!empty($_SESSION['employee_id'])) {
