@@ -4,7 +4,9 @@ header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 // Include database connection
-require_once '../../../config/db.php';
+// Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/db.php';
 
 // Check if patient_id is provided
 $patient_id = isset($_GET['patient_id']) ? (int)$_GET['patient_id'] : 0;

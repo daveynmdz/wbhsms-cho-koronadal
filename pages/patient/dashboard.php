@@ -4,8 +4,9 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// Include patient session configuration
-require_once '../../config/session/patient_session.php';
+// Include patient session configuration - Use absolute path resolution
+$root_path = dirname(dirname(__DIR__));
+require_once $root_path . '/config/session/patient_session.php';
 
 // If user is not logged in, bounce to login
 if (!is_patient_logged_in()) {
@@ -14,7 +15,7 @@ if (!is_patient_logged_in()) {
 }
 
 // DB
-require_once '../../config/db.php'; // adjust relative path if needed
+require_once $root_path . '/config/db.php'; // adjust relative path if needed
 $patient_id = $_SESSION['patient_id'];
 
 // -------------------- Data bootstrap (from patientHomepage.php) --------------------

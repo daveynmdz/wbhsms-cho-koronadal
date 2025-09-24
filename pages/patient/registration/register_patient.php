@@ -29,17 +29,20 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 session_regenerate_id(true);
-require_once '../../config/db.php'; // must define $pdo (PDO)
+
+// Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/db.php'; // must define $pdo (PDO)
 
 // ---- Load PHPMailer (prefer Composer, fallback to manual includes) ----
 if (!class_exists('\PHPMailer\PHPMailer\PHPMailer')) {
-    $vendorAutoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
+    $vendorAutoload = $root_path . '/vendor/autoload.php';
     if (file_exists($vendorAutoload)) {
         require_once $vendorAutoload;
     } else {
-        require_once '../../phpmailer/phpmailer/src/PHPMailer.php';
-        require_once '../../phpmailer/phpmailer/src/SMTP.php';
-        require_once '../../phpmailer/phpmailer/src/Exception.php';
+        require_once $root_path . '/vendor/phpmailer/phpmailer/src/PHPMailer.php';
+        require_once $root_path . '/vendor/phpmailer/phpmailer/src/SMTP.php';
+        require_once $root_path . '/vendor/phpmailer/phpmailer/src/Exception.php';
     }
 }
 

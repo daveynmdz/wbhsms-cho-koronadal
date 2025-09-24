@@ -4,7 +4,9 @@ header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 // Include database connection
-require_once '../../../config/db.php';
+// Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/db.php';
 
 // Check if facility_id is provided
 $facility_id = isset($_GET['facility_id']) ? (int)$_GET['facility_id'] : 0;

@@ -1,6 +1,9 @@
 <?php // patient_registration.php 
 session_start();
-require_once '../../../config/env.php'; // Load database connection
+
+// Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/env.php'; // Load database connection
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));

@@ -4,8 +4,9 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// Include employee session configuration
-require_once '../../../config/session/employee_session.php';
+// Include employee session configuration - Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
 
 // If user is not logged in, bounce to login
 if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
@@ -21,7 +22,7 @@ if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
 }
 
 // Database connection
-require_once '../../../config/db.php';
+require_once $root_path . '/config/db.php';
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 

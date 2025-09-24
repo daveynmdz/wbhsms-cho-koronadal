@@ -1,7 +1,10 @@
 <?php
 // registration_otp.php
 session_start();
-require_once '../../config/db.php'; // must set $pdo (PDO, ERRMODE_EXCEPTION recommended)
+
+// Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/db.php'; // must set $pdo (PDO, ERRMODE_EXCEPTION recommended)
 
 // Helper: respond JSON for AJAX, otherwise redirect with a flash-style message
 function respond($isAjax, $ok, $payload = [])

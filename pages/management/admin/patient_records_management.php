@@ -1,7 +1,9 @@
 <?php
 // Include employee session configuration
-require_once '../../../config/session/employee_session.php';
-include '../../../config/db.php';
+// Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
+include $root_path . '/config/db.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['employee_id'])) {

@@ -5,8 +5,10 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 // Include employee session configuration
-require_once '../../../config/session/employee_session.php';
-require_once '../../../config/db.php';
+// Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
+require_once $root_path . '/config/db.php';
 
 // If user is not logged in, bounce to login
 if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
