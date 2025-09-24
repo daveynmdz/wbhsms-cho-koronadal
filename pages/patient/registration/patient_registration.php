@@ -1,6 +1,6 @@
 <?php // patient_registration.php 
 session_start();
-require_once '../../config/env.php'; // Load database connection
+require_once '../../../config/env.php'; // Load database connection
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));

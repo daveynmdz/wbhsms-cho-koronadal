@@ -217,86 +217,347 @@ try {
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
-        :root {
-            --primary: #007bff;
-            --primary-dark: #0056b3;
-            --secondary: #6c757d;
-            --success: #28a745;
-            --info: #17a2b8;
-            --warning: #ffc107;
-            --danger: #dc3545;
-            --light: #f8f9fa;
-            --dark: #343a40;
-            --white: #ffffff;
-            --border: #dee2e6;
-            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            --border-radius: 0.5rem;
-            --border-radius-lg: 1rem;
-            --transition: all 0.3s ease;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
         .content-wrapper {
-            margin-left: var(--sidebar-width, 260px);
+            margin-left: 300px;
             padding: 2rem;
-            min-height: 100vh;
-            transition: var(--transition);
+            transition: margin-left 0.3s;
         }
-
-        @media (max-width: 960px) {
+        
+        @media (max-width: 768px) {
             .content-wrapper {
                 margin-left: 0;
-                padding: 1rem;
             }
         }
-
-        /* Welcome Header */
-        .welcome-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: var(--border-radius-lg);
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 2rem;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
+            flex-wrap: wrap;
         }
-
-        .welcome-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 200px;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-        }
-
-        .welcome-header h1 {
+        
+        .dashboard-title {
+            font-size: 1.8rem;
+            color: #0077b6;
             margin: 0;
+        }
+        
+        .dashboard-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .info-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border-left: 4px solid #0077b6;
+        }
+        
+        .info-card h2 {
+            font-size: 1.4rem;
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .info-card h2 i {
+            color: #0077b6;
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            color: #0077b6;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .card-status {
+            padding: 0.3rem 0.6rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-confirmed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-active {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-completed {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        
+        .card-content {
+            margin-bottom: 1rem;
+        }
+        
+        .card-detail {
+            display: flex;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #6b7280;
+            width: 70px;
+            flex-shrink: 0;
+        }
+        
+        .detail-value {
+            color: #1f2937;
+        }
+        
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #0077b6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #023e8a;
+        }
+        
+        .btn-secondary {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .section-divider {
+            margin: 2.5rem 0;
+            border: none;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .quick-actions {
+            margin-top: 2rem;
+        }
+        
+        .actions-title {
+            font-size: 1.4rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+        
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .action-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-decoration: none;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 160px;
+        }
+        
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            color: #333;
+        }
+        
+        .action-icon {
             font-size: 2.5rem;
-            font-weight: 300;
-            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: #0077b6;
+            transition: transform 0.2s;
         }
-
-        .welcome-header .subtitle {
-            margin-top: 0.5rem;
-            font-size: 1.1rem;
-            opacity: 0.9;
+        
+        .action-card:hover .action-icon {
+            transform: scale(1.1);
         }
-
+        
+        .action-title {
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+        
+        .action-description {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin: 0;
+        }
+        
         @media (max-width: 768px) {
-            .welcome-header h1 {
-                font-size: 1.8rem;
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                margin-top: 80px;
+            }
+            
+            .dashboard-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .action-card {
+                min-height: 140px;
             }
         }
+        
+        /* Welcome message animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .welcome-message {
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        /* Card entry animation */
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .animated-card {
+            animation: slideInRight 0.5s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .animated-card:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+        
+        .animated-card:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+        
+        .animated-card:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+        
+        .animated-card:nth-child(4) {
+            animation-delay: 0.8s;
+        }
+        
+        /* Accessibility improvements */
+        .visually-hidden {
+            border: 0;
+            clip: rect(0 0 0 0);
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            padding: 0;
+            position: absolute;
+            width: 1px;
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 10;
+        }
 
-        /* Statistics Grid */
+        /* Statistics Grid for Admin - keeping the 6-card layout */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -305,37 +566,25 @@ try {
         }
 
         .stat-card {
-            background: var(--white);
-            border-radius: var(--border-radius-lg);
+            background: white;
+            border-radius: 10px;
             padding: 1.5rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            position: relative;
-            overflow: hidden;
-            transition: var(--transition);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
 
         .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--card-color, var(--primary));
-        }
-
-        .stat-card.patients { --card-color: #667eea; }
-        .stat-card.appointments { --card-color: #f093fb; }
-        .stat-card.lab { --card-color: #4facfe; }
-        .stat-card.employees { --card-color: #43e97b; }
-        .stat-card.revenue { --card-color: #fa709a; }
-        .stat-card.queue { --card-color: #a8edea; }
+        .stat-card.patients { border-left-color: #667eea; }
+        .stat-card.appointments { border-left-color: #f093fb; }
+        .stat-card.lab { border-left-color: #4facfe; }
+        .stat-card.employees { border-left-color: #43e97b; }
+        .stat-card.revenue { border-left-color: #fa709a; }
+        .stat-card.queue { border-left-color: #a8edea; }
 
         .stat-header {
             display: flex;
@@ -346,105 +595,33 @@ try {
 
         .stat-icon {
             font-size: 2rem;
-            color: var(--card-color, var(--primary));
+            color: #0077b6;
             opacity: 0.8;
         }
+
+        .stat-card.patients .stat-icon { color: #667eea; }
+        .stat-card.appointments .stat-icon { color: #f093fb; }
+        .stat-card.lab .stat-icon { color: #4facfe; }
+        .stat-card.employees .stat-icon { color: #43e97b; }
+        .stat-card.revenue .stat-icon { color: #fa709a; }
+        .stat-card.queue .stat-icon { color: #a8edea; }
 
         .stat-number {
             font-size: 2.5rem;
             font-weight: 700;
-            color: var(--dark);
+            color: #333;
             margin-bottom: 0.25rem;
         }
 
         .stat-label {
             font-size: 0.9rem;
-            color: var(--secondary);
+            color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 500;
         }
 
-        /* Quick Actions */
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .action-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .action-card {
-            background: var(--white);
-            border-radius: var(--border-radius-lg);
-            padding: 1.5rem;
-            text-decoration: none;
-            color: inherit;
-            transition: var(--transition);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .action-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--card-color, var(--primary));
-            transition: var(--transition);
-        }
-
-        .action-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-            text-decoration: none;
-        }
-
-        .action-card:hover::before {
-            width: 8px;
-        }
-
-        .action-card.blue { --card-color: #007bff; }
-        .action-card.purple { --card-color: #6f42c1; }
-        .action-card.orange { --card-color: #fd7e14; }
-        .action-card.teal { --card-color: #20c997; }
-        .action-card.green { --card-color: #28a745; }
-        .action-card.red { --card-color: #dc3545; }
-
-        .action-card .icon {
-            font-size: 2.5rem;
-            color: var(--card-color, var(--primary));
-            margin-bottom: 1rem;
-            display: block;
-        }
-
-        .action-card h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .action-card p {
-            margin: 0;
-            color: var(--secondary);
-            font-size: 0.9rem;
-        }
-
-        /* Info Layout */
+        /* Info Layout for Admin-specific sections */
         .info-layout {
             display: grid;
             grid-template-columns: 1fr 400px;
@@ -457,13 +634,13 @@ try {
             }
         }
 
-        /* Card Sections */
+        /* Card Sections for admin specific content */
         .card-section {
-            background: var(--white);
-            border-radius: var(--border-radius-lg);
+            background: white;
+            border-radius: 10px;
             padding: 1.5rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
             margin-bottom: 1.5rem;
         }
 
@@ -473,29 +650,33 @@ try {
             align-items: center;
             margin-bottom: 1.5rem;
             padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .section-header h3 {
             margin: 0;
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--dark);
+            color: #333;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
+        .section-header h3 i {
+            color: #0077b6;
+        }
+
         .view-more-btn {
-            color: var(--primary);
+            color: #0077b6;
             text-decoration: none;
             font-size: 0.9rem;
             font-weight: 500;
-            transition: var(--transition);
+            transition: all 0.2s;
         }
 
         .view-more-btn:hover {
-            color: var(--primary-dark);
+            color: #023e8a;
             text-decoration: none;
         }
 
@@ -503,8 +684,8 @@ try {
         .table-wrapper {
             max-height: 300px;
             overflow-y: auto;
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border);
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
         }
 
         .notification-table {
@@ -516,20 +697,20 @@ try {
         .notification-table td {
             padding: 0.75rem;
             text-align: left;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .notification-table th {
-            background: var(--light);
+            background: #f8f9fa;
             font-weight: 600;
-            color: var(--dark);
+            color: #333;
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .notification-table td {
-            color: var(--secondary);
+            color: #6b7280;
         }
 
         /* Activity Log */
@@ -541,19 +722,19 @@ try {
 
         .activity-log li {
             padding: 0.75rem;
-            border-left: 3px solid var(--primary);
-            background: var(--light);
+            border-left: 3px solid #0077b6;
+            background: #f8f9fa;
             margin-bottom: 0.5rem;
-            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            border-radius: 0 5px 5px 0;
             font-size: 0.9rem;
-            color: var(--secondary);
+            color: #6b7280;
         }
 
         /* Status Badges */
         .alert-badge {
             display: inline-block;
             padding: 0.25rem 0.5rem;
-            border-radius: 1rem;
+            border-radius: 50px;
             font-size: 0.75rem;
             font-weight: 500;
             text-transform: uppercase;
@@ -561,43 +742,43 @@ try {
         }
 
         .alert-success {
-            background: #d1ecf1;
-            color: #0c5460;
+            background-color: #d1fae5;
+            color: #065f46;
         }
 
         .alert-warning {
-            background: #fff3cd;
-            color: #856404;
+            background-color: #fef3c7;
+            color: #92400e;
         }
 
         .alert-danger {
-            background: #f8d7da;
-            color: #721c24;
+            background-color: #fecaca;
+            color: #991b1b;
         }
 
         .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
+            background-color: #dbeafe;
+            color: #1e40af;
         }
 
         .priority-high {
-            color: var(--danger);
+            color: #dc2626;
             font-weight: 600;
         }
 
         .priority-normal {
-            color: var(--success);
+            color: #16a34a;
         }
 
         .priority-low {
-            color: var(--secondary);
+            color: #6b7280;
         }
 
         /* Empty States */
         .empty-state {
             text-align: center;
             padding: 2rem;
-            color: var(--secondary);
+            color: #6b7280;
         }
 
         .empty-state i {
@@ -612,22 +793,11 @@ try {
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .status-item:last-child {
             border-bottom: none;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-grid {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
@@ -640,103 +810,117 @@ try {
     include '../../../includes/sidebar_admin.php';
     ?>
 
-    <section class="content-wrapper">
-        <!-- Welcome Header -->
-        <div class="welcome-header">
-            <h1>Welcome back, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
-            <p class="subtitle">
-                Admin Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> 
-                • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?>
-            </p>
-        </div>
-
-        <!-- Statistics Overview -->
-        <h2 class="section-title">
-            <i class="fas fa-chart-line"></i>
-            System Overview
-        </h2>
-        <div class="stats-grid">
-            <div class="stat-card patients">
+    <main class="content-wrapper">
+        <section class="dashboard-header">
+            <div class="welcome-message">
+                <h1 class="dashboard-title">Welcome back, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
+                <p>Admin Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?></p>
+            </div>
+            
+            <div class="dashboard-actions">
+                <a href="patient_records_management.php" class="btn btn-primary">
+                    <i class="fas fa-users"></i> Manage Patients
+                </a>
+                <a href="appointments_management.php" class="btn btn-secondary">
+                    <i class="fas fa-calendar-check"></i> Appointments
+                </a>
+            </div>
+        </section>
+        
+        <section class="info-card">
+            <h2><i class="fas fa-chart-line"></i> System Overview</h2>
+            <div class="notification-list">
+                <p>Here's a quick overview of your system status and performance metrics.</p>
+            </div>
+        </section>
+        <section class="stats-grid">
+            <div class="stat-card patients animated-card">
                 <div class="stat-header">
                     <div class="stat-icon"><i class="fas fa-users"></i></div>
                 </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['total_patients']); ?></div>
                 <div class="stat-label">Total Patients</div>
             </div>
-            <div class="stat-card appointments">
+            <div class="stat-card appointments animated-card">
                 <div class="stat-header">
                     <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
                 </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['today_appointments']); ?></div>
                 <div class="stat-label">Today's Appointments</div>
             </div>
-            <div class="stat-card lab">
+            <div class="stat-card lab animated-card">
                 <div class="stat-header">
                     <div class="stat-icon"><i class="fas fa-vials"></i></div>
                 </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['pending_lab_results']); ?></div>
                 <div class="stat-label">Pending Lab Results</div>
             </div>
-            <div class="stat-card employees">
+            <div class="stat-card employees animated-card">
                 <div class="stat-header">
                     <div class="stat-icon"><i class="fas fa-user-tie"></i></div>
                 </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['total_employees']); ?></div>
                 <div class="stat-label">Total Employees</div>
             </div>
-            <div class="stat-card revenue">
+            <div class="stat-card revenue animated-card">
                 <div class="stat-header">
                     <div class="stat-icon"><i class="fas fa-peso-sign"></i></div>
                 </div>
                 <div class="stat-number">₱<?php echo number_format($defaults['stats']['monthly_revenue'], 2); ?></div>
                 <div class="stat-label">Monthly Revenue</div>
             </div>
-            <div class="stat-card queue">
+            <div class="stat-card queue animated-card">
                 <div class="stat-header">
                     <div class="stat-icon"><i class="fas fa-list-ol"></i></div>
                 </div>
                 <div class="stat-number"><?php echo number_format($defaults['stats']['queue_count']); ?></div>
                 <div class="stat-label">Patients in Queue</div>
             </div>
-        </div>
+        </section>
 
-        <!-- Quick Actions -->
-        <h2 class="section-title">
-            <i class="fas fa-bolt"></i>
-            Quick Actions
-        </h2>
-        <div class="action-grid">
-            <a href="patient_records_management.php" class="action-card blue">
-                <i class="fas fa-users icon"></i>
-                <h3>Manage Patients</h3>
-                <p>Add, edit, or view patient records and information</p>
-            </a>
-            <a href="../management/admin/appointments_management.php" class="action-card purple">
-                <i class="fas fa-calendar-check icon"></i>
-                <h3>Schedule Appointments</h3>
-                <p>Manage patient appointments and doctor schedules</p>
-            </a>
-            <a href="../user/employee_management.php" class="action-card orange">
-                <i class="fas fa-user-tie icon"></i>
-                <h3>Manage Staff</h3>
-                <p>Add, edit, or manage employee accounts and roles</p>
-            </a>
-            <a href="../reports/reports.php" class="action-card teal">
-                <i class="fas fa-chart-bar icon"></i>
-                <h3>Generate Reports</h3>
-                <p>View analytics and generate comprehensive reports</p>
-            </a>
-            <a href="../queueing/queue_management.php" class="action-card green">
-                <i class="fas fa-list-ol icon"></i>
-                <h3>Manage Queue</h3>
-                <p>Control patient flow and queue management system</p>
-            </a>
-            <a href="../billing/billing_management.php" class="action-card red">
-                <i class="fas fa-file-invoice-dollar icon"></i>
-                <h3>Billing Management</h3>
-                <p>Process payments and manage billing operations</p>
-            </a>
-        </div>
+        <hr class="section-divider">
+        
+        <section class="quick-actions">
+            <h2 class="actions-title">Quick Actions</h2>
+            
+            <div class="actions-grid">
+                <a href="patient_records_management.php" class="action-card">
+                    <i class="fas fa-users action-icon"></i>
+                    <h3 class="action-title">Manage Patients</h3>
+                    <p class="action-description">Add, edit, or view patient records and information</p>
+                </a>
+                
+                <a href="appointments_management.php" class="action-card">
+                    <i class="fas fa-calendar-check action-icon"></i>
+                    <h3 class="action-title">Schedule Appointments</h3>
+                    <p class="action-description">Manage patient appointments and doctor schedules</p>
+                </a>
+                
+                <a href="employee_management.php" class="action-card">
+                    <i class="fas fa-user-tie action-icon"></i>
+                    <h3 class="action-title">Manage Staff</h3>
+                    <p class="action-description">Add, edit, or manage employee accounts and roles</p>
+                </a>
+                
+                <a href="../reports/reports.php" class="action-card">
+                    <i class="fas fa-chart-bar action-icon"></i>
+                    <h3 class="action-title">Generate Reports</h3>
+                    <p class="action-description">View analytics and generate comprehensive reports</p>
+                </a>
+                
+                <a href="../queueing/queue_management.php" class="action-card">
+                    <i class="fas fa-list-ol action-icon"></i>
+                    <h3 class="action-title">Manage Queue</h3>
+                    <p class="action-description">Control patient flow and queue management system</p>
+                </a>
+                
+                <a href="../billing/billing_management.php" class="action-card">
+                    <i class="fas fa-file-invoice-dollar action-icon"></i>
+                    <h3 class="action-title">Billing Management</h3>
+                    <p class="action-description">Process payments and manage billing operations</p>
+                </a>
+            </div>
+        </section>
 
         <!-- Info Layout -->
         <div class="info-layout">
@@ -774,7 +958,7 @@ try {
                 <div class="card-section">
                     <div class="section-header">
                         <h3><i class="fas fa-tasks"></i> Pending Tasks</h3>
-                        <a href="../user/admin_tasks.php" class="view-more-btn">
+                        <a href="admin_tasks.php" class="view-more-btn">
                             <i class="fas fa-chevron-right"></i> View All
                         </a>
                     </div>
@@ -878,7 +1062,17 @@ try {
                 </div>
             </div>
         </div>
-    </section>
+    </main>
+    
+    <script>
+        // Simple animation for the cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.animated-card');
+            cards.forEach(card => {
+                card.style.opacity = '1';
+            });
+        });
+    </script>
 </body>
 
 </html>

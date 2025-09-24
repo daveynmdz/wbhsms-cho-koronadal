@@ -11,9 +11,9 @@ if (session_status() === PHP_SESSION_NONE) {
 $activePage = $activePage ?? '';
 $patient_id = $patient_id ?? ($_SESSION['patient_id'] ?? null);
 
-// Initial display values from caller/session; will be refined from DB if needed.
-$displayName = $defaults['name'] ?? ($_SESSION['patient_name'] ?? 'Patient');
-$patientNo   = $defaults['patient_number'] ?? '';
+// Initial display values from session first, then caller defaults if available
+$displayName = $_SESSION['patient_name'] ?? ($defaults['name'] ?? 'Patient');
+$patientNo   = $_SESSION['patient_number'] ?? ($defaults['patient_number'] ?? '');
 
 // If we don't have good display values yet, pull from DB (only if we have an id)
 $needsName = empty($displayName) || $displayName === 'Patient';
@@ -57,13 +57,40 @@ if (($needsName || $needsNo) && $patient_id) {
         }
     }
 }
+
+// Calculate the correct paths based on the calling file's location
+$assets_path = '';
+$vendor_path = '';
+$nav_base = '';
+
+if (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/profile/') !== false) {
+    // Called from /pages/patient/profile/ (3 levels deep)
+    $assets_path = '../../../assets/css/sidebar.css';
+    $vendor_path = '../../../vendor/photo_controller.php';
+    $nav_base = '../';
+} elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/') !== false) {
+    // Called from /pages/patient/ (2 levels deep)  
+    $assets_path = '../../assets/css/sidebar.css';
+    $vendor_path = '../../vendor/photo_controller.php';
+    $nav_base = '';
+} elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/') !== false) {
+    // Called from /pages/ (1 level deep)
+    $assets_path = '../assets/css/sidebar.css';
+    $vendor_path = '../vendor/photo_controller.php';
+    $nav_base = 'patient/';
+} else {
+    // Called from root level
+    $assets_path = 'assets/css/sidebar.css';
+    $vendor_path = 'vendor/photo_controller.php';
+    $nav_base = 'pages/patient/';
+}
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="stylesheet" href="../../assets/css/sidebar.css">
+<link rel="stylesheet" href="<?= $assets_path ?>">
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="../patient/dashboard.php">
+    <a href="<?= $nav_base ?>dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
@@ -76,40 +103,40 @@ if (($needsName || $needsNo) && $patient_id) {
         <i class="fas fa-times"></i>
     </button>
 
-    <a href="../patient/dashboard.php">
+    <a href="<?= $nav_base ?>dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
     <div class="menu" role="menu">
-        <a href="../patient/dashboard.php"
+        <a href="<?= $nav_base ?>dashboard.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="../appointment/appointments.php"
+        <a href="<?= $nav_base ?>appointment/appointments.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-calendar-check"></i> Appointments
+            <i class="fas fa-calendar-check"></i> Appointments & Referrals
         </a>
-        <a href="../prescription/prescriptions.php"
+        <a href="<?= $nav_base ?>prescription/prescriptions.php"
             class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-prescription-bottle-alt"></i> Prescription
         </a>
-        <a href="../laboratory/lab_tests.php"
+        <a href="<?= $nav_base ?>laboratory/lab_tests.php"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-vials"></i> Laboratory
         </a>
-        <a href="../billing/billing.php"
+        <a href="<?= $nav_base ?>billing/billing.php"
             class="<?= $activePage === 'billing' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-file-invoice-dollar"></i> Billing
         </a>
     </div>
 
-    <a href="../patient/profile.php"
+    <a href="<?= $nav_base ?>profile/profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
             <div class="user-info">
                 <img class="user-profile-photo"
                     src="<?= $patient_id
-                                ? '../../vendor/photo_controller.php?patient_id=' . urlencode((string)$patient_id)
+                                ? $vendor_path . '?patient_id=' . urlencode((string)$patient_id)
                                 : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
                     alt="User photo"
                     onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
@@ -127,7 +154,7 @@ if (($needsName || $needsNo) && $patient_id) {
     </a>
 
     <div class="user-actions">
-        <a href="../patient/user_settings.php"><i class="fas fa-cog"></i> Settings</a>
+        <a href="<?= $nav_base ?>user_settings.php"><i class="fas fa-cog"></i> Settings</a>
         <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>

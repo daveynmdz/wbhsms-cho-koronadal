@@ -1,14 +1,16 @@
 <?php
 // update_medical_history.php
-session_start();
-require_once __DIR__ . '/../../../config/db.php';
 
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Set content type for JSON response
+// Set content type for JSON response FIRST
 header('Content-Type: application/json');
+
+// Enable error reporting but disable HTML display to avoid corrupting JSON
+error_reporting(E_ALL);
+ini_set('display_errors', 0);  // Don't display errors in HTML
+ini_set('log_errors', 1);      // Log errors instead
+
+require_once __DIR__ . '/../../../../config/session/patient_session.php';
+require_once __DIR__ . '/../../../../config/db.php';
 
 if (!isset($_SESSION['patient_id'])) {
     http_response_code(403);

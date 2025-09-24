@@ -65,19 +65,38 @@ if (($needsName || $needsNo) && $employee_id) {
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <?php
-// Dynamic asset path based on where this file is included from
+// Dynamic paths based on where this file is included from
 $cssPath = '';
+$vendorPath = '';
+$nav_base = '';
+
 if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
+    // Called from /pages/management/ (3 levels deep)
     $cssPath = '../../../assets/css/sidebar.css';
+    $vendorPath = '../../../vendor/photo_controller.php';
+    $nav_base = '../../../pages/';
+} elseif (strpos($_SERVER['PHP_SELF'], '/pages/patient/profile/') !== false) {
+    // Called from /pages/patient/profile/ (admin viewing patient)
+    $cssPath = '../../../assets/css/sidebar.css';
+    $vendorPath = '../../../vendor/photo_controller.php';
+    $nav_base = '../../../pages/';
+} elseif (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) {
+    // Called from /pages/ (2 levels deep)
+    $cssPath = '../../assets/css/sidebar.css';
+    $vendorPath = '../../vendor/photo_controller.php';
+    $nav_base = '../../pages/';
 } else {
-    $cssPath = '../../assets/css/sidebar.css'; // Default fallback
+    // Default fallback (1 level deep)
+    $cssPath = '../../assets/css/sidebar.css';
+    $vendorPath = '../../vendor/photo_controller.php';
+    $nav_base = '../pages/';
 }
 ?>
 <link rel="stylesheet" href="<?= $cssPath ?>">
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="../pages/dashboard/dashboard_admin.php">
+    <a href="<?= $nav_base ?>dashboard/dashboard_admin.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
@@ -90,24 +109,24 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
         <i class="fas fa-times"></i>
     </button>
 
-    <a href="../dashboard/dashboard_admin.php">
+        <a href="<?= $nav_base ?>management/admin/dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
     <div class="menu" role="menu">
-        <a href="../dashboard/dashboard_admin.php"
+        <a href="<?= $nav_base ?>management/admin/dashboard.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="../admin/patient_records_management.php"
-            class="<?= $activePage === 'patients' ? 'active' : '' ?>" role="menuitem">
+        <a href="<?= $nav_base ?>management/admin/patient_records_management.php"
+            class="<?= $activePage === 'patient_records' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-users"></i> Patient Records
         </a>
-       <a href="../pages/management/admin/appointments_management.php"
+        <a href="<?= $nav_base ?>management/admin/appointments_management.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments
         </a>
-        <a href="../pages/management/admin/employee_management.php"
+        <a href="<?= $nav_base ?>management/admin/employee_management.php"
             class="<?= $activePage === 'employees' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-user-tie"></i> Employee Management
         </a>
@@ -132,7 +151,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'queueing' ? 'active' : '' ?> disabled" role="menuitem">
             <i class="fas fa-list-ol"></i> Queue Management
         </a>
-        <a href="../pages/management/admin/referrals_management.php"
+        <a href="<?= $nav_base ?>management/admin/referrals_management.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-share"></i> Referrals
         </a>
@@ -142,13 +161,13 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
         </a>
     </div>
 
-    <a href="../pages/user/admin_profile.php"
+    <a href="<?= $nav_base ?>user/admin_profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
             <div class="user-info">
                 <img class="user-profile-photo"
                     src="<?= $employee_id
-                                ? '../../vendor/employee_photo_controller.php?employee_id=' . urlencode((string)$employee_id)
+                                ? $vendorPath . '?employee_id=' . urlencode((string)$employee_id)
                                 : 'https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172' ?>"
                     alt="User photo"
                     onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
@@ -169,7 +188,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
     </a>
 
     <div class="user-actions">
-        <a href="../pages/user/admin_settings.php"><i class="fas fa-cog"></i> Settings</a>
+        <a href="<?= $nav_base ?>user/admin_settings.php"><i class="fas fa-cog"></i> Settings</a>
         <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>

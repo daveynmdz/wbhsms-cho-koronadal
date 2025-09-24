@@ -1242,3 +1242,57 @@ body {
         padding: 1em 0.5em;
     }
 }*/
+
+/* =============================
+   N/A CHECKBOX STYLES
+   ============================= */
+.na-checkbox-label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5em !important;
+    font-weight: normal !important;
+    font-size: 0.85em !important;
+    color: #6c757d !important;
+    cursor: pointer !important;
+    transition: color 0.2s ease !important;
+}
+
+.na-checkbox-label:hover {
+    color: #495057 !important;
+}
+
+.na-checkbox-label input[type="checkbox"] {
+    transform: scale(1.1) !important;
+    cursor: pointer !important;
+    accent-color: #28a745 !important;
+}
+
+.na-checkbox-label input[type="checkbox"]:checked {
+    accent-color: #28a745 !important;
+}
+
+.na-checkbox-label input[type="checkbox"]:focus {
+    outline: 2px solid #28a745 !important;
+    outline-offset: 2px !important;
+}
+
+/* Section heading with N/A checkbox */
+.profile-card h3 {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-top: 0 !important;
+    color: #333 !important;
+}
+
+@media (max-width: 768px) {
+    .profile-card h3 {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5em !important;
+    }
+    
+    .na-checkbox-label {
+        font-size: 0.8em !important;
+    }
+}

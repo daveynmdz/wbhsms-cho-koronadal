@@ -1,20 +1,22 @@
 <?php
 // referrals_management.php - Admin Side
-session_start();
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// Security check - Only allow authorized healthcare personnel
+// Include employee session configuration
+require_once '../../../config/session/employee_session.php';
+
+// If user is not logged in, bounce to login
 if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
-    header('Location: ../../auth/employee_login.php');
+    header('Location: ../auth/employee_login.php');
     exit();
 }
 
 // Check if role is authorized
-$authorized_roles = ['Doctor', 'BHW', 'DHO', 'Records Officer', 'Admin'];
-if (!in_array($_SESSION['role'], $authorized_roles)) {
-    header('Location: ../admin/dashboard.php');
+$authorized_roles = ['doctor', 'bhw', 'dho', 'records_officer', 'admin'];
+if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
+    header('Location: dashboard.php');
     exit();
 }
 
@@ -102,7 +104,7 @@ if (!empty($last_name)) {
 }
 
 if (!empty($barangay)) {
-    $where_conditions[] = "p.barangay LIKE ?";
+    $where_conditions[] = "b.barangay_name LIKE ?";
     $barangay_term = "%$barangay%";
     $params[] = $barangay_term;
     $param_types .= 's';
@@ -122,13 +124,15 @@ if (!empty($where_conditions)) {
 try {
     $sql = "
         SELECT r.*, 
-               p.first_name, p.middle_name, p.last_name, p.username as patient_number, p.barangay,
+               p.first_name, p.middle_name, p.last_name, p.username as patient_number, 
+               b.barangay_name as barangay,
                e.first_name as issuer_first_name, e.last_name as issuer_last_name
         FROM referrals r
-        LEFT JOIN patients p ON r.patient_id = p.id
-        LEFT JOIN employees e ON r.issued_by = e.employee_id
+        LEFT JOIN patients p ON r.patient_id = p.patient_id
+        LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
+        LEFT JOIN employees e ON r.referred_by = e.employee_id
         $where_clause
-        ORDER BY r.date_of_referral DESC
+        ORDER BY r.referral_date DESC
         LIMIT 50
     ";
 
@@ -170,6 +174,18 @@ try {
 } catch (Exception $e) {
     // Ignore errors for stats
 }
+
+// Fetch barangays for dropdown
+$barangays = [];
+try {
+    $stmt = $conn->prepare("SELECT barangay_id, barangay_name FROM barangay WHERE status = 'active' ORDER BY barangay_name ASC");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $barangays = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+} catch (Exception $e) {
+    // Ignore errors for barangays
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -183,14 +199,15 @@ try {
     <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
         .content-wrapper {
-            display: block;
-            margin-left: var(--sidebar-width, 260px);
-            padding: 1.25rem;
+            margin-left: 300px;
+            padding: 2rem;
+            transition: margin-left 0.3s;
         }
 
-        @media (max-width: 960px) {
+        @media (max-width: 768px) {
             .content-wrapper {
                 margin-left: 0;
+                padding: 1rem;
             }
         }
 
@@ -199,12 +216,11 @@ try {
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
         }
 
         .page-header h1 {
-            color: #03045e;
+            color: #0077b6;
             margin: 0;
             font-size: 1.8rem;
         }
@@ -218,30 +234,36 @@ try {
 
         .stat-card {
             background: white;
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
 
         .stat-card.total {
-            border-left: 4px solid #007bff;
+            border-left: 4px solid #0077b6;
         }
 
         .stat-card.active {
-            border-left: 4px solid #28a745;
+            border-left: 4px solid #43e97b;
         }
 
         .stat-card.completed {
-            border-left: 4px solid #17a2b8;
+            border-left: 4px solid #4facfe;
         }
 
         .stat-card.pending {
-            border-left: 4px solid #ffc107;
+            border-left: 4px solid #f093fb;
         }
 
         .stat-card.voided {
-            border-left: 4px solid #dc3545;
+            border-left: 4px solid #fa709a;
         }
 
         .stat-number {
@@ -259,10 +281,11 @@ try {
 
         .filters-container {
             background: white;
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 1.5rem;
             margin-bottom: 2rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
         }
 
         .filters-grid {
@@ -286,7 +309,7 @@ try {
         .form-group label {
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #03045e;
+            color: #0077b6;
             font-size: 0.9rem;
         }
 
@@ -357,8 +380,9 @@ try {
 
         .table-container {
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
             overflow: hidden;
         }
 
@@ -384,7 +408,7 @@ try {
         .table th {
             background: #f8f9fa;
             font-weight: 600;
-            color: #03045e;
+            color: #0077b6;
             position: sticky;
             top: 0;
             z-index: 10;
@@ -828,14 +852,14 @@ try {
     <section class="content-wrapper">
         <!-- Breadcrumb Navigation -->
         <div class="breadcrumb" style="margin-top: 50px;">
-            <a href="../admin/dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
             <i class="fas fa-chevron-right"></i>
             <span>Referrals Management</span>
         </div>
 
         <div class="page-header">
             <h1><i class="fas fa-share"></i> Referrals Management</h1>
-            <a href="create_referral.php" class="btn btn-primary">
+            <a href="create_referrals.php" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Create Referral
             </a>
         </div>
@@ -896,8 +920,15 @@ try {
                 </div>
                 <div class="form-group">
                     <label for="barangay">Barangay</label>
-                    <input type="text" id="barangay" name="barangay" value="<?php echo htmlspecialchars($barangay); ?>"
-                        placeholder="Enter barangay...">
+                    <select id="barangay" name="barangay">
+                        <option value="">All Barangays</option>
+                        <?php foreach ($barangays as $brgy): ?>
+                            <option value="<?php echo htmlspecialchars($brgy['barangay_name']); ?>" 
+                                <?php echo $barangay === $brgy['barangay_name'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($brgy['barangay_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="status">Status</label>
@@ -929,7 +960,7 @@ try {
                     <i class="fas fa-share"></i>
                     <h3>No Referrals Found</h3>
                     <p>No referrals match your current search criteria.</p>
-                    <a href="create_referral.php" class="btn btn-primary">Create First Referral</a>
+                    <a href="create_referrals.php" class="btn btn-primary">Create First Referral</a>
                 </div>
             <?php else: ?>
                 <!-- Desktop/Tablet Table View -->

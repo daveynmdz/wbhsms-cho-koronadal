@@ -1018,6 +1018,107 @@ $barangayResult = $conn->query($barangaySql);
             color: var(--primary);
             margin-right: 8px;
         }
+
+        /* Breadcrumb styling */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .breadcrumb a {
+            color: #0077b6;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        /* Page header styling */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .page-header h1 {
+            color: #0077b6;
+            margin: 0;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .page-header h1 i {
+            color: #0077b6;
+        }
+
+        /* Total count badges styling */
+        .total-count {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .total-count .badge {
+            min-width: 150px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            border-radius: 25px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .total-count .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Mobile responsive styling */
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .total-count {
+                width: 100%;
+                justify-content: flex-start;
+                gap: 0.75rem;
+            }
+
+            .total-count .badge {
+                min-width: 120px;
+                font-size: 0.8rem;
+                padding: 6px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .total-count {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+
+            .total-count .badge {
+                width: 100%;
+                min-width: auto;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1026,12 +1127,19 @@ $barangayResult = $conn->query($barangaySql);
     
     <div class="homepage">
         <div class="main-content">
-            <div class="content-header">
-                <h1 class="page-title">Patient Records Management</h1>
-                <div class="total-count" style="margin-left: 20px;gap :10px; display: flex; flex-wrap: wrap;">
-                    <span class="badge bg-success"style="min-width: 150px;"><?php echo $totalRecords; ?> Total Patients</span>
-                    <span class="badge bg-primary"style="min-width: 150px;"><?php echo $activePatients; ?> Active</span>
-                    <span class="badge bg-danger"style="min-width: 150px;"><?php echo $inactivePatients; ?> Inactive</span>
+            <!-- Breadcrumb Navigation -->
+            <div class="breadcrumb" style="margin-top: 50px;">
+                <a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+                <i class="fas fa-chevron-right"></i>
+                <span>Patient Records Management</span>
+            </div>
+
+            <div class="page-header">
+                <h1><i class="fas fa-users"></i> Patient Records Management</h1>
+                <div class="total-count">
+                    <span class="badge bg-success"><?php echo $totalRecords; ?> Total Patients</span>
+                    <span class="badge bg-primary"><?php echo $activePatients; ?> Active</span>
+                    <span class="badge bg-danger"><?php echo $inactivePatients; ?> Inactive</span>
                 </div>
             </div>
             

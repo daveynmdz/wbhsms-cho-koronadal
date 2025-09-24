@@ -49,7 +49,7 @@ $block_seconds = 900; // 15 minutes block
 
 $error = '';
 $success = '';
-$employee_id = '';
+$employee_username = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException("Too many attempts. Please wait " . ceil($remaining / 60) . " minutes before trying again.");
         }
 
-        $employee_id = strtoupper(trim($_POST['employee_id'] ?? ''));
+        $employee_username = strtoupper(trim($_POST['employee_username'] ?? ''));
         $posted_csrf = $_POST['csrf_token'] ?? '';
 
         $_SESSION['employee_last_forgot_attempt'] = time();
@@ -70,14 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Validate input
-        if ($employee_id === '') {
-            throw new RuntimeException('Please enter your Employee ID.');
+        if ($employee_username === '') {
+            throw new RuntimeException('Please enter your Employee Username.');
         }
 
-        if (!preg_match('/^E\d{6}$/', $employee_id)) {
+        if (!preg_match('/^EMP\d{5}$/', $employee_username)) {
             $_SESSION[$rate_limit_key]++;
             usleep(500000); // Delay for invalid format
-            throw new RuntimeException('Invalid Employee ID format.');
+            throw new RuntimeException('Invalid Employee Username format.');
         }
 
         // Database connection check
@@ -89,8 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Query employee - always delay the same amount of time regardless of result
         $start_time = microtime(true);
         
-        $stmt = $pdo->prepare('SELECT id, employee_id, email, first_name, last_name, status FROM employees WHERE employee_id = ? AND status = "active" LIMIT 1');
-        $stmt->execute([$employee_id]);
+        $stmt = $pdo->prepare('SELECT employee_id, employee_number, email, first_name, last_name, status FROM employees WHERE (employee_id = ? OR employee_number = ?) AND status = "active" LIMIT 1');
+        $stmt->execute([$employee_username, $employee_username]);
         $employee = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // Consistent timing to prevent user enumeration
@@ -103,26 +103,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($employee) {
             // Generate OTP
             $otp = sprintf('%06d', mt_rand(100000, 999999));
-            $otp_expiry = date('Y-m-d H:i:s', time() + 900); // 15 minutes
             
-            // Store OTP in database
-            $stmt = $pdo->prepare('UPDATE employees SET reset_otp = ?, reset_otp_expiry = ? WHERE id = ?');
-            $stmt->execute([$otp, $otp_expiry, $employee['id']]);
+            // Store OTP in session (like patient system)
+            $_SESSION['reset_otp'] = $otp;
+            $_SESSION['reset_user_id'] = $employee['employee_id'];
+            $_SESSION['reset_email'] = $employee['email'];
+            $_SESSION['reset_name'] = trim(($employee['first_name'] ?? '') . ' ' . ($employee['last_name'] ?? ''));
+            $_SESSION['reset_otp_time'] = time(); // 15 minutes expiry
 
             // Send email
             $mail = new PHPMailer(true);
             
             try {
-                // Email configuration (you'll need to set these)
+                // Email configuration (matching patient system)
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com'; // Configure your SMTP
-                $mail->SMTPAuth = true;
-                $mail->Username = 'your-email@gmail.com'; // Configure
-                $mail->Password = 'your-app-password'; // Configure
+                $mail->Host       = $_ENV['SMTP_HOST'] ?? getenv('SMTP_HOST') ?? 'smtp.gmail.com';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = $_ENV['SMTP_USER'] ?? getenv('SMTP_USER') ?? 'cityhealthofficeofkoronadal@gmail.com';
+                $mail->Password   = $_ENV['SMTP_PASS'] ?? getenv('SMTP_PASS') ?? '';
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port = 587;
+                $mail->Port       = (int)($_ENV['SMTP_PORT'] ?? getenv('SMTP_PORT') ?? 587);
 
-                $mail->setFrom('cho.koronadal@gmail.com', 'CHO Koronadal');
+                $mail->setFrom('cityhealthofficeofkoronadal@gmail.com', 'City Health Office of Koronadal');
                 $mail->addAddress($employee['email'], $employee['first_name'] . ' ' . $employee['last_name']);
 
                 $mail->isHTML(true);
@@ -141,21 +143,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->send();
                 
                 // Success - redirect to OTP verification page
-                $_SESSION['reset_employee_id'] = $employee_id;
                 unset($_SESSION[$rate_limit_key], $_SESSION['employee_last_forgot_attempt']);
+                
+                // Flash message for next page
+                $_SESSION['flash'] = [
+                    'type' => 'success',
+                    'msg' => 'Identity verified! OTP sent to ' . $employee['email'] . '. Check your inbox and enter the code below.'
+                ];
                 
                 header('Location: employee_forgot_password_otp.php');
                 exit;
                 
             } catch (Exception $e) {
                 error_log('[employee_forgot_password] Email send failed: ' . $e->getMessage());
-                throw new RuntimeException('Failed to send reset email. Please try again later or contact support.');
+                // Continue to redirect even if email fails (like patient system)
             }
+            
+            // Success redirect (whether email sent or not)
+            unset($_SESSION[$rate_limit_key], $_SESSION['employee_last_forgot_attempt']);
+            $_SESSION['flash'] = [
+                'type' => 'success', 
+                'msg' => 'Identity verified! OTP sent to ' . $employee['email'] . '. Check your inbox and enter the code below.'
+            ];
+            header('Location: employee_forgot_password_otp.php');
+            exit;
+            
         } else {
-            // Invalid employee ID - increment rate limit but show generic message
+            // Invalid employee - increment rate limit but show generic message
             $_SESSION[$rate_limit_key]++;
-            // Still show success message to prevent user enumeration
-            $success = 'If this Employee ID exists, a reset email has been sent.';
+            throw new RuntimeException('The information provided does not match our records. Please verify your Employee Username or contact IT support.');
         }
         
     } catch (RuntimeException $e) {
@@ -236,29 +252,27 @@ $flash = $sessionFlash ?: (!empty($error) ? array('type' => 'error', 'msg' => $e
                 
                 <div class="form-header">
                     <h2>Reset Password</h2>
-                    <p style="color: #666; font-size: 0.9rem; margin-top: 8px;">
-                        Enter your Employee ID to receive a password reset code.
+                    <p style="color: #666; font-size: 0.9rem; margin-top: 8px; margin-bottom: 0;">
+                        Enter your Employee Username to receive a password reset code.
                     </p>
                 </div>
 
-                <!-- Employee ID -->
-                <label for="employee_id">Employee ID</label>
+                <!-- Employee Username -->
+                <label for="employee_username">Employee Username</label>
                 <input
                     type="text"
-                    id="employee_id"
-                    name="employee_id"
+                    id="employee_username"
+                    name="employee_username"
                     class="input-field"
-                    placeholder="Enter Employee ID (e.g., E000001)"
+                    placeholder="Enter Employee Username (e.g., EMP00001)"
                     inputmode="text"
                     autocomplete="username"
-                    pattern="^E\d{6}$"
-                    title="Format: capital E followed by 6 digits (e.g., E000001)"
-                    maxlength="7"
-                    value="<?php echo htmlspecialchars($employee_id); ?>"
+                    maxlength="8"
+                    value="<?php echo htmlspecialchars($employee_username); ?>"
                     required
                     autofocus />
                 <small class="input-help">
-                    Format: capital "E" followed by 6 digits (e.g., E000001)
+                    Format: capital "EMP" followed by 5 digits (e.g., EMP00001)
                 </small>
 
                 <button type="submit" class="btn">Send Reset Code</button>
@@ -278,16 +292,28 @@ $flash = $sessionFlash ?: (!empty($error) ? array('type' => 'error', 'msg' => $e
     <div id="snackbar" role="status" aria-live="polite"></div>
 
     <script>
-        // Light client validation message surface
+        // Light client validation message surface with debugging
         (function() {
             const form = document.querySelector("form");
             const status = document.getElementById("form-status");
-            if (!form || !status) return;
+            const empInput = document.getElementById("employee_username");
+            
+            if (!form || !status || !empInput) return;
+
+            // Debug: Log what's being typed
+            empInput.addEventListener("input", function(e) {
+                console.log("Employee Username input:", e.target.value);
+            });
 
             form.addEventListener("submit", function(e) {
+                console.log("Submitting with Employee Username:", empInput.value);
+                
                 if (!form.checkValidity()) {
                     e.preventDefault();
+                    console.log("Form validation failed");
                     status.textContent = "Please fix the highlighted fields.";
+                } else {
+                    console.log("Form validation passed");
                 }
             });
         })();

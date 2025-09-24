@@ -98,7 +98,7 @@ try {
                 <img src="assets/images/Nav_Logo_Dark.png" alt="CHO Koronadal Logo" class="logo-img">
             </div>
             <div class="nav-actions">
-                <a href="pages/auth/patient_login.php" class="nav-btn btn-outline">
+                <a href="pages/patient/auth/patient_login.php" class="nav-btn btn-outline">
                     <i class="fas fa-user"></i> Patient Portal
                 </a>
                 <a href="pages/management/auth/employee_login.php" class="nav-btn btn-primary">
@@ -115,7 +115,7 @@ try {
                 <h1 class="hero-title">Welcome to<br><span class="text-primary">Koronadal City Health Office</span></h1>
                 <p class="hero-subtitle">Providing comprehensive healthcare services across three districts with modern facilities and dedicated professionals.</p>
                 <div class="hero-buttons">
-                    <a href="pages/auth/patient_login.php" class="btn btn-primary btn-large">
+                    <a href="pages/patient/auth/patient_login.php" class="btn btn-primary btn-large">
                         <i class="fas fa-user"></i> Patient Login
                     </a>
                     <a href="pages/management/auth/employee_login.php" class="btn btn-outline btn-large">
@@ -281,7 +281,7 @@ try {
                 <h2 style="color: #fff;">Ready to Access Healthcare Services?</h2>
                 <p style="color: #fff;">Choose your portal to get started with CHO Koronadal's comprehensive healthcare services</p>
                 <div class="cta-buttons">
-                    <a href="pages/auth/patient_login.php" class="btn btn-primary btn-large">
+                    <a href="pages/patient/auth/patient_login.php" class="btn btn-primary btn-large">
                         <i class="fas fa-user"></i> Patient Portal
                     </a>
                     <a href="pages/management/auth/employee_login.php" class="btn btn-outline btn-large">

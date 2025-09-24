@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Database Update Instructions - Intelligent Referral System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .sql-code { background: #f4f4f4; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; }
+        .warning { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 10px 0; }
+        .success { background: #d4edda; padding: 10px; border-left: 4px solid #28a745; margin: 10px 0; }
+        .step { background: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Database Update Instructions</h1>
+    <h2>Intelligent Referral Destination Selection System</h2>
+    
+    <div class="warning">
+        <strong>Important:</strong> Please backup your database before running these updates!
+    </div>
+    
+    <div class="step">
+        <h3>Step 1: Access phpMyAdmin or MySQL Command Line</h3>
+        <p>Go to: <a href="http://localhost/phpmyadmin" target="_blank">http://localhost/phpmyadmin</a></p>
+        <p>Select database: <strong>wbhsms_cho</strong></p>
+    </div>
+    
+    <div class="step">
+        <h3>Step 2: Execute the following SQL commands:</h3>
+        <div class="sql-code">-- Update referrals table schema to match the application requirements
+-- This script adds missing fields and updates existing ones
+
+-- Add missing fields to referrals table
+ALTER TABLE `referrals` 
+ADD COLUMN `referral_num` varchar(20) UNIQUE AFTER `referral_id`,
+ADD COLUMN `destination_type` enum('barangay_center','district_office','city_office','external') DEFAULT 'barangay_center' AFTER `service_id`;
+
+-- Update status enum to include 'active'
+ALTER TABLE `referrals` 
+MODIFY COLUMN `status` enum('active','pending','accepted','completed','cancelled') DEFAULT 'pending';
+
+-- Ensure referring_facility_id is properly set (should be populated from employee's facility)
+ALTER TABLE `referrals` 
+MODIFY COLUMN `referring_facility_id` int(10) UNSIGNED NOT NULL;
+
+-- Add index for referral_num for faster lookups
+ALTER TABLE `referrals` 
+ADD INDEX `idx_referral_num` (`referral_num`);
+
+-- Update roles table to match session role names
+UPDATE `roles` SET `role_name` = 'bhw' WHERE `role_name` = 'BHW';
+UPDATE `roles` SET `role_name` = 'dho' WHERE `role_name` = 'DHO';
+UPDATE `roles` SET `role_name` = 'admin' WHERE `role_name` = 'Admin';
+UPDATE `roles` SET `role_name` = 'doctor' WHERE `role_name` = 'Doctor';
+UPDATE `roles` SET `role_name` = 'nurse' WHERE `role_name` = 'Nurse';
+UPDATE `roles` SET `role_name` = 'pharmacist' WHERE `role_name` = 'Pharmacist';
+UPDATE `roles` SET `role_name` = 'records_officer' WHERE `role_name` = 'Records Officer';
+UPDATE `roles` SET `role_name` = 'cashier' WHERE `role_name` = 'Cashier';
+UPDATE `roles` SET `role_name` = 'laboratory_tech' WHERE `role_name` = 'Laboratory Tech.';</div>
+    </div>
+    
+    <div class="success">
+        <h3>What This Update Does:</h3>
+        <ul>
+            <li><strong>Adds referral_num:</strong> Unique tracking number for each referral (format: REF-YYYYMMDD-0001)</li>
+            <li><strong>Adds destination_type:</strong> Smart categorization (barangay_center, district_office, city_office, external)</li>
+            <li><strong>Updates status enum:</strong> Adds 'active' status for referrals</li>
+            <li><strong>Ensures referring_facility_id:</strong> Links referral to employee's facility</li>
+            <li><strong>Updates role names:</strong> Matches session role names for proper authorization</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h3>Step 3: Features Enabled After Update</h3>
+        <ul>
+            <li><strong>Intelligent Destination Selection:</strong> Auto-populates facilities based on patient's barangay</li>
+            <li><strong>Barangay Health Center:</strong> Automatically selects based on patient's barangay</li>
+            <li><strong>District Health Office:</strong> Automatically selects based on patient's district</li>
+            <li><strong>City Health Office:</strong> Direct referral to main facility</li>
+            <li><strong>External Facilities:</strong> Hospital dropdown and custom facility input</li>
+            <li><strong>Progressive Disclosure:</strong> Shows/hides fields based on selections</li>
+            <li><strong>Validation & Confirmation:</strong> Enhanced form validation with confirmation dialogs</li>
+        </ul>
+    </div>
+    
+    <div class="warning">
+        <h3>Next Steps After Database Update:</h3>
+        <ol>
+            <li>Test the create_referrals.php page</li>
+            <li>Select a patient and verify auto-population works</li>
+            <li>Test all destination types (barangay, district, city, external)</li>
+            <li>Verify form validation and confirmation dialogs</li>
+            <li>Check that referrals are created with proper facility relationships</li>
+        </ol>
+    </div>
+</body>
+</html>

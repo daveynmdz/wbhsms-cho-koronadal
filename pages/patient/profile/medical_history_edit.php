@@ -1,12 +1,12 @@
 <?php
 // Use patient session configuration
-require_once __DIR__ . '/../../config/session/patient_session.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../../config/session/patient_session.php';
+require_once __DIR__ . '/../../../config/db.php';
 
 // Only allow logged-in patients
 $patient_id = isset($_SESSION['patient_id']) ? $_SESSION['patient_id'] : null;
 if (!$patient_id) {
-    header('Location: /wbhsms-cho-koronadal/pages/auth/patient_login.php');
+    header('Location: ../auth/patient_login.php');
     exit();
 }
 
@@ -91,8 +91,8 @@ function h($v)
     <meta charset="UTF-8" />
     <title>Edit Medical History</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="../../assets/css/topbar.css">
-    <link rel="stylesheet" href="../../assets/css/medical-history-edit.css">
+    <link rel="stylesheet" href="../../../assets/css/topbar.css">
+    <link rel="stylesheet" href="../../../assets/css/medical-history-edit.css">
 </head>
 
 <body>
@@ -100,7 +100,7 @@ function h($v)
     <!-- Top Navigation Bar -->
     <header class="topbar" disabled>
         <div>
-            <a href="/../dashboard/dashboard_patient.php" class="topbar-logo" style="pointer-events: none; cursor: default;">
+            <a href="../dashboard.php" class="topbar-logo" style="pointer-events: none; cursor: default;">
                 <picture>
                     <source media="(max-width: 600px)"
                         srcset="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128">
@@ -117,7 +117,7 @@ function h($v)
                 </strong><br>
                 <small style="color: #ffffff;">Patient</small>
             </div>
-            <img src="../../vendor/photo_controller.php?patient_id=<?= urlencode($patient_id) ?>" alt="User Profile"
+            <img src="../../../vendor/photo_controller.php?patient_id=<?= urlencode($patient_id) ?>" alt="User Profile"
                 class="topbar-userphoto"
                 onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';" />
         </div>
@@ -132,7 +132,7 @@ function h($v)
 
         <!-- Go Back to Patient Profile Button -->
         <div class="edit-profile-toolbar-flex">
-            <button type="button" class="btn btn-cancel floating-back-btn" id="backCancelBtn">Back /
+            <button type="button" class="btn btn-cancel floating-back-btn" id="backCancelBtn"> Back /
                 Cancel</button>
             <!-- Custom Back/Cancel Confirmation Modal -->
             <div id="backCancelModal" class="custom-modal" style="display:none;">
@@ -169,7 +169,24 @@ function h($v)
                     <!-- Allergies Table -->
                     <div class="profile-photo-col">
                         <div class="profile-card">
-                            <h3 style="margin-top:0;color:#333;">Allergies</h3>
+                            <h3 style="margin-top:0;color:#333;display:flex;align-items:center;justify-content:space-between;">
+                                Allergies
+                                <label class="na-checkbox-label">
+                                    <input type="checkbox" onchange="toggleNAStatus('allergies', this)" 
+                                           <?php 
+                                           // Check if section has "Not Applicable" data
+                                           $hasNA = false;
+                                           foreach($medical_history['allergies'] as $allergy) {
+                                               if(strtolower($allergy['allergen']) === 'not applicable') {
+                                                   $hasNA = true;
+                                                   break;
+                                               }
+                                           }
+                                           echo $hasNA ? 'checked' : '';
+                                           ?>>
+                                    N/A
+                                </label>
+                            </h3>
                             <table class="medical-history-table">
                                 <thead>
                                     <tr style="background:#f5f5f5;">
@@ -380,7 +397,24 @@ function h($v)
                     <!-- Past Medical Condition Table -->
                     <div class="profile-photo-col">
                         <div class="profile-card">
-                            <h3 style="margin-top:0;color:#333;">Past Medical Conditions</h3>
+                            <h3 style="margin-top:0;color:#333;display:flex;align-items:center;justify-content:space-between;">
+                                Past Medical Conditions
+                                <label class="na-checkbox-label">
+                                    <input type="checkbox" onchange="toggleNAStatus('past_medical_conditions', this)" 
+                                           <?php 
+                                           // Check if section has "Not Applicable" data
+                                           $hasNA = false;
+                                           foreach($medical_history['past_conditions'] as $condition) {
+                                               if(strtolower($condition['condition']) === 'not applicable') {
+                                                   $hasNA = true;
+                                                   break;
+                                               }
+                                           }
+                                           echo $hasNA ? 'checked' : '';
+                                           ?>>
+                                    N/A
+                                </label>
+                            </h3>
                             <table class="medical-history-table">
                                 <thead>
                                     <tr style="background:#f5f5f5;">
@@ -534,7 +568,24 @@ function h($v)
                     <!-- Chronic Illnesses Table -->
                     <div class="profile-photo-col">
                         <div class="profile-card">
-                            <h3 style="margin-top:0;color:#333;">Chronic Illnesses</h3>
+                            <h3 style="margin-top:0;color:#333;display:flex;align-items:center;justify-content:space-between;">
+                                Chronic Illnesses
+                                <label class="na-checkbox-label">
+                                    <input type="checkbox" onchange="toggleNAStatus('chronic_illnesses', this)" 
+                                           <?php 
+                                           // Check if section has "Not Applicable" data
+                                           $hasNA = false;
+                                           foreach($medical_history['chronic_illnesses'] as $illness) {
+                                               if(strtolower($illness['illness']) === 'not applicable') {
+                                                   $hasNA = true;
+                                                   break;
+                                               }
+                                           }
+                                           echo $hasNA ? 'checked' : '';
+                                           ?>>
+                                    N/A
+                                </label>
+                            </h3>
                             <table class="medical-history-table">
                                 <thead>
                                     <tr style="background:#f5f5f5;">
@@ -703,7 +754,25 @@ function h($v)
                     <!-- Family History Table -->
                     <div class="profile-photo-col">
                         <div class="profile-card">
-                            <h3 style="margin-top:0;color:#333;">Family History</h3>
+                            <h3 style="margin-top:0;color:#333;display:flex;align-items:center;justify-content:space-between;">
+                                Family History
+                                <label class="na-checkbox-label">
+                                    <input type="checkbox" onchange="toggleNAStatus('family_history', this)" 
+                                           
+                                           <?php 
+                                           // Check if section has "Not Applicable" data
+                                           $hasNA = false;
+                                           foreach($medical_history['family_history'] as $family) {
+                                               if(strtolower($family['condition']) === 'not applicable') {
+                                                   $hasNA = true;
+                                                   break;
+                                               }
+                                           }
+                                           echo $hasNA ? 'checked' : '';
+                                           ?>>
+                                    N/A
+                                </label>
+                            </h3>
                             <table class="medical-history-table">
                                 <thead>
                                     <tr style="background:#f5f5f5;">
@@ -893,7 +962,25 @@ function h($v)
                     <!-- Surgical History Table -->
                     <div class="profile-photo-col">
                         <div class="profile-card">
-                            <h3 style="margin-top:0;color:#333;">Surgical History</h3>
+                            <h3 style="margin-top:0;color:#333;display:flex;align-items:center;justify-content:space-between;">
+                                Surgical History
+                                <label class="na-checkbox-label">
+                                    <input type="checkbox" onchange="toggleNAStatus('surgical_history', this)" 
+                                           
+                                           <?php 
+                                           // Check if section has "Not Applicable" data
+                                           $hasNA = false;
+                                           foreach($medical_history['surgical_history'] as $surgery) {
+                                               if(strtolower($surgery['surgery']) === 'not applicable') {
+                                                   $hasNA = true;
+                                                   break;
+                                               }
+                                           }
+                                           echo $hasNA ? 'checked' : '';
+                                           ?>>
+                                    N/A
+                                </label>
+                            </h3>
                             <table class="medical-history-table">
                                 <thead>
                                     <tr style="background:#f5f5f5;">
@@ -1064,7 +1151,25 @@ function h($v)
                     <!-- Current Medications Table -->
                     <div class="profile-photo-col">
                         <div class="profile-card">
-                            <h3 style="margin-top:0;color:#333;">Current Medications</h3>
+                            <h3 style="margin-top:0;color:#333;display:flex;align-items:center;justify-content:space-between;">
+                                Current Medications
+                                <label class="na-checkbox-label">
+                                    <input type="checkbox" onchange="toggleNAStatus('current_medications', this)" 
+                                           
+                                           <?php 
+                                           // Check if section has "Not Applicable" data
+                                           $hasNA = false;
+                                           foreach($medical_history['current_medications'] as $medication) {
+                                               if(strtolower($medication['medication']) === 'not applicable') {
+                                                   $hasNA = true;
+                                                   break;
+                                               }
+                                           }
+                                           echo $hasNA ? 'checked' : '';
+                                           ?>>
+                                    N/A
+                                </label>
+                            </h3>
                             <table class="medical-history-table">
                                 <thead>
                                     <tr style="background:#f5f5f5;">
@@ -1240,7 +1345,25 @@ function h($v)
                     <!-- Immunizations Table -->
                     <div class="profile-photo-col">
                         <div class="profile-card">
-                            <h3 style="margin-top:0;color:#333;">Immunizations</h3>
+                            <h3 style="margin-top:0;color:#333;display:flex;align-items:center;justify-content:space-between;">
+                                Immunizations
+                                <label class="na-checkbox-label">
+                                    <input type="checkbox" onchange="toggleNAStatus('immunizations', this)" 
+                                           
+                                           <?php 
+                                           // Check if section has "Not Applicable" data
+                                           $hasNA = false;
+                                           foreach($medical_history['immunizations'] as $immunization) {
+                                               if(strtolower($immunization['vaccine']) === 'not applicable') {
+                                                   $hasNA = true;
+                                                   break;
+                                               }
+                                           }
+                                           echo $hasNA ? 'checked' : '';
+                                           ?>>
+                                    N/A
+                                </label>
+                            </h3>
                             <table class="medical-history-table">
                                 <thead>
                                     <tr style="background:#f5f5f5;">
@@ -1446,15 +1569,14 @@ function h($v)
     <script src="actions/medicalHistory.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle back/cancel button
+            // Custom Back/Cancel modal logic
             const backBtn = document.getElementById('backCancelBtn');
             const modal = document.getElementById('backCancelModal');
             const modalCancel = document.getElementById('modalCancelBtn');
             const modalStay = document.getElementById('modalStayBtn');
-            
             if (backBtn && modal && modalCancel && modalStay) {
                 backBtn.addEventListener('click', function() {
-                    modal.style.display = 'block';
+                    modal.style.display = 'flex';
                 });
                 
                 modalCancel.addEventListener('click', function() {
@@ -1465,8 +1587,162 @@ function h($v)
                 modalStay.addEventListener('click', function() {
                     modal.style.display = 'none';
                 });
+                
+                // Close modal on outside click
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) modal.style.display = 'none';
+                });
             }
         });
+
+        // N/A Status Toggle Function
+        function toggleNAStatus(table, checkbox) {
+            console.log('Toggle N/A Status called for table:', table, 'checked:', checkbox.checked);
+            
+            if (checkbox.checked) {
+                // Add N/A record
+                addNARecord(table, checkbox);
+            } else {
+                // Remove N/A record
+                removeNARecord(table, checkbox);
+            }
+        }
+
+        function addNARecord(table, checkbox) {
+            const formData = new FormData();
+            formData.append('table', table);
+            formData.append('patient_id', '<?= $patient_id ?>');
+            
+            // Set appropriate N/A values based on table
+            switch(table) {
+                case 'allergies':
+                    formData.append('allergen_dropdown', 'Others');
+                    formData.append('allergen_other', 'Not Applicable');
+                    formData.append('reaction_dropdown', 'Others');
+                    formData.append('reaction_other', 'N/A');
+                    formData.append('severity', 'N/A');
+                    break;
+                case 'past_medical_conditions':
+                    formData.append('condition_dropdown', 'Others');
+                    formData.append('condition_other', 'Not Applicable');
+                    formData.append('year_diagnosed', new Date().getFullYear());
+                    formData.append('status', 'N/A');
+                    break;
+                case 'chronic_illnesses':
+                    formData.append('illness_dropdown', 'Others');
+                    formData.append('illness_other', 'Not Applicable');
+                    formData.append('year_diagnosed', new Date().getFullYear());
+                    formData.append('management', 'N/A');
+                    break;
+                case 'family_history':
+                    formData.append('family_member_dropdown', 'Others');
+                    formData.append('family_member_other', 'Not Applicable');
+                    formData.append('condition_dropdown', 'Others');
+                    formData.append('condition_other', 'Not Applicable');
+                    formData.append('age_diagnosed', 'N/A');
+                    formData.append('current_status', 'N/A');
+                    break;
+                case 'surgical_history':
+                    formData.append('surgery_dropdown', 'Others');
+                    formData.append('surgery_other', 'Not Applicable');
+                    formData.append('year', new Date().getFullYear());
+                    formData.append('hospital_dropdown', 'Others');
+                    formData.append('hospital_other', 'N/A');
+                    break;
+                case 'current_medications':
+                    formData.append('medication_dropdown', 'Others');
+                    formData.append('medication_other', 'Not Applicable');
+                    formData.append('dosage', 'N/A');
+                    formData.append('frequency_dropdown', 'Others');
+                    formData.append('frequency_other', 'N/A');
+                    formData.append('prescribed_by', 'N/A');
+                    break;
+                case 'immunizations':
+                    formData.append('vaccine_dropdown', 'Others');
+                    formData.append('vaccine_other', 'Not Applicable');
+                    formData.append('year_received', new Date().getFullYear());
+                    formData.append('doses_completed', '0');
+                    formData.append('status', 'N/A');
+                    break;
+            }
+            
+            fetch('actions/add_medical_history.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    showSnackbar('Section marked as Not Applicable');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    checkbox.checked = false;
+                    showSnackbar('Error: ' + (data.error || 'Failed to mark as N/A'), 'error');
+                }
+            })
+            .catch(error => {
+                checkbox.checked = false;
+                showSnackbar('Network error: ' + error.message, 'error');
+                console.error('Detailed error:', error);
+            });
+        }
+
+        function removeNARecord(table, checkbox) {
+            // Find and remove the N/A record
+            fetch('actions/delete_medical_history.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `table=${table}&na_removal=true`
+            })
+            .then(response => {
+                console.log('Delete response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Delete response data:', data);
+                if (data.success) {
+                    showSnackbar('N/A status removed');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    checkbox.checked = true;
+                    showSnackbar('Error: ' + (data.error || 'Failed to remove N/A status'), 'error');
+                }
+            })
+            .catch(error => {
+                checkbox.checked = true;
+                showSnackbar('Delete error: ' + error.message, 'error');
+                console.error('Delete error details:', error);
+            });
+        }
+
+        function showSnackbar(message, type = 'success') {
+            const snackbar = document.getElementById('snackbar');
+            const snackbarText = document.getElementById('snackbar-text');
+            
+            snackbarText.textContent = message;
+            snackbar.style.background = type === 'error' ? '#f44336' : '#27ae60';
+            snackbar.style.display = 'block';
+            snackbar.style.opacity = '1';
+            
+            setTimeout(() => {
+                snackbar.style.opacity = '0';
+                setTimeout(() => {
+                    snackbar.style.display = 'none';
+                }, 300);
+            }, 3000);
+        }
     </script>
 </body>
 

@@ -21,7 +21,7 @@
    2. MAIN CONTENT AREA
    ===================== */
         .homepage {
-            margin-left: 250px;
+            margin-left: 280px;
             min-height: 100vh;
             padding: 20px 30px 30px 30px;
             color: #03045e;
@@ -88,7 +88,7 @@
    3. SIDEBAR/NAVIGATION
    ===================== */
         .nav {
-            width: 300px;
+            width: 280px;
             height: 100vh;
             background-color: #03045e;
             color: #ffffff;

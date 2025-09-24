@@ -11,13 +11,13 @@ if (!$debug) {
 }
 
 // Include patient session configuration
-require_once __DIR__ . '/../../config/session/patient_session.php';
+require_once __DIR__ . '/../../../config/session/patient_session.php';
 
-include_once __DIR__ . '/../../config/db.php';
+include_once __DIR__ . '/../../../config/db.php';
 
 // If already logged in, redirect to dashboard
 if (is_patient_logged_in()) {
-    header('Location: ../patient/dashboard.php');
+    header('Location: ../dashboard.php');
     exit;
 }
 
@@ -113,7 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['patient_username'] = $row['username'];
                 $_SESSION['login_time'] = time();
                 
-                header('Location: ../dashboard/dashboard_patient.php');
+                // Redirect to patient dashboard
+                header('Location: ../dashboard.php');
                 exit;
             } else {
                 $_SESSION[$rate_limit_key]++;
@@ -148,7 +149,7 @@ $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error]
     <title>CHO – Patient Login</title>
     <!-- Icons & Styles -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link rel="stylesheet" href="../../assets/css/login.css" />
+    <link rel="stylesheet" href="../../../assets/css/login.css" />
     <style>
         /* Snackbar */
         #snackbar {
@@ -195,7 +196,7 @@ $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error]
 <body>
     <header class="site-header">
         <div class="logo-container" role="banner">
-            <a href="../../index.php" tabindex="0">
+            <a href="../../../index.php" tabindex="0">
                 <img class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128"
                     alt="City Health Office Koronadal logo" width="100" height="100" decoding="async" />
             </a>

@@ -1,7 +1,7 @@
 <?php
 // Use patient session configuration
-require_once dirname(__DIR__, 2) . '/config/session/patient_session.php';
-require_once dirname(__DIR__, 2) . '/config/db.php';
+require_once dirname(__DIR__, 3) . '/config/session/patient_session.php';
+require_once dirname(__DIR__, 3) . '/config/db.php';
 
 // Ensure patient is logged in and get patient_id
 if (!is_patient_logged_in()) {
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
             }
             $_SESSION['snackbar_message'] = 'Profile photo saved.';
             $_SESSION['show_snackbar'] = true;
-            header("Location: ../patient/profile_edit.php");
+            header("Location: profile_edit.php");
             exit;
         }
     }

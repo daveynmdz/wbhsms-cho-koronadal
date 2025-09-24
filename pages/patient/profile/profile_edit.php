@@ -1,12 +1,12 @@
 <?php
 // Use patient session configuration
-require_once __DIR__ . '/../../config/session/patient_session.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../../config/session/patient_session.php';
+require_once __DIR__ . '/../../../config/db.php';
 
 // Only allow logged-in patients
 $patient_id = isset($_SESSION['patient_id']) ? $_SESSION['patient_id'] : null;
 if (!$patient_id) {
-    header('Location: /wbhsms-cho-koronadal/pages/auth/patient_login.php');
+    header('Location: ../auth/patient_login.php');
     exit();
 }
 
@@ -208,14 +208,14 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
     <meta charset="UTF-8" />
     <title>Edit Profile</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="../../assets/css/topbar.css" />
-    <link rel="stylesheet" href="../../assets/css/profile-edit-responsive.css" />
-    <link rel="stylesheet" href="../../assets/css/profile-edit.css" />
-    <link rel="stylesheet" href="../../assets/css/edit.css">
-    <link rel="stylesheet" href="../../vendor/cropper-modal.css">
+    <link rel="stylesheet" href="../../../assets/css/topbar.css" />
+    <link rel="stylesheet" href="../../../assets/css/profile-edit-responsive.css" />
+    <link rel="stylesheet" href="../../../assets/css/profile-edit.css" />
+    <link rel="stylesheet" href="../../../assets/css/edit.css">
+    <link rel="stylesheet" href="../../../vendor/cropper-modal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
-    <script src="../../vendor/profile-photo-cropper.js"></script>
+    <script src="../../../vendor/profile-photo-cropper.js"></script>
 </head>
 
 <body>
@@ -227,7 +227,7 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
     <!-- Top Bar -->
     <header class="topbar">
         <div>
-            <a href="patientHomepage.php" class="topbar-logo" style="pointer-events: none; cursor: default;">
+            <a href="../dashboard.php" class="topbar-logo" style="pointer-events: none; cursor: default;">
                 <picture>
                     <source media="(max-width: 600px)"
                         srcset="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128">
@@ -244,7 +244,7 @@ $profile_photo_url = !empty($patient['profile_photo']) ? 'images/' . $patient['p
                 </strong><br>
                 <small style="color: #ffffff;">Patient</small>
             </div>
-            <img src="../../vendor/photo_controller.php?patient_id=<?= urlencode($patient_id) ?>" alt="User Profile"
+            <img src="../../../vendor/photo_controller.php?patient_id=<?= urlencode($patient_id) ?>" alt="User Profile"
                 class="topbar-userphoto"
                 onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';" />
         </div>
