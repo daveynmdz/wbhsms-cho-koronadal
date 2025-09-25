@@ -861,6 +861,398 @@ try {
                 font-size: 0.8rem;
             }
         }
+
+        /* Referral Details Modal Styles (matching create_referrals.php) */
+        .referral-confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .referral-confirmation-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .referral-modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideInUp 0.4s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .referral-modal-header {
+            background: linear-gradient(135deg, #0077b6, #023e8a);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .referral-modal-header h3 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .referral-modal-header .icon {
+            font-size: 3em;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+        
+        .referral-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background 0.3s;
+        }
+        
+        .referral-modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .referral-modal-body {
+            padding: 2rem;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .referral-modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .referral-modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .referral-modal-body::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .referral-modal-body::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .referral-summary-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .summary-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .summary-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .summary-title {
+            font-weight: 700;
+            color: #0077b6;
+            font-size: 1.1em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .summary-title i {
+            background: #e3f2fd;
+            padding: 0.5rem;
+            border-radius: 8px;
+            color: #0077b6;
+            font-size: 0.9em;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        
+        .summary-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-value {
+            font-size: 1.05em;
+            color: #333;
+            font-weight: 500;
+            word-wrap: break-word;
+        }
+        
+        .summary-value.highlight {
+            color: #0077b6;
+            font-weight: 600;
+        }
+        
+        .summary-value.reason {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #0077b6;
+            margin-top: 0.5rem;
+            line-height: 1.5;
+        }
+        
+        .vitals-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+        
+        .vital-item {
+            background: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        
+        .vital-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #0077b6;
+        }
+        
+        .vital-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 0.3rem;
+        }
+        
+        .referral-modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            padding: 1rem 1.5rem 1.5rem;
+            flex-shrink: 0;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            flex-wrap: wrap;
+        }
+        
+        .modal-btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            min-width: 90px;
+            flex: 1;
+            max-width: 120px;
+        }
+        
+        .modal-btn-secondary {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+        }
+        
+        .modal-btn-secondary:hover {
+            background: #e9ecef;
+            color: #5a6268;
+        }
+        
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #0077b6, #023e8a);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 119, 182, 0.3);
+        }
+        
+        .modal-btn-primary:hover {
+            background: linear-gradient(135deg, #023e8a, #001d3d);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 119, 182, 0.4);
+        }
+        
+        .modal-btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .modal-btn-success:hover {
+            background: linear-gradient(135deg, #218838, #1e7e34);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .modal-btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+        
+        .modal-btn-danger:hover {
+            background: linear-gradient(135deg, #c82333, #bd2130);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+        
+        .modal-btn-warning {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+        
+        .modal-btn-warning:hover {
+            background: linear-gradient(135deg, #e0a800, #d39e00);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+        }
+        
+        /* Mobile responsive design for modal */
+        @media (max-width: 768px) {
+            .referral-modal-actions {
+                gap: 0.5rem;
+                padding: 1rem;
+                justify-content: center;
+            }
+            
+            .modal-btn {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.8em;
+                min-width: 70px;
+                max-width: 100px;
+                flex: 1;
+            }
+            
+            .referral-confirmation-modal .modal-content {
+                margin: 0.5rem;
+                max-height: 95vh;
+            }
+            
+            .modal-header h3 {
+                font-size: 1.2em;
+            }
+            
+            .modal-body {
+                font-size: 0.9em;
+                max-height: calc(95vh - 200px);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .referral-modal-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .modal-btn {
+                max-width: 100%;
+                padding: 0.75rem 1rem;
+                font-size: 0.85em;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .referral-modal-content {
+                margin: 1rem;
+                border-radius: 15px;
+            }
+            
+            .referral-modal-header {
+                padding: 1.5rem;
+                border-radius: 15px 15px 0 0;
+            }
+            
+            .referral-modal-header h3 {
+                font-size: 1.3em;
+            }
+            
+            .referral-modal-header .icon {
+                font-size: 2.5em;
+            }
+            
+            .referral-modal-body {
+                padding: 1.5rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .vitals-summary {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+            
+            .referral-modal-actions {
+                flex-direction: column;
+                padding: 1rem 1.5rem 1.5rem;
+            }
+            
+            .modal-btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .modal-btn:last-child {
+                margin-bottom: 0;
+            }
+        }
     </style>
 </head>
 
@@ -1065,7 +1457,7 @@ try {
                                     <td><?php echo htmlspecialchars($issuer_name); ?></td>
                                     <td>
                                         <div class="actions-group">
-                                            <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['id']; ?>)" title="View Details">
+                                            <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['referral_id']; ?>)" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                             <?php if ($referral['status'] === 'voided'): ?>
@@ -1139,7 +1531,7 @@ try {
                                     <?php echo htmlspecialchars($issuer_name); ?>
                                 </div>
                                 <div class="actions-group" style="margin-top: 0.75rem;">
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['id']; ?>)">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['referral_id']; ?>)">
                                         <i class="fas fa-eye"></i> View Details
                                     </button>
                                     <?php if ($referral['status'] === 'cancelled'): ?>
@@ -1187,35 +1579,38 @@ try {
     </div>
 
     <!-- View Referral Modal -->
-    <div id="viewReferralModal" class="modal">
-        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h3><i class="fas fa-share"></i> Referral Details</h3>
-                <button type="button" class="close" onclick="closeModal('viewReferralModal')">&times;</button>
+    <div id="viewReferralModal" class="referral-confirmation-modal">
+        <div class="referral-modal-content">
+            <div class="referral-modal-header">
+                <button type="button" class="referral-modal-close" onclick="closeReferralModal()">&times;</button>
+                <div class="icon">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <h3>Referral Details</h3>
+                <p style="margin: 0.5rem 0 0; opacity: 0.9;">Complete information about this referral</p>
             </div>
             
-            <div id="referralDetailsContent">
-                <!-- Content will be loaded via AJAX -->
-                <div style="text-align: center; padding: 2rem;">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p>Loading referral details...</p>
+            <div class="referral-modal-body">
+                <div id="referralDetailsContent">
+                    <!-- Content will be loaded via JavaScript -->
+                    <div style="text-align: center; padding: 2rem;">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p>Loading referral details...</p>
+                    </div>
                 </div>
             </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal('viewReferralModal')">
-                    <i class="fas fa-arrow-left"></i> Back
+            
+            <div class="referral-modal-actions">
+                <button type="button" class="modal-btn modal-btn-warning" onclick="editReferral()" id="editReferralBtn">
+                    <i class="fas fa-edit"></i> Edit
                 </button>
-                <button type="button" class="btn btn-warning" onclick="editReferral()" id="editReferralBtn">
-                    <i class="fas fa-edit"></i> Edit Referral
+                <button type="button" class="modal-btn modal-btn-danger" onclick="cancelReferral()" id="cancelReferralBtn">
+                    <i class="fas fa-ban"></i> Void
                 </button>
-                <button type="button" class="btn btn-danger" onclick="cancelReferral()" id="cancelReferralBtn">
-                    <i class="fas fa-ban"></i> Cancel Referral
+                <button type="button" class="modal-btn modal-btn-success" onclick="markComplete()" id="markCompleteBtn">
+                    <i class="fas fa-check"></i> Complete
                 </button>
-                <button type="button" class="btn btn-success" onclick="markComplete()" id="markCompleteBtn">
-                    <i class="fas fa-check"></i> Mark Complete
-                </button>
-                <button type="button" class="btn btn-primary" onclick="printReferral()">
+                <button type="button" class="modal-btn modal-btn-primary" onclick="printReferral()">
                     <i class="fas fa-print"></i> Print
                 </button>
             </div>
@@ -1255,7 +1650,11 @@ try {
 
         function viewReferral(referralId) {
             currentReferralId = referralId;
-            document.getElementById('viewReferralModal').style.display = 'block';
+            
+            // Show modal with new styling
+            const modal = document.getElementById('viewReferralModal');
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
             
             // Load referral details via AJAX
             fetch(`get_referral_details.php?id=${referralId}`)
@@ -1289,175 +1688,156 @@ try {
 
             const patient_name = `${referral.first_name} ${referral.middle_name ? referral.middle_name + ' ' : ''}${referral.last_name}`;
             const issuer_name = `${referral.issuer_first_name} ${referral.issuer_last_name}`;
-            const destination = referral.destination_type === 'external' ? referral.referred_to_external : 'Internal Facility';
-
-            // Determine status badge class
-            let statusBadgeClass = 'badge-secondary';
-            switch (referral.status) {
-                case 'active': statusBadgeClass = 'badge-success'; break;
-                case 'pending': statusBadgeClass = 'badge-warning'; break;
-                case 'completed': statusBadgeClass = 'badge-info'; break;
-                case 'voided': statusBadgeClass = 'badge-danger'; break;
+            
+            // Determine destination based on destination_type
+            let destination = '';
+            if (referral.destination_type === 'external') {
+                destination = referral.external_facility_name || referral.referred_to_external || 'External Facility';
+            } else {
+                destination = referral.referred_facility_name || 'Internal Facility';
             }
 
-            // Format vitals table
-            let vitalsTable = '';
+            // Format vitals for display
+            let vitalsContent = '';
+            let hasVitals = false;
+            
             if (vitals && vitals.length > 0) {
-                vitalsTable = `
-                    <table class="vitals-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>BP</th>
-                                <th>HR</th>
-                                <th>RR</th>
-                                <th>Temp</th>
-                                <th>Weight</th>
-                                <th>Height</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
+                const latestVital = vitals[0]; // Assuming vitals are sorted by date DESC
+                vitalsContent = '<div class="vitals-summary">';
                 
-                vitals.forEach(vital => {
-                    const date = new Date(vital.date_recorded).toLocaleDateString();
-                    vitalsTable += `
-                        <tr>
-                            <td>${date}</td>
-                            <td>${vital.blood_pressure || 'N/A'}</td>
-                            <td>${vital.heart_rate || 'N/A'}</td>
-                            <td>${vital.respiratory_rate || 'N/A'}</td>
-                            <td>${vital.temperature || 'N/A'}</td>
-                            <td>${vital.weight || 'N/A'}</td>
-                            <td>${vital.height || 'N/A'}</td>
-                        </tr>
+                if (latestVital.blood_pressure) {
+                    vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.blood_pressure}</div><div class="vital-label">Blood Pressure</div></div>`;
+                    hasVitals = true;
+                }
+                if (latestVital.heart_rate) {
+                    vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.heart_rate}</div><div class="vital-label">Heart Rate (bpm)</div></div>`;
+                    hasVitals = true;
+                }
+                if (latestVital.respiratory_rate) {
+                    vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.respiratory_rate}</div><div class="vital-label">Resp Rate (/min)</div></div>`;
+                    hasVitals = true;
+                }
+                if (latestVital.temperature) {
+                    vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.temperature}</div><div class="vital-label">Temperature (°C)</div></div>`;
+                    hasVitals = true;
+                }
+                if (latestVital.weight) {
+                    vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.weight}</div><div class="vital-label">Weight (kg)</div></div>`;
+                    hasVitals = true;
+                }
+                if (latestVital.height) {
+                    vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.height}</div><div class="vital-label">Height (cm)</div></div>`;
+                    hasVitals = true;
+                }
+                
+                vitalsContent += '</div>';
+                
+                if (latestVital.remarks) {
+                    vitalsContent += `
+                        <div class="summary-item" style="margin-top: 1rem;">
+                            <div class="summary-label">Vitals Remarks</div>
+                            <div class="summary-value">${latestVital.remarks}</div>
+                        </div>
                     `;
-                });
-                
-                vitalsTable += '</tbody></table>';
-            } else {
-                vitalsTable = '<p style="color: #6c757d; font-style: italic;">No vital signs recorded</p>';
+                    hasVitals = true;
+                }
             }
 
             const content = `
-                <div class="referral-details-grid">
-                    <!-- Referral Information -->
-                    <div class="details-section">
-                        <h4><i class="fas fa-share"></i> Referral Information</h4>
-                        <div class="detail-item">
-                            <span class="detail-label">Referral #:</span>
-                            <span class="detail-value"><strong>${referral.referral_num}</strong></span>
+                <!-- Patient Information -->
+                <div class="referral-summary-card">
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-user"></i>
+                            Patient Information
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Status:</span>
-                            <span class="detail-value">
-                                <span class="badge ${statusBadgeClass}">${referral.status.charAt(0).toUpperCase() + referral.status.slice(1)}</span>
-                            </span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Date Issued:</span>
-                            <span class="detail-value">${new Date(referral.date_of_referral).toLocaleString()}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Issued By:</span>
-                            <span class="detail-value">${issuer_name} (${referral.issuer_position || 'N/A'})</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Destination:</span>
-                            <span class="detail-value">${destination}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Priority:</span>
-                            <span class="detail-value">${referral.priority || 'Normal'}</span>
-                        </div>
-                    </div>
-
-                    <!-- Patient Information -->
-                    <div class="details-section">
-                        <h4><i class="fas fa-user"></i> Patient Information</h4>
-                        <div class="detail-item">
-                            <span class="detail-label">Name:</span>
-                            <span class="detail-value"><strong>${patient_name}</strong></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Patient ID:</span>
-                            <span class="detail-value">${referral.patient_number}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Age:</span>
-                            <span class="detail-value">${patientAge || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Gender:</span>
-                            <span class="detail-value">${referral.sex || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Barangay:</span>
-                            <span class="detail-value">${referral.barangay || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Contact:</span>
-                            <span class="detail-value">${referral.contact_num || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Address:</span>
-                            <span class="detail-value">${referral.address || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Civil Status:</span>
-                            <span class="detail-value">${referral.civil_status || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Occupation:</span>
-                            <span class="detail-value">${referral.occupation || 'N/A'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Emergency Contact:</span>
-                            <span class="detail-value">
-                                ${referral.emergency_contact_first_name && referral.emergency_contact_last_name 
-                                    ? `${referral.emergency_contact_first_name} ${referral.emergency_contact_last_name}` 
-                                    : 'N/A'}
-                                ${referral.emergency_contact_relation ? ` (${referral.emergency_contact_relation})` : ''}
-                                ${referral.emergency_contact_number ? `<br><small>${referral.emergency_contact_number}</small>` : ''}
-                            </span>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-label">Patient Name</div>
+                                <div class="summary-value highlight">${patient_name}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Patient ID</div>
+                                <div class="summary-value">${referral.patient_number || 'N/A'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Age</div>
+                                <div class="summary-value">${patientAge || 'N/A'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Gender</div>
+                                <div class="summary-value">${referral.sex || 'N/A'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Barangay</div>
+                                <div class="summary-value">${referral.barangay || 'N/A'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Contact Number</div>
+                                <div class="summary-value">${referral.contact_number || 'N/A'}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Medical Information -->
-                <div class="details-section" style="margin-bottom: 1.5rem;">
-                    <h4><i class="fas fa-stethoscope"></i> Medical Information</h4>
-                    <div class="detail-item">
-                        <span class="detail-label">Chief Complaint:</span>
-                        <span class="detail-value">${referral.chief_complaint || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">History of Present Illness:</span>
-                        <span class="detail-value">${referral.history_of_present_illness || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Past Medical History:</span>
-                        <span class="detail-value">${referral.past_medical_history || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Physical Examination:</span>
-                        <span class="detail-value">${referral.physical_examination || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Diagnosis:</span>
-                        <span class="detail-value">${referral.diagnosis || 'N/A'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Reason for Referral:</span>
-                        <span class="detail-value">${referral.reason_for_referral || 'N/A'}</span>
+                <!-- Referral Details -->
+                <div class="referral-summary-card">
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-share"></i>
+                            Referral Details
+                        </div>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-label">Referral Number</div>
+                                <div class="summary-value highlight">${referral.referral_num || 'N/A'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Status</div>
+                                <div class="summary-value">
+                                    <span class="badge badge-${referral.status === 'active' ? 'success' : referral.status === 'completed' ? 'primary' : referral.status === 'accepted' ? 'info' : referral.status === 'cancelled' ? 'danger' : 'secondary'}">
+                                        ${referral.status ? referral.status.charAt(0).toUpperCase() + referral.status.slice(1) : 'Unknown'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Issued By</div>
+                                <div class="summary-value">${issuer_name}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Date Issued</div>
+                                <div class="summary-value">${referral.referral_date ? new Date(referral.referral_date).toLocaleDateString() : 'N/A'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Destination</div>
+                                <div class="summary-value highlight">${destination}</div>
+                            </div>
+                            ${referral.service_name ? `
+                            <div class="summary-item">
+                                <div class="summary-label">Service Requested</div>
+                                <div class="summary-value">${referral.service_name}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        <div class="summary-item" style="margin-top: 1rem;">
+                            <div class="summary-label">Reason for Referral</div>
+                            <div class="summary-value reason">${referral.referral_reason || referral.reason_for_referral || 'No reason specified'}</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Recent Vital Signs -->
-                <div class="details-section" style="margin-bottom: 1.5rem;">
-                    <h4><i class="fas fa-heartbeat"></i> Recent Vital Signs</h4>
-                    ${vitalsTable}
+                ${hasVitals ? `
+                <!-- Patient Vitals -->
+                <div class="referral-summary-card">
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-heartbeat"></i>
+                            Recent Vital Signs
+                        </div>
+                        ${vitalsContent}
+                    </div>
                 </div>
+                ` : ''}
             `;
 
             document.getElementById('referralDetailsContent').innerHTML = content;
@@ -1537,6 +1917,22 @@ try {
             }
         }
 
+        // Function to close referral modal (new modal style)
+        function closeReferralModal() {
+            const modal = document.getElementById('viewReferralModal');
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+            
+            // Clear modal contents and reset variables
+            document.getElementById('referralDetailsContent').innerHTML = `
+                <div style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading referral details...</p>
+                </div>
+            `;
+            currentReferralId = null;
+        }
+
         // Password verification form handler
         document.getElementById('passwordVerificationForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1582,12 +1978,19 @@ try {
 
         // Close modal when clicking outside
         window.onclick = function(event) {
+            // Handle old-style modals
             const modals = document.querySelectorAll('.modal');
             modals.forEach(modal => {
                 if (event.target === modal) {
                     modal.style.display = 'none';
                 }
             });
+            
+            // Handle new-style referral modal
+            const referralModal = document.getElementById('viewReferralModal');
+            if (event.target === referralModal) {
+                closeReferralModal();
+            }
         }
 
         // Handle responsive view switching
@@ -1606,6 +2009,16 @@ try {
                 if (mobileCards) mobileCards.style.display = 'none';
             }
         }
+
+        // ESC key support for closing modals
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const referralModal = document.getElementById('viewReferralModal');
+                if (referralModal && referralModal.classList.contains('show')) {
+                    closeReferralModal();
+                }
+            }
+        });
 
         // Initialize responsive view on load
         document.addEventListener('DOMContentLoaded', function() {
