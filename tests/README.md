@@ -1,29 +1,37 @@
-# Tests
+# Testing Utilities
 
-This folder contains test files and utilities for the Koronadal Health Management System.
+This directory contains testing utilities for the CHO Koronadal Healthcare Management System.
 
-## Test Files
+## Available Tests
 
-- `testdb.php` - Database connection testing utility
-- `test_paths.php` - Path resolution testing script
-- `test_db_connection.php` - Production database connection test (if exists)
+### Database Connection Test
+- **File:** `testdb.php` - Advanced database connectivity test
+- **Root Test:** `/testdb.php` - Simple XAMPP-friendly test
+- **Setup Check:** `/setup_check.php` - Complete system validation
+
+## XAMPP Testing
+
+For XAMPP users, use the simplified tests in the root directory:
+
+1. **Setup Validation:** http://localhost/wbhsms-cho-koronadal/setup_check.php
+2. **Database Test:** http://localhost/wbhsms-cho-koronadal/testdb.php
+3. **Homepage:** http://localhost/wbhsms-cho-koronadal/
 
 ## Running Tests
 
-### Database Connection Test
-```bash
-# For local testing
-php tests/testdb.php
-
-# For path resolution testing  
-php tests/test_paths.php
+### Via Browser (Recommended for XAMPP)
+```
+http://localhost/wbhsms-cho-koronadal/setup_check.php
+http://localhost/wbhsms-cho-koronadal/testdb.php
 ```
 
-### Web-based Tests
-Access via browser:
-- Local: `http://localhost/wbhsms-cho-koronadal/tests/testdb.php`
-- Production: `https://your-domain.com/tests/testdb.php`
+### Via Command Line
+```bash
+# From project root
+php setup_check.php
+php testdb.php
+```
 
 ## Security Note
 
-⚠️ **Important**: Test files should not be accessible in production environments. Make sure your web server configuration blocks access to the `/tests/` directory in production.
+⚠️ **Important:** Test files should be removed or blocked in production environments.

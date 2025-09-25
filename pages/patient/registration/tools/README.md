@@ -1,6 +1,6 @@
-# Registration Tools
+# Patient Registration Diagnostic Tools
 
-This folder contains diagnostic and testing tools for the CHO Koronadal registration system.
+This directory contains diagnostic tools for troubleshooting the patient registration system.
 
 ## 🔧 Available Tools
 
