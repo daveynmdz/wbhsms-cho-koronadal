@@ -15,7 +15,7 @@ ini_set('display_startup_errors', '0');
 error_reporting(E_ALL);
 
 // ---- require files (fixed paths) ----
-require_once dirname(__DIR__, 2) . '/config/db.php';         // FIXED: up 2 dirs to /config
+require_once dirname(__DIR__, 3) . '/config/db.php';         // FIXED: up 3 dirs to /config
 require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
 
 // ---- only allow POST ----
