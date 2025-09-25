@@ -1,0 +1,55 @@
+# Koronadal Health Management System - Security Configuration
+
+# Enable mod_rewrite
+RewriteEngine On
+
+# Block access to sensitive directories in production
+<Files ~ "\.(env|env\.local)$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Block access to test directory in production
+<Directory "tests">
+    Order allow,deny  
+    Deny from all
+</Directory>
+
+# Block access to configuration files
+<FilesMatch "\.(json|lock|md|yml|yaml|xml)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow composer.json and package files for deployment
+<Files ~ "(composer\.json|composer\.lock|package\.json)$">
+    Order deny,allow
+    Allow from all
+</Files>
+
+# Block access to git files
+<FilesMatch "^\.git">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Hide server signature
+ServerTokens Prod
+ServerSignature Off
+
+# Prevent access to PHP files in uploads directory (if you add one)
+<Directory "uploads">
+    <Files "*.php">
+        Order allow,deny
+        Deny from all
+    </Files>
+</Directory>

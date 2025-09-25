@@ -1,2 +1,42 @@
+# Environment files with sensitive data
 /config/.env
 /config/.env.local
+.env.local
+
+# Dependencies
+/vendor/
+
+# Test files and utilities (should not be in production)
+/tests/test_*.php
+/tests/debug_*.php
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE files
+/.vscode/
+/.idea/
+*.swp
+*.swo
+
+# Cache and temp directories
+/tmp/
+/cache/
+/logs/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# OS generated files
+.DS_Store*
+ehthumbs.db
+Icon?
+
+# Development files
+/debug/
+*.debug
