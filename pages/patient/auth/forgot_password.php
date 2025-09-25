@@ -10,8 +10,8 @@ ini_set('display_errors', '1');                // turn off in production
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
-include_once __DIR__ . '/../../config/db.php';
-require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+include_once __DIR__ . '/../../../config/db.php';
+require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;

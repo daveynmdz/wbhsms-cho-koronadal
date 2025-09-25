@@ -16,7 +16,7 @@ error_reporting(E_ALL);
 
 // ---- require files (fixed paths) ----
 require_once dirname(__DIR__, 2) . '/config/db.php';         // FIXED: up 2 dirs to /config
-require_once dirname(__DIR__, 2) . '/vendor/autoload.php';   // correct
+require_once dirname(__DIR__, 3) . '/vendor/autoload.php';
 
 // ---- only allow POST ----
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
