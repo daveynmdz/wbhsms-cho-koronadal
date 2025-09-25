@@ -10,6 +10,11 @@ $root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/config/db.php';
 
+// Check database connection
+if (!isset($conn) || $conn->connect_error) {
+    die("Database connection failed. Please contact administrator.");
+}
+
 // If user is not logged in, bounce to login
 if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
     header('Location: ../auth/employee_login.php');
@@ -24,7 +29,8 @@ if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
 }
 
 $employee_id = $_SESSION['employee_id'];
-$employee_name = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
+// Include reusable topbar component
+require_once $root_path . '/includes/topbar.php';
 
 // Get employee's facility information
 $employee_facility_id = null;
@@ -68,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hospital_name = trim($_POST['hospital_name'] ?? '');
             $other_facility_name = trim($_POST['other_facility_name'] ?? '');
             $service_id = !empty($_POST['service_id']) ? (int)$_POST['service_id'] : null;
+            $custom_service_name = trim($_POST['custom_service_name'] ?? '');
             
             // Determine final external facility name based on type
             if ($destination_type === 'external') {
@@ -107,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Validate based on destination type
-            if (in_array($destination_type, ['barangay_center', 'district_office', 'city_office']) && !$referred_to_facility_id) {
+            if (in_array($destination_type, ['district_office', 'city_office']) && !$referred_to_facility_id) {
                 throw new Exception('Destination facility could not be determined. Please contact administrator.');
             }
             
@@ -128,6 +135,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (!$employee_facility_id) {
                 throw new Exception('Employee facility information not found. Please contact administrator.');
+            }
+            
+            // Validate custom service if "others" is selected
+            if (isset($_POST['service_id']) && $_POST['service_id'] === 'others') {
+                if (empty($custom_service_name)) {
+                    throw new Exception('Please specify the other service name.');
+                }
+                if (strlen($custom_service_name) < 3) {
+                    throw new Exception('Other service name must be at least 3 characters.');
+                }
             }
             
             // Insert vitals first (if any vitals data provided)
@@ -158,6 +175,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $count = $result->fetch_assoc()['count'];
             $referral_num = 'REF-' . $date_prefix . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
             
+            // Handle custom service - if "others" is selected, store custom service name in referral_reason or notes
+            $final_service_id = $service_id;
+            $final_referral_reason = $referral_reason;
+            
+            // If service_id is "others", append custom service to referral reason
+            if (isset($_POST['service_id']) && $_POST['service_id'] === 'others' && !empty($custom_service_name)) {
+                $final_service_id = null; // Set to null for "others"
+                $final_referral_reason .= "\n\nRequested Service: " . $custom_service_name;
+            }
+            
             // Insert referral
             $stmt = $conn->prepare("
                 INSERT INTO referrals (
@@ -169,13 +196,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param(
                 'siiisisssi',
                 $referral_num, $patient_id, $employee_facility_id, $referred_to_facility_id,
-                $external_facility_name, $vitals_id, $service_id, $referral_reason,
+                $external_facility_name, $vitals_id, $final_service_id, $final_referral_reason,
                 $destination_type, $employee_id
             );
             $stmt->execute();
             
             $conn->commit();
             $_SESSION['snackbar_message'] = "Referral created successfully! Referral #: $referral_num";
+            
+            // Redirect to referrals management page after successful creation
+            header('Location: referrals_management.php');
+            exit();
             
         } catch (Exception $e) {
             $conn->rollback();
@@ -328,6 +359,7 @@ try {
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
+            min-width: 600px; /* Ensure table doesn't get too cramped */
         }
 
         .patient-table th,
@@ -518,6 +550,87 @@ try {
             border: 1px solid #f1b2b7;
         }
 
+        /* Responsive Patient Table */
+        .patient-table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .patient-card {
+            display: none;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .patient-card:hover {
+            border-color: #0077b6;
+            box-shadow: 0 2px 8px rgba(0, 119, 182, 0.1);
+        }
+        
+        .patient-card.selected {
+            border-color: #28a745;
+            background: #f8fff8;
+        }
+        
+        .patient-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .patient-card-name {
+            font-weight: 600;
+            color: #0077b6;
+            font-size: 1.1em;
+        }
+        
+        .patient-card-id {
+            background: #f8f9fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+        
+        .patient-card-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.9em;
+        }
+        
+        .patient-card-detail {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .patient-card-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.8em;
+            margin-bottom: 0.1rem;
+        }
+        
+        .patient-card-value {
+            color: #333;
+        }
+        
+        .patient-card-checkbox {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 20px;
+            height: 20px;
+        }
+
         @media (max-width: 768px) {
             .search-grid {
                 grid-template-columns: 1fr;
@@ -530,57 +643,374 @@ try {
             .form-row {
                 grid-template-columns: 1fr;
             }
+            
+            /* Hide table and show cards on mobile */
+            .patient-table table {
+                display: none;
+            }
+            
+            .patient-card {
+                display: block;
+            }
+            
+            .patient-table-container {
+                overflow-x: visible;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .patient-card-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-container {
+                padding: 1rem;
+            }
+            
+            .patient-table {
+                padding: 1rem;
+            }
+        }
+        
+        /* Referral Confirmation Modal Styles */
+        .referral-confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .referral-confirmation-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .referral-modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideInUp 0.4s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .referral-modal-header {
+            background: linear-gradient(135deg, #0077b6, #023e8a);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .referral-modal-header h3 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .referral-modal-header .icon {
+            font-size: 3em;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+        
+        .referral-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background 0.3s;
+        }
+        
+        .referral-modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .referral-modal-body {
+            padding: 2rem;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Custom scrollbar for modal body */
+        .referral-modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .referral-modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .referral-modal-body::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .referral-modal-body::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .referral-summary-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .summary-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .summary-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .summary-title {
+            font-weight: 700;
+            color: #0077b6;
+            font-size: 1.1em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .summary-title i {
+            background: #e3f2fd;
+            padding: 0.5rem;
+            border-radius: 8px;
+            color: #0077b6;
+            font-size: 0.9em;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        
+        .summary-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-value {
+            font-size: 1.05em;
+            color: #333;
+            font-weight: 500;
+            word-wrap: break-word;
+        }
+        
+        .summary-value.highlight {
+            color: #0077b6;
+            font-weight: 600;
+        }
+        
+        .summary-value.reason {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #0077b6;
+            margin-top: 0.5rem;
+            line-height: 1.5;
+        }
+        
+        .vitals-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+        
+        .vital-item {
+            background: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        
+        .vital-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #0077b6;
+        }
+        
+        .vital-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 0.3rem;
+        }
+        
+        .referral-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding: 1.5rem 2rem 2rem;
+            flex-shrink: 0;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .modal-btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+            min-width: 120px;
+        }
+        
+        .modal-btn-cancel {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+        }
+        
+        .modal-btn-cancel:hover {
+            background: #e9ecef;
+            color: #5a6268;
+        }
+        
+        .modal-btn-confirm {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .modal-btn-confirm:hover:not(:disabled) {
+            background: linear-gradient(135deg, #218838, #1e7e34);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .modal-btn-confirm:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .referral-modal-content {
+                margin: 1rem;
+                border-radius: 15px;
+            }
+            
+            .referral-modal-header {
+                padding: 1.5rem;
+                border-radius: 15px 15px 0 0;
+            }
+            
+            .referral-modal-header h3 {
+                font-size: 1.3em;
+            }
+            
+            .referral-modal-header .icon {
+                font-size: 2.5em;
+            }
+            
+            .referral-modal-body {
+                padding: 1.5rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .vitals-summary {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+            
+            .referral-modal-actions {
+                flex-direction: column;
+                padding: 1rem 1.5rem 1.5rem;
+            }
+            
+            .modal-btn {
+                padding: 0.8rem 1.5rem;
+            }
         }
     </style>
 </head>
 
 <body>
-    <!-- Snackbar notification -->
-    <div id="snackbar" style="display:none;position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#323232;color:#fff;padding:1em 2em;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.18);font-size:1.1em;z-index:99999;opacity:0;transition:opacity 0.3s;">
-        <span id="snackbar-text"></span>
-    </div>
-
-    <!-- Top Bar -->
-    <header class="topbar">
-        <div>
-            <a href="dashboard.php" class="topbar-logo" style="pointer-events: none; cursor: default;">
-                <picture>
-                    <source media="(max-width: 600px)"
-                        srcset="https://ik.imagekit.io/wbhsmslogo/Nav_LogoClosed.png?updatedAt=1751197276128">
-                    <img src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527"
-                        alt="City Health Logo" class="responsive-logo" />
-                </picture>
-            </a>
-        </div>
-        <div class="topbar-title" style="color: #ffffff;">Create New Referral</div>
-        <div class="topbar-userinfo">
-            <div class="topbar-usertext">
-                <strong style="color: #ffffff;">
-                    <?= htmlspecialchars($employee_name) ?>
-                </strong><br>
-                <small style="color: #ffffff;"><?= htmlspecialchars($_SESSION['role']) ?></small>
-            </div>
-            <img src="../../../vendor/photo_controller.php?employee_id=<?= urlencode($employee_id) ?>" alt="User Profile"
-                class="topbar-userphoto"
-                onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';" />
-        </div>
-    </header>
+    <?php 
+    // Render snackbar notification system
+    renderSnackbar();
+    
+    // Render topbar
+    renderTopbar([
+        'title' => 'Create New Referral',
+        'back_url' => 'referrals_management.php',
+        'user_type' => 'employee'
+    ]);
+    ?>
 
     <section class="homepage">
-        <div class="edit-profile-toolbar-flex">
-            <button type="button" class="btn btn-cancel floating-back-btn" id="backCancelBtn">&#8592; Back / Cancel</button>
-            <!-- Custom Back/Cancel Confirmation Modal -->
-            <div id="backCancelModal" class="custom-modal" style="display:none;">
-                <div class="custom-modal-content">
-                    <h3>Cancel Creating Referral?</h3>
-                    <p>Are you sure you want to go back/cancel? Unsaved changes will be lost.</p>
-                    <div class="custom-modal-actions">
-                        <button type="button" class="btn btn-danger" id="modalCancelBtn">Yes, Cancel</button>
-                        <button type="button" class="btn btn-secondary" id="modalStayBtn">Stay</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php 
+        // Render back button with modal
+        renderBackButton([
+            'back_url' => 'referrals_management.php',
+            'button_text' => '← Back / Cancel',
+            'modal_title' => 'Cancel Creating Referral?',
+            'modal_message' => 'Are you sure you want to go back/cancel? Unsaved changes will be lost.',
+            'confirm_text' => 'Yes, Cancel',
+            'stay_text' => 'Stay'
+        ]);
+        ?>
 
         <div class="profile-wrapper">
             <!-- Reminders Box -->
@@ -660,37 +1090,73 @@ try {
                         </div>
                     <?php elseif (!empty($patients)): ?>
                         <p>Found <?= count($patients) ?> patient(s). Select one to create a referral:</p>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Select</th>
-                                    <th>Patient ID</th>
-                                    <th>Name</th>
-                                    <th>Age/Sex</th>
-                                    <th>Contact</th>
-                                    <th>Barangay</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($patients as $patient): ?>
-                                    <tr class="patient-row" data-patient-id="<?= $patient['patient_id'] ?>">
-                                        <td>
-                                            <input type="radio" name="selected_patient" value="<?= $patient['patient_id'] ?>" 
-                                                class="patient-checkbox" data-patient-name="<?= htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']) ?>">
-                                        </td>
-                                        <td><?= htmlspecialchars($patient['username']) ?></td>
-                                        <td>
-                                            <?= htmlspecialchars($patient['first_name'] . ' ' . 
-                                                ($patient['middle_name'] ? $patient['middle_name'] . ' ' : '') . 
-                                                $patient['last_name']) ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($patient['age']) ?> / <?= htmlspecialchars($patient['sex']) ?></td>
-                                        <td><?= htmlspecialchars($patient['contact_number'] ?? 'N/A') ?></td>
-                                        <td><?= htmlspecialchars($patient['barangay_name'] ?? 'N/A') ?></td>
+                        
+                        <!-- Desktop Table View -->
+                        <div class="patient-table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Select</th>
+                                        <th>Patient ID</th>
+                                        <th>Name</th>
+                                        <th>Age/Sex</th>
+                                        <th>Contact</th>
+                                        <th>Barangay</th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($patients as $patient): ?>
+                                        <tr class="patient-row" data-patient-id="<?= $patient['patient_id'] ?>">
+                                            <td>
+                                                <input type="radio" name="selected_patient" value="<?= $patient['patient_id'] ?>" 
+                                                    class="patient-checkbox" data-patient-name="<?= htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']) ?>">
+                                            </td>
+                                            <td><?= htmlspecialchars($patient['username']) ?></td>
+                                            <td>
+                                                <?= htmlspecialchars($patient['first_name'] . ' ' . 
+                                                    ($patient['middle_name'] ? $patient['middle_name'] . ' ' : '') . 
+                                                    $patient['last_name']) ?>
+                                            </td>
+                                            <td><?= htmlspecialchars($patient['age']) ?> / <?= htmlspecialchars($patient['sex']) ?></td>
+                                            <td><?= htmlspecialchars($patient['contact_number'] ?? 'N/A') ?></td>
+                                            <td><?= htmlspecialchars($patient['barangay_name'] ?? 'N/A') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Mobile Card View -->
+                        <?php foreach ($patients as $patient): ?>
+                            <div class="patient-card" data-patient-id="<?= $patient['patient_id'] ?>" onclick="selectPatientCard(this)">
+                                <input type="radio" name="selected_patient_mobile" value="<?= $patient['patient_id'] ?>" 
+                                    class="patient-card-checkbox patient-checkbox" data-patient-name="<?= htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']) ?>">
+                                    
+                                <div class="patient-card-header">
+                                    <div class="patient-card-name">
+                                        <?= htmlspecialchars($patient['first_name'] . ' ' . 
+                                            ($patient['middle_name'] ? $patient['middle_name'] . ' ' : '') . 
+                                            $patient['last_name']) ?>
+                                    </div>
+                                    <div class="patient-card-id"><?= htmlspecialchars($patient['username']) ?></div>
+                                </div>
+                                
+                                <div class="patient-card-details">
+                                    <div class="patient-card-detail">
+                                        <div class="patient-card-label">Age / Sex</div>
+                                        <div class="patient-card-value"><?= htmlspecialchars($patient['age']) ?> / <?= htmlspecialchars($patient['sex']) ?></div>
+                                    </div>
+                                    <div class="patient-card-detail">
+                                        <div class="patient-card-label">Contact</div>
+                                        <div class="patient-card-value"><?= htmlspecialchars($patient['contact_number'] ?? 'N/A') ?></div>
+                                    </div>
+                                    <div class="patient-card-detail">
+                                        <div class="patient-card-label">Barangay</div>
+                                        <div class="patient-card-value"><?= htmlspecialchars($patient['barangay_name'] ?? 'N/A') ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div class="empty-search">
                             <i class="fas fa-search fa-2x"></i>
@@ -706,6 +1172,7 @@ try {
                 <form class="profile-card referral-form" id="referralForm" method="post">
                     <input type="hidden" name="action" value="create_referral">
                     <input type="hidden" name="patient_id" id="selectedPatientId">
+                    <input type="hidden" name="referred_to_facility_id" id="referredToFacilityId">
                     
                     <h3><i class="fas fa-share"></i> Create Referral</h3>
                     <div class="facility-info" style="background: #e8f4fd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #0077b6;">
@@ -768,17 +1235,52 @@ try {
                             </div>
                         </div>
                         
-                        <!-- Intelligent Destination Selection -->
+                        <!-- Role-Based Destination Selection -->
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="destination_type">Referral Destination Type *</label>
                                 <select id="destination_type" name="destination_type" required>
                                     <option value="">Select referral destination...</option>
-                                    <option value="barangay_center">Barangay Health Center</option>
-                                    <option value="district_office">District Health Office</option>
-                                    <option value="city_office">City Health Office (Main District)</option>
-                                    <option value="external">External Facility</option>
+                                    
+                                    <?php 
+                                    $current_role = strtolower($_SESSION['role']);
+                                    
+                                    // BHW can refer to district, city, and external
+                                    if ($current_role === 'bhw'): ?>
+                                        <option value="district_office">District Health Office</option>
+                                        <option value="city_office">City Health Office (Main District)</option>
+                                        <option value="external">External Facility</option>
+                                    
+                                    <?php // DHO can refer to city and external
+                                    elseif ($current_role === 'dho'): ?>
+                                        <option value="city_office">City Health Office (Main District)</option>
+                                        <option value="external">External Facility</option>
+                                    
+                                    <?php // Admin, Doctor, Nurse, Records Officer can only refer to external
+                                    elseif (in_array($current_role, ['admin', 'doctor', 'nurse', 'records_officer'])): ?>
+                                        <option value="external">External Facility</option>
+                                        
+                                    <?php else: 
+                                        // Fallback for any other roles - show district, city, and external only ?>
+                                        <option value="district_office">District Health Office</option>
+                                        <option value="city_office">City Health Office (Main District)</option>
+                                        <option value="external">External Facility</option>
+                                    <?php endif; ?>
                                 </select>
+                                
+                                <?php if (in_array($current_role, ['admin', 'doctor', 'nurse', 'records_officer'])): ?>
+                                    <small style="color: #666; font-size: 0.85em;">
+                                        <i class="fas fa-info-circle"></i> As <?= htmlspecialchars(formatRoleForDisplay($_SESSION['role'])) ?> at City Health Office, you can only refer to external facilities
+                                    </small>
+                                <?php elseif ($current_role === 'dho'): ?>
+                                    <small style="color: #666; font-size: 0.85em;">
+                                        <i class="fas fa-info-circle"></i> As District Health Officer, you can refer to City Health Office or external facilities
+                                    </small>
+                                <?php elseif ($current_role === 'bhw'): ?>
+                                    <small style="color: #666; font-size: 0.85em;">
+                                        <i class="fas fa-info-circle"></i> As Barangay Health Worker, you can refer to District Office, City Health Office, or external facilities
+                                    </small>
+                                <?php endif; ?>
                             </div>
                         </div>
                         
@@ -789,7 +1291,7 @@ try {
                                 <input type="text" id="barangay_facility_display" readonly 
                                     placeholder="Will be auto-populated based on patient's barangay"
                                     style="background: #f8f9fa; border: 2px solid #e9ecef;">
-                                <input type="hidden" id="barangay_facility_id" name="referred_to_facility_id">
+
                                 <small style="color: #666; font-size: 0.85em;">
                                     <i class="fas fa-info-circle"></i> Auto-selected based on patient's barangay
                                 </small>
@@ -803,7 +1305,7 @@ try {
                                 <input type="text" id="district_office_display" readonly 
                                     placeholder="Will be auto-populated based on patient's district"
                                     style="background: #f8f9fa; border: 2px solid #e9ecef;">
-                                <input type="hidden" id="district_office_id" name="referred_to_facility_id">
+
                                 <small style="color: #666; font-size: 0.85em;">
                                     <i class="fas fa-info-circle"></i> Auto-selected based on patient's district
                                 </small>
@@ -813,7 +1315,7 @@ try {
                         <!-- City Health Office (no additional fields needed) -->
                         <div class="form-row conditional-field" id="cityOfficeField">
                             <div class="form-group">
-                                <input type="hidden" id="city_office_id" name="referred_to_facility_id" value="1">
+
                                 <div style="background: #e8f5e8; padding: 1rem; border-radius: 8px; border-left: 4px solid #28a745;">
                                     <i class="fas fa-hospital"></i> <strong>City Health Office (Main District)</strong>
                                     <br><small style="color: #666;">Direct referral to main city facility</small>
@@ -873,9 +1375,24 @@ try {
                                             <?php endif; ?>
                                         </option>
                                     <?php endforeach; ?>
+                                    <!-- Others option - will be shown/hidden based on destination type -->
+                                    <option value="others" id="othersServiceOption" style="display: none;">Others (Specify below)</option>
                                 </select>
                                 <small style="color: #666; font-size: 0.85em;">
-                                    Note: Service availability may vary by destination facility
+                                    <span id="serviceAvailabilityNote">Note: Service availability may vary by destination facility</span>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Service Input (only shows when "Others" is selected) -->
+                        <div class="form-row conditional-field" id="customServiceField">
+                            <div class="form-group">
+                                <label for="custom_service_name">Specify Other Service *</label>
+                                <input type="text" id="custom_service_name" name="custom_service_name" 
+                                    placeholder="Enter the specific service name (minimum 3 characters)"
+                                    minlength="3">
+                                <small style="color: #666; font-size: 0.85em;">
+                                    Please provide the specific service or treatment needed
                                 </small>
                             </div>
                         </div>
@@ -893,50 +1410,34 @@ try {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Snackbar logic
-            <?php if (isset($_SESSION['snackbar_message'])) { ?>
-                var snackbar = document.getElementById('snackbar');
-                var snackbarText = document.getElementById('snackbar-text');
-                if (snackbar && snackbarText) {
-                    snackbarText.textContent = <?= json_encode($_SESSION['snackbar_message']) ?>;
-                    snackbar.style.display = 'block';
-                    setTimeout(function() {
-                        snackbar.style.opacity = '1';
-                    }, 100);
-                    setTimeout(function() {
-                        snackbar.style.opacity = '0';
-                        setTimeout(function() {
-                            snackbar.style.display = 'none';
-                        }, 400);
-                    }, 4000);
-                }
-            <?php unset($_SESSION['snackbar_message']); } ?>
 
-            // Back/Cancel modal logic
-            const backBtn = document.getElementById('backCancelBtn');
-            const modal = document.getElementById('backCancelModal');
-            const modalCancel = document.getElementById('modalCancelBtn');
-            const modalStay = document.getElementById('modalStayBtn');
-            
-            if (backBtn && modal && modalCancel && modalStay) {
-                backBtn.addEventListener('click', function() {
-                    modal.style.display = 'flex';
-                });
-                
-                modalCancel.addEventListener('click', function() {
-                    modal.style.display = 'none';
-                    window.location.href = "referrals_management.php";
-                });
-                
-                modalStay.addEventListener('click', function() {
-                    modal.style.display = 'none';
-                });
-                
-                modal.addEventListener('click', function(e) {
-                    if (e.target === modal) modal.style.display = 'none';
-                });
+            // Initialize service filtering on page load
+            const destinationTypeSelect = document.getElementById('destination_type');
+            if (destinationTypeSelect && destinationTypeSelect.value) {
+                filterServicesByDestination(destinationTypeSelect.value);
             }
-
+            
+            // Mobile patient card selection function
+            window.selectPatientCard = function(cardElement) {
+                const checkbox = cardElement.querySelector('.patient-card-checkbox');
+                if (checkbox && !checkbox.checked) {
+                    // Uncheck all other checkboxes (both mobile and desktop)
+                    document.querySelectorAll('.patient-checkbox').forEach(cb => cb.checked = false);
+                    
+                    // Remove previous selections from both cards and rows
+                    document.querySelectorAll('.patient-card').forEach(card => card.classList.remove('selected'));
+                    document.querySelectorAll('.patient-row').forEach(row => row.classList.remove('selected-patient'));
+                    
+                    // Select current card
+                    checkbox.checked = true;
+                    cardElement.classList.add('selected');
+                    
+                    // Trigger the change event to handle form enabling
+                    const event = new Event('change', { bubbles: true });
+                    checkbox.dispatchEvent(event);
+                }
+            };
+            
             // Patient selection logic
             const patientCheckboxes = document.querySelectorAll('.patient-checkbox');
             const referralForm = document.getElementById('referralForm');
@@ -953,13 +1454,23 @@ try {
                             if (cb !== this) cb.checked = false;
                         });
                         
-                        // Remove previous selections
+                        // Remove previous selections from both desktop and mobile
                         document.querySelectorAll('.patient-row').forEach(row => {
                             row.classList.remove('selected-patient');
                         });
+                        document.querySelectorAll('.patient-card').forEach(card => {
+                            card.classList.remove('selected');
+                        });
                         
-                        // Highlight selected row
-                        this.closest('.patient-row').classList.add('selected-patient');
+                        // Highlight selected row or card
+                        const parentRow = this.closest('.patient-row');
+                        const parentCard = this.closest('.patient-card');
+                        
+                        if (parentRow) {
+                            parentRow.classList.add('selected-patient');
+                        } else if (parentCard) {
+                            parentCard.classList.add('selected');
+                        }
                         
                         // Enable form
                         referralForm.classList.add('enabled');
@@ -976,7 +1487,16 @@ try {
                         submitBtn.disabled = true;
                         selectedPatientId.value = '';
                         selectedPatientInfo.style.display = 'none';
-                        this.closest('.patient-row').classList.remove('selected-patient');
+                        
+                        // Remove selection from both desktop and mobile
+                        const parentRow = this.closest('.patient-row');
+                        const parentCard = this.closest('.patient-card');
+                        
+                        if (parentRow) {
+                            parentRow.classList.remove('selected-patient');
+                        } else if (parentCard) {
+                            parentCard.classList.remove('selected');
+                        }
                         
                         // Clear facility information
                         currentPatientFacilities = null;
@@ -1035,6 +1555,7 @@ try {
                                 populateBarangayFacility();
                             }
                             if (barangayFacilityField) barangayFacilityField.classList.add('show');
+                            filterServicesByDestination('barangay_center');
                             break;
                             
                         case 'district_office':
@@ -1042,17 +1563,26 @@ try {
                                 populateDistrictOffice();
                             }
                             if (districtOfficeField) districtOfficeField.classList.add('show');
+                            filterServicesByDestination('district_office');
                             break;
                             
                         case 'city_office':
+                            // Set city office ID (facility_id = 1)
+                            const referredToFacilityId = document.getElementById('referredToFacilityId');
+                            if (referredToFacilityId) referredToFacilityId.value = '1';
                             if (cityOfficeField) cityOfficeField.classList.add('show');
+                            filterServicesByDestination('city_office');
                             break;
                             
                         case 'external':
+                            // External facilities don't use referred_to_facility_id
+                            const referredToFacilityIdExt = document.getElementById('referredToFacilityId');
+                            if (referredToFacilityIdExt) referredToFacilityIdExt.value = '';
                             if (externalFacilityTypeField) {
                                 externalFacilityTypeField.classList.add('show');
                                 externalFacilityType.required = true;
                             }
+                            filterServicesByDestination('external');
                             break;
                     }
                 });
@@ -1085,30 +1615,132 @@ try {
             // Function to populate barangay facility
             function populateBarangayFacility() {
                 const barangayDisplay = document.getElementById('barangay_facility_display');
-                const barangayIdInput = document.getElementById('barangay_facility_id');
+                const referredToFacilityId = document.getElementById('referredToFacilityId');
                 
                 if (currentPatientFacilities && currentPatientFacilities.facilities.barangay_center) {
                     const facility = currentPatientFacilities.facilities.barangay_center;
                     if (barangayDisplay) barangayDisplay.value = facility.name;
-                    if (barangayIdInput) barangayIdInput.value = facility.facility_id;
+                    if (referredToFacilityId) referredToFacilityId.value = facility.facility_id;
                 } else {
                     if (barangayDisplay) barangayDisplay.value = 'No barangay health center found';
-                    if (barangayIdInput) barangayIdInput.value = '';
+                    if (referredToFacilityId) referredToFacilityId.value = '';
                 }
             }
             
             // Function to populate district office
             function populateDistrictOffice() {
                 const districtDisplay = document.getElementById('district_office_display');
-                const districtIdInput = document.getElementById('district_office_id');
+                const referredToFacilityId = document.getElementById('referredToFacilityId');
                 
                 if (currentPatientFacilities && currentPatientFacilities.facilities.district_office) {
                     const facility = currentPatientFacilities.facilities.district_office;
                     if (districtDisplay) districtDisplay.value = facility.name;
-                    if (districtIdInput) districtIdInput.value = facility.facility_id;
+                    if (referredToFacilityId) referredToFacilityId.value = facility.facility_id;
                 } else {
                     if (districtDisplay) districtDisplay.value = 'No district office found';
-                    if (districtIdInput) districtIdInput.value = '';
+                    if (referredToFacilityId) referredToFacilityId.value = '';
+                }
+            }
+            
+            // Function to filter services based on destination type
+            function filterServicesByDestination(destinationType) {
+                const serviceSelect = document.getElementById('service_id');
+                const othersOption = document.getElementById('othersServiceOption');
+                const serviceNote = document.getElementById('serviceAvailabilityNote');
+                const customServiceField = document.getElementById('customServiceField');
+                
+                if (!serviceSelect) return;
+                
+                // Get all service options (excluding the "others" option)
+                const allOptions = Array.from(serviceSelect.options).filter(opt => opt.value !== 'others' && opt.value !== '');
+                
+                // Define primary care services (you may need to adjust these based on your services table)
+                const primaryCareServices = [
+                    'consultation', 'primary care', 'general consultation', 'basic health services',
+                    'immunization', 'family planning', 'maternal health', 'child health',
+                    'health education', 'preventive care', 'basic medical care'
+                ];
+                
+                // Clear current selection if it will be filtered out
+                const currentValue = serviceSelect.value;
+                
+                switch(destinationType) {
+                    case 'district_office':
+                        // District Office: Only primary care services
+                        showPrimaryCareServicesOnly(serviceSelect, allOptions, primaryCareServices);
+                        hideOthersOption(othersOption, customServiceField);
+                        if (serviceNote) serviceNote.textContent = 'District Health Office: Primary care services only';
+                        break;
+                        
+                    case 'city_office':
+                        // City Office: All services except "others"
+                        showAllServices(serviceSelect, allOptions);
+                        hideOthersOption(othersOption, customServiceField);
+                        if (serviceNote) serviceNote.textContent = 'City Health Office: All services available';
+                        break;
+                        
+                    case 'external':
+                        // External: All services including "others"
+                        showAllServices(serviceSelect, allOptions);
+                        showOthersOption(othersOption);
+                        if (serviceNote) serviceNote.textContent = 'External Facility: All services available, including custom services';
+                        break;
+                        
+                    default:
+                        // Default: Show all services except "others" (for internal facilities)
+                        showAllServices(serviceSelect, allOptions);
+                        hideOthersOption(othersOption, customServiceField);
+                        if (serviceNote) serviceNote.textContent = 'Note: Service availability may vary by destination facility';
+                        break;
+                }
+                
+                // If current selection is no longer available, clear it
+                if (currentValue && currentValue !== '' && !Array.from(serviceSelect.options).some(opt => opt.value === currentValue)) {
+                    serviceSelect.value = '';
+                }
+            }
+            
+            // Helper functions for service filtering
+            function showPrimaryCareServicesOnly(serviceSelect, allOptions, primaryCareServices) {
+                // Hide all non-primary care options
+                allOptions.forEach(option => {
+                    const serviceName = option.textContent.toLowerCase();
+                    const isPrimaryCare = primaryCareServices.some(pc => serviceName.includes(pc));
+                    option.style.display = isPrimaryCare ? 'block' : 'none';
+                });
+            }
+            
+            function showAllServices(serviceSelect, allOptions) {
+                // Show all service options
+                allOptions.forEach(option => {
+                    option.style.display = 'block';
+                });
+            }
+            
+            function showOthersOption(othersOption) {
+                if (othersOption) {
+                    othersOption.style.display = 'block';
+                    othersOption.disabled = false;
+                }
+            }
+            
+            function hideOthersOption(othersOption, customServiceField) {
+                if (othersOption) {
+                    othersOption.style.display = 'none';
+                    othersOption.disabled = true;
+                }
+                if (customServiceField) customServiceField.classList.remove('show');
+                
+                // Clear custom service input if it was selected
+                const serviceSelect = document.getElementById('service_id');
+                if (serviceSelect && serviceSelect.value === 'others') {
+                    serviceSelect.value = '';
+                }
+                
+                const customServiceInput = document.getElementById('custom_service_name');
+                if (customServiceInput) {
+                    customServiceInput.value = '';
+                    customServiceInput.required = false;
                 }
             }
             
@@ -1173,20 +1805,59 @@ try {
                 if (loader) loader.style.display = 'none';
             }
             
-            // Function to show referral confirmation dialog
+            // Function to show referral confirmation modal
             function showReferralConfirmation() {
-                const destinationType = document.getElementById('destination_type').value;
+                return new Promise((resolve) => {
+                    populateReferralModal();
+                    showReferralModal();
+                    
+                    // Store resolve function globally so modal buttons can access it
+                    window.currentReferralResolve = resolve;
+                });
+            }
+            
+            // Function to populate modal with form data
+            function populateReferralModal() {
+                // Patient information
                 const patientName = document.getElementById('selectedPatientName').textContent;
-                const referralReason = document.getElementById('referral_reason').value;
+                const selectedCheckbox = document.querySelector('.patient-checkbox:checked');
+                let patientId = '-';
                 
+                if (selectedCheckbox) {
+                    // Try to get patient ID from table row
+                    const tableRow = selectedCheckbox.closest('tr');
+                    if (tableRow) {
+                        const idCell = tableRow.querySelector('td:nth-child(2)');
+                        patientId = idCell ? idCell.textContent : '-';
+                    } else {
+                        // Try to get patient ID from mobile card
+                        const card = selectedCheckbox.closest('.patient-card');
+                        if (card) {
+                            const idElement = card.querySelector('.patient-card-id');
+                            patientId = idElement ? idElement.textContent : '-';
+                        }
+                    }
+                }
+                
+                document.getElementById('modalPatientName').textContent = patientName || '-';
+                document.getElementById('modalPatientId').textContent = patientId || '-';
+                
+                // Referral details
+                const referringFrom = <?= json_encode(htmlspecialchars($employee_facility_name ?: "Unknown Facility")) ?>;
+                document.getElementById('modalReferringFrom').textContent = referringFrom;
+                
+                // Destination
+                const destinationType = document.getElementById('destination_type').value;
                 let destinationName = '';
                 
                 switch(destinationType) {
                     case 'barangay_center':
-                        destinationName = document.getElementById('barangay_facility_display').value;
+                        const barangayDisplay = document.getElementById('barangay_facility_display');
+                        destinationName = barangayDisplay ? barangayDisplay.value : 'Barangay Health Center';
                         break;
                     case 'district_office':
-                        destinationName = document.getElementById('district_office_display').value;
+                        const districtDisplay = document.getElementById('district_office_display');
+                        destinationName = districtDisplay ? districtDisplay.value : 'District Health Office';
                         break;
                     case 'city_office':
                         destinationName = 'City Health Office (Main District)';
@@ -1194,31 +1865,179 @@ try {
                     case 'external':
                         const externalType = document.getElementById('external_facility_type').value;
                         if (externalType === 'hospital') {
-                            destinationName = document.getElementById('hospital_name').value;
+                            const hospitalSelect = document.getElementById('hospital_name');
+                            destinationName = hospitalSelect ? hospitalSelect.value : 'External Hospital';
                         } else if (externalType === 'other') {
-                            destinationName = document.getElementById('other_facility_name').value;
+                            const otherFacility = document.getElementById('other_facility_name');
+                            destinationName = otherFacility ? otherFacility.value : 'Other External Facility';
                         }
                         break;
+                    default:
+                        destinationName = 'Not specified';
                 }
                 
-                const confirmationMessage = `
-Please confirm the referral details:
-
-Patient: ${patientName}
-Destination: ${destinationName}
-Reason: ${referralReason}
-
-Do you want to create this referral?`;
+                document.getElementById('modalDestination').textContent = destinationName;
                 
-                return confirm(confirmationMessage);
+                // Service (if selected)
+                const serviceSelect = document.getElementById('service_id');
+                const serviceContainer = document.getElementById('modalServiceContainer');
+                
+                if (serviceSelect && serviceSelect.value) {
+                    let serviceName = '';
+                    if (serviceSelect.value === 'others') {
+                        const customServiceName = document.getElementById('custom_service_name').value;
+                        serviceName = customServiceName + ' (Custom Service)';
+                    } else {
+                        const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+                        serviceName = selectedOption.textContent;
+                    }
+                    document.getElementById('modalService').textContent = serviceName;
+                    serviceContainer.style.display = 'block';
+                } else {
+                    serviceContainer.style.display = 'none';
+                }
+                
+                // Referral reason
+                const referralReason = document.getElementById('referral_reason').value;
+                document.getElementById('modalReason').textContent = referralReason || 'No reason specified';
+                
+                // Vitals (if provided)
+                populateVitalsModal();
             }
+            
+            // Function to populate vitals in modal
+            function populateVitalsModal() {
+                const vitalsCard = document.getElementById('modalVitalsCard');
+                const vitalsGrid = document.getElementById('modalVitalsGrid');
+                const vitalsRemarksContainer = document.getElementById('modalVitalsRemarksContainer');
+                
+                // Clear previous vitals
+                vitalsGrid.innerHTML = '';
+                
+                const vitalsFields = [
+                    { id: 'systolic_bp', label: 'Systolic BP', unit: 'mmHg' },
+                    { id: 'diastolic_bp', label: 'Diastolic BP', unit: 'mmHg' },
+                    { id: 'heart_rate', label: 'Heart Rate', unit: 'bpm' },
+                    { id: 'respiratory_rate', label: 'Respiratory Rate', unit: '/min' },
+                    { id: 'temperature', label: 'Temperature', unit: '°C' },
+                    { id: 'weight', label: 'Weight', unit: 'kg' },
+                    { id: 'height', label: 'Height', unit: 'cm' }
+                ];
+                
+                let hasVitals = false;
+                
+                vitalsFields.forEach(field => {
+                    const input = document.getElementById(field.id);
+                    if (input && input.value) {
+                        hasVitals = true;
+                        const vitalItem = document.createElement('div');
+                        vitalItem.className = 'vital-item';
+                        vitalItem.innerHTML = `
+                            <div class="vital-value">${input.value}</div>
+                            <div class="vital-label">${field.label} (${field.unit})</div>
+                        `;
+                        vitalsGrid.appendChild(vitalItem);
+                    }
+                });
+                
+                // Check vitals remarks
+                const vitalsRemarks = document.getElementById('vitals_remarks');
+                if (vitalsRemarks && vitalsRemarks.value.trim()) {
+                    document.getElementById('modalVitalsRemarks').textContent = vitalsRemarks.value;
+                    vitalsRemarksContainer.style.display = 'block';
+                    hasVitals = true;
+                } else {
+                    vitalsRemarksContainer.style.display = 'none';
+                }
+                
+                // Show/hide vitals card based on whether we have any vitals data
+                vitalsCard.style.display = hasVitals ? 'block' : 'none';
+            }
+            
+            // Function to show modal
+            function showReferralModal() {
+                const modal = document.getElementById('referralConfirmationModal');
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+            
+            // Function to close modal
+            window.closeReferralModal = function() {
+                const modal = document.getElementById('referralConfirmationModal');
+                modal.classList.remove('show');
+                document.body.style.overflow = '';
+                
+                // Reset confirm button state if needed
+                const confirmBtn = document.getElementById('modalConfirmBtn');
+                if (confirmBtn && confirmBtn.disabled) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-check"></i> Create Referral';
+                }
+                
+                // Resolve with false (user cancelled)
+                if (window.currentReferralResolve) {
+                    window.currentReferralResolve(false);
+                    window.currentReferralResolve = null;
+                }
+            };
+            
+            // Modal confirm button handler (moved outside DOMContentLoaded to avoid nesting)
+            function setupModalHandlers() {
+                const confirmBtn = document.getElementById('modalConfirmBtn');
+                console.log('Setting up modal handlers, confirmBtn:', confirmBtn);
+                if (confirmBtn) {
+                    confirmBtn.addEventListener('click', function() {
+                        // Add loading state to button
+                        const originalContent = confirmBtn.innerHTML;
+                        confirmBtn.disabled = true;
+                        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Referral...';
+                        
+                        // Immediately resolve the promise to proceed with form submission
+                        if (window.currentReferralResolve) {
+                            window.currentReferralResolve(true);
+                            window.currentReferralResolve = null;
+                        }
+                        
+                        // Close modal with a short delay for visual feedback
+                        setTimeout(() => {
+                            closeReferralModal();
+                        }, 200);
+                        
+                        // Reset button state in case of error (longer timeout)
+                        setTimeout(() => {
+                            confirmBtn.disabled = false;
+                            confirmBtn.innerHTML = originalContent;
+                        }, 2000);
+                    });
+                }
+                
+                // Close modal when clicking outside
+                const modal = document.getElementById('referralConfirmationModal');
+                if (modal) {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === modal) {
+                            closeReferralModal();
+                        }
+                    });
+                }
+                
+                // Close modal on ESC key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && modal && modal.classList.contains('show')) {
+                        closeReferralModal();
+                    }
+                });
+            }
+            
+
 
             // Form validation
             if (referralForm) {
                 referralForm.addEventListener('submit', function(e) {
+                    e.preventDefault(); // Always prevent default submission initially
+                    
                     const patientId = document.getElementById('selectedPatientId').value;
                     if (!patientId) {
-                        e.preventDefault();
                         alert('Please select a patient from the search results above.');
                         return false;
                     }
@@ -1226,18 +2045,18 @@ Do you want to create this referral?`;
                     const destinationType = document.getElementById('destination_type').value;
                     
                     // Validate based on destination type
-                    if (destinationType === 'barangay_center') {
-                        const facilityId = document.getElementById('barangay_facility_id').value;
-                        if (!facilityId) {
-                            e.preventDefault();
-                            alert('No barangay health center available for this patient. Please select a different destination type.');
-                            return false;
-                        }
-                    } else if (destinationType === 'district_office') {
-                        const facilityId = document.getElementById('district_office_id').value;
-                        if (!facilityId) {
+                    const referredToFacilityId = document.getElementById('referredToFacilityId').value;
+                    
+                    if (destinationType === 'district_office') {
+                        if (!referredToFacilityId) {
                             e.preventDefault();
                             alert('No district health office available for this patient. Please select a different destination type.');
+                            return false;
+                        }
+                    } else if (destinationType === 'city_office') {
+                        if (!referredToFacilityId || referredToFacilityId !== '1') {
+                            e.preventDefault();
+                            alert('City Health Office facility ID not set properly. Please try again.');
                             return false;
                         }
                     } else if (destinationType === 'external') {
@@ -1282,83 +2101,150 @@ Do you want to create this referral?`;
                         return false;
                     }
                     
-                    // Show confirmation dialog with referral details
-                    if (!showReferralConfirmation()) {
-                        e.preventDefault();
-                        return false;
+                    // Validate custom service if "Others" is selected
+                    const serviceId = document.getElementById('service_id').value;
+                    if (serviceId === 'others') {
+                        const customServiceName = document.getElementById('custom_service_name').value;
+                        if (!customServiceName.trim()) {
+                            e.preventDefault();
+                            alert('Please specify the other service name.');
+                            return false;
+                        }
+                        if (customServiceName.trim().length < 3) {
+                            e.preventDefault();
+                            alert('Other service name must be at least 3 characters.');
+                            return false;
+                        }
+                    }
+                    
+                    // Show confirmation modal with referral details
+                    e.preventDefault();
+                    showReferralConfirmation().then(confirmed => {
+                        if (confirmed) {
+                            // User confirmed, submit the form
+                            referralForm.submit();
+                        }
+                        // If not confirmed, do nothing (form won't submit)
+                    });
+                    return false;
+                });
+            }
+            
+            // Handle service selection change (for "Others" option)
+            const serviceSelect = document.getElementById('service_id');
+            const customServiceField = document.getElementById('customServiceField');
+            const customServiceInput = document.getElementById('custom_service_name');
+            
+            if (serviceSelect && customServiceField && customServiceInput) {
+                serviceSelect.addEventListener('change', function() {
+                    if (this.value === 'others') {
+                        customServiceField.classList.add('show');
+                        customServiceInput.required = true;
+                    } else {
+                        customServiceField.classList.remove('show');
+                        customServiceInput.required = false;
+                        customServiceInput.value = '';
                     }
                 });
             }
             
-            // Service filtering based on selected facility
-            if (internalFacilityInput) {
-                internalFacilityInput.addEventListener('change', function() {
-                    const facilityId = this.value;
-                    const serviceSelect = document.getElementById('service_id');
-                    
-                    if (facilityId && serviceSelect) {
-                        // Fetch available services for the selected facility
-                        fetch(`get_facility_services.php?facility_id=${facilityId}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                // Clear current options except the first one
-                                serviceSelect.innerHTML = '<option value="">Select service (optional)...</option>';
-                                
-                                // Add available services for this facility
-                                data.services.forEach(service => {
-                                    const option = document.createElement('option');
-                                    option.value = service.service_id;
-                                    option.textContent = service.name;
-                                    if (service.description) {
-                                        option.textContent += ' - ' + service.description.substring(0, 50) + '...';
-                                    }
-                                    serviceSelect.appendChild(option);
-                                });
-                                
-                                // Show message if no services available
-                                if (data.services.length === 0) {
-                                    const option = document.createElement('option');
-                                    option.value = '';
-                                    option.textContent = 'No services available at selected facility';
-                                    option.disabled = true;
-                                    serviceSelect.appendChild(option);
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching facility services:', error);
-                                // Fallback: show all services
-                                serviceSelect.innerHTML = `
-                                    <option value="">Select service (optional)...</option>
-                                    <?php foreach ($all_services as $service): ?>
-                                        <option value="<?= $service['service_id'] ?>">
-                                            <?= htmlspecialchars($service['name']) ?>
-                                            <?php if ($service['description']): ?>
-                                                - <?= htmlspecialchars(substr($service['description'], 0, 50)) ?>...
-                                            <?php endif; ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                `;
-                            });
-                    } else {
-                        // Reset to all services if no facility selected
-                        if (serviceSelect) {
-                            serviceSelect.innerHTML = `
-                                <option value="">Select service (optional)...</option>
-                                <?php foreach ($all_services as $service): ?>
-                                    <option value="<?= $service['service_id'] ?>">
-                                        <?= htmlspecialchars($service['name']) ?>
-                                        <?php if ($service['description']): ?>
-                                            - <?= htmlspecialchars(substr($service['description'], 0, 50)) ?>...
-                                        <?php endif; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            `;
-                        }
-                    }
-                });
-            }
+            // Note: Service filtering is handled through destination type selection
+            // No additional facility-based service filtering needed here
+            
+            // Setup modal handlers
+            setupModalHandlers();
         });
     </script>
+
+    <!-- Referral Confirmation Modal -->
+    <div id="referralConfirmationModal" class="referral-confirmation-modal">
+        <div class="referral-modal-content">
+            <div class="referral-modal-header">
+                <button type="button" class="referral-modal-close" onclick="closeReferralModal()">&times;</button>
+                <div class="icon">
+                    <i class="fas fa-share-square"></i>
+                </div>
+                <h3>Confirm Referral Details</h3>
+                <p style="margin: 0.5rem 0 0; opacity: 0.9;">Please review the information below before creating the referral</p>
+            </div>
+            
+            <div class="referral-modal-body">
+                <!-- Patient Information -->
+                <div class="referral-summary-card">
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-user"></i>
+                            Patient Information
+                        </div>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-label">Patient Name</div>
+                                <div class="summary-value highlight" id="modalPatientName">-</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Patient ID</div>
+                                <div class="summary-value" id="modalPatientId">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Referral Details -->
+                <div class="referral-summary-card">
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-hospital"></i>
+                            Referral Details
+                        </div>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-label">Referring From</div>
+                                <div class="summary-value" id="modalReferringFrom">-</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Destination</div>
+                                <div class="summary-value highlight" id="modalDestination">-</div>
+                            </div>
+                            <div class="summary-item" id="modalServiceContainer" style="display: none;">
+                                <div class="summary-label">Service Requested</div>
+                                <div class="summary-value" id="modalService">-</div>
+                            </div>
+                        </div>
+                        <div class="summary-item" style="margin-top: 1rem;">
+                            <div class="summary-label">Reason for Referral</div>
+                            <div class="summary-value reason" id="modalReason">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Patient Vitals (if provided) -->
+                <div class="referral-summary-card" id="modalVitalsCard" style="display: none;">
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-heartbeat"></i>
+                            Patient Vitals
+                        </div>
+                        <div class="vitals-summary" id="modalVitalsGrid">
+                            <!-- Vitals will be populated dynamically -->
+                        </div>
+                        <div class="summary-item" id="modalVitalsRemarksContainer" style="display: none; margin-top: 1rem;">
+                            <div class="summary-label">Vitals Remarks</div>
+                            <div class="summary-value" id="modalVitalsRemarks">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="referral-modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" onclick="closeReferralModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="modal-btn modal-btn-confirm" id="modalConfirmBtn">
+                    <i class="fas fa-check"></i> Create Referral
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

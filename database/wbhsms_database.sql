@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 24, 2025 at 01:14 PM
+-- Generation Time: Sep 25, 2025 at 07:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `wbhsms_cho`
+-- Database: `wbhsms_database`
 --
 
 -- --------------------------------------------------------
@@ -70,6 +70,7 @@ CREATE TABLE `appointments` (
 CREATE TABLE `barangay` (
   `barangay_id` int(10) UNSIGNED NOT NULL,
   `barangay_name` varchar(100) NOT NULL,
+  `district_id` int(10) UNSIGNED NOT NULL,
   `city` varchar(100) NOT NULL DEFAULT 'Koronadal City',
   `province` varchar(100) NOT NULL DEFAULT 'South Cotabato',
   `zip_code` varchar(10) NOT NULL DEFAULT '9506',
@@ -82,34 +83,34 @@ CREATE TABLE `barangay` (
 -- Dumping data for table `barangay`
 --
 
-INSERT INTO `barangay` (`barangay_id`, `barangay_name`, `city`, `province`, `zip_code`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'Brgy. Assumption', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(2, 'Brgy. Avanceña', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(3, 'Brgy. Cacub', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(4, 'Brgy. Caloocan', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(5, 'Brgy. Carpenter Hill', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(6, 'Brgy. Concepcion', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(7, 'Brgy. Esperanza', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(8, 'Brgy. General Paulino Santos', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(9, 'Brgy. Mabini', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(10, 'Brgy. Magsaysay', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(11, 'Brgy. Mambucal', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(12, 'Brgy. Morales', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(13, 'Brgy. Namnama', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(14, 'Brgy. New Pangasinan', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(15, 'Brgy. Paraiso', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(16, 'Brgy. Rotonda', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(17, 'Brgy. San Isidro', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(18, 'Brgy. San Roque', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(19, 'Brgy. San Jose', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(20, 'Brgy. Sta. Cruz', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(21, 'Brgy. Sto. Niño', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(22, 'Brgy. Saravia', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(23, 'Brgy. Topland', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(24, 'Brgy. Zone 1', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(25, 'Brgy. Zone 2', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(26, 'Brgy. Zone 3', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25'),
-(27, 'Brgy. Zone 4', 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-21 03:50:25');
+INSERT INTO `barangay` (`barangay_id`, `barangay_name`, `district_id`, `city`, `province`, `zip_code`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'Brgy. Assumption', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(2, 'Brgy. Avanceña', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(3, 'Brgy. Cacub', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(4, 'Brgy. Caloocan', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(5, 'Brgy. Carpenter Hill', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(6, 'Brgy. Concepcion', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(7, 'Brgy. Esperanza', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(8, 'Brgy. General Paulino Santos', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(9, 'Brgy. Mabini', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(10, 'Brgy. Magsaysay', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(11, 'Brgy. Mambucal', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(12, 'Brgy. Morales', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(13, 'Brgy. Namnama', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(14, 'Brgy. New Pangasinan', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(15, 'Brgy. Paraiso', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(16, 'Brgy. Rotonda', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(17, 'Brgy. San Isidro', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(18, 'Brgy. San Roque', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(19, 'Brgy. San Jose', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(20, 'Brgy. Sta. Cruz', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(21, 'Brgy. Sto. Niño', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(22, 'Brgy. Saravia', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(23, 'Brgy. Topland', 2, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(24, 'Brgy. Zone 1', 3, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(25, 'Brgy. Zone 2', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(26, 'Brgy. Zone 3', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49'),
+(27, 'Brgy. Zone 4', 1, 'Koronadal City', 'South Cotabato', '9506', 'active', '2025-09-21 03:50:25', '2025-09-25 05:33:49');
 
 -- --------------------------------------------------------
 
@@ -205,6 +206,38 @@ CREATE TABLE `current_medications` (
   `frequency` varchar(50) DEFAULT NULL,
   `prescribed_by` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `current_medications`
+--
+
+INSERT INTO `current_medications` (`id`, `patient_id`, `medication`, `dosage`, `frequency`, `prescribed_by`) VALUES
+(2, 7, 'Not Applicable', 'N/A', 'N/A', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `districts`
+--
+
+CREATE TABLE `districts` (
+  `district_id` int(10) UNSIGNED NOT NULL,
+  `district_name` varchar(100) NOT NULL,
+  `district_code` varchar(20) NOT NULL,
+  `city` varchar(100) DEFAULT 'Koronadal City',
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `districts`
+--
+
+INSERT INTO `districts` (`district_id`, `district_name`, `district_code`, `city`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'Main District', 'MAIN', 'Koronadal City', 'active', '2025-09-25 05:29:59', '2025-09-25 05:29:59'),
+(2, 'Concepcion District', 'CONCEP', 'Koronadal City', 'active', '2025-09-25 05:29:59', '2025-09-25 05:29:59'),
+(3, 'GPS District', 'GPS', 'Koronadal City', 'active', '2025-09-25 05:29:59', '2025-09-25 05:29:59');
 
 -- --------------------------------------------------------
 
@@ -309,6 +342,7 @@ CREATE TABLE `facilities` (
   `name` varchar(100) NOT NULL,
   `type` varchar(50) NOT NULL,
   `barangay_id` int(10) UNSIGNED NOT NULL,
+  `district_id` int(10) UNSIGNED DEFAULT NULL,
   `district` varchar(50) NOT NULL,
   `is_main` tinyint(1) DEFAULT 0,
   `parent_facility_id` int(10) UNSIGNED DEFAULT NULL,
@@ -321,37 +355,37 @@ CREATE TABLE `facilities` (
 -- Dumping data for table `facilities`
 --
 
-INSERT INTO `facilities` (`facility_id`, `name`, `type`, `barangay_id`, `district`, `is_main`, `parent_facility_id`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'City Health Office (Main District)', 'City Health Office', 27, 'Main District', 1, NULL, 'active', '2025-09-21 04:06:10', '2025-09-21 04:06:10'),
-(2, 'Concepcion District Health Office', 'District Health Office', 6, 'Concepcion District', 0, NULL, 'active', '2025-09-21 04:06:10', '2025-09-21 04:06:10'),
-(3, 'GPS District Health Office', 'District Health Office', 8, 'GPS District', 0, NULL, 'active', '2025-09-21 04:06:10', '2025-09-21 04:06:10'),
-(4, 'Zone II Health Center', 'Barangay Health Center', 25, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(5, 'Zone III Health Center', 'Barangay Health Center', 26, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(6, 'Zone IV Health Center', 'Barangay Health Center', 27, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(7, 'Sta. Cruz Health Center', 'Barangay Health Center', 20, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(8, 'Sto. Niño Health Center', 'Barangay Health Center', 21, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(9, 'Saravia Health Center', 'Barangay Health Center', 22, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(10, 'Paraiso Health Center', 'Barangay Health Center', 15, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(11, 'San Isidro Health Center', 'Barangay Health Center', 17, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(12, 'Assumption Health Center', 'Barangay Health Center', 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(13, 'Mambucal Health Center', 'Barangay Health Center', 11, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(14, 'Concepcion Health Center', 'Barangay Health Center', 6, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(15, 'Cacub Health Center', 'Barangay Health Center', 3, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(16, 'Topland Health Center', 'Barangay Health Center', 23, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(17, 'Carpenter Hill Health Center', 'Barangay Health Center', 5, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(18, 'Magsaysay Health Center', 'Barangay Health Center', 10, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(19, 'New Pangasinan Health Center', 'Barangay Health Center', 14, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(20, 'Esperanza Health Center', 'Barangay Health Center', 7, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(21, 'San Roque Health Center', 'Barangay Health Center', 18, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(22, 'GPS Health Center', 'Barangay Health Center', 8, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(23, 'Zone I Health Center', 'Barangay Health Center', 24, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(24, 'Namnama Health Center', 'Barangay Health Center', 13, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(25, 'Avanceña Health Center', 'Barangay Health Center', 2, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(26, 'Mabini Health Center', 'Barangay Health Center', 9, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(27, 'San Jose Health Center', 'Barangay Health Center', 19, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(28, 'Caloocan Health Center', 'Barangay Health Center', 4, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(29, 'Rotonda Health Center', 'Barangay Health Center', 16, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30'),
-(30, 'Morales Health Center', 'Barangay Health Center', 12, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-21 04:06:30');
+INSERT INTO `facilities` (`facility_id`, `name`, `type`, `barangay_id`, `district_id`, `district`, `is_main`, `parent_facility_id`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'City Health Office (Main District)', 'City Health Office', 27, 1, 'Main District', 1, NULL, 'active', '2025-09-21 04:06:10', '2025-09-25 05:34:31'),
+(2, 'Concepcion District Health Office', 'District Health Office', 6, 2, 'Concepcion District', 0, NULL, 'active', '2025-09-21 04:06:10', '2025-09-25 05:34:31'),
+(3, 'GPS District Health Office', 'District Health Office', 8, 3, 'GPS District', 0, NULL, 'active', '2025-09-21 04:06:10', '2025-09-25 05:34:31'),
+(4, 'Zone II Health Center', 'Barangay Health Center', 25, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(5, 'Zone III Health Center', 'Barangay Health Center', 26, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(6, 'Zone IV Health Center', 'Barangay Health Center', 27, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(7, 'Sta. Cruz Health Center', 'Barangay Health Center', 20, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(8, 'Sto. Niño Health Center', 'Barangay Health Center', 21, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(9, 'Saravia Health Center', 'Barangay Health Center', 22, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(10, 'Paraiso Health Center', 'Barangay Health Center', 15, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(11, 'San Isidro Health Center', 'Barangay Health Center', 17, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(12, 'Assumption Health Center', 'Barangay Health Center', 1, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(13, 'Mambucal Health Center', 'Barangay Health Center', 11, 1, 'Main District', 0, 1, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(14, 'Concepcion Health Center', 'Barangay Health Center', 6, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(15, 'Cacub Health Center', 'Barangay Health Center', 3, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(16, 'Topland Health Center', 'Barangay Health Center', 23, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(17, 'Carpenter Hill Health Center', 'Barangay Health Center', 5, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(18, 'Magsaysay Health Center', 'Barangay Health Center', 10, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(19, 'New Pangasinan Health Center', 'Barangay Health Center', 14, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(20, 'Esperanza Health Center', 'Barangay Health Center', 7, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(21, 'San Roque Health Center', 'Barangay Health Center', 18, 2, 'Concepcion District', 0, 2, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(22, 'GPS Health Center', 'Barangay Health Center', 8, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(23, 'Zone I Health Center', 'Barangay Health Center', 24, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(24, 'Namnama Health Center', 'Barangay Health Center', 13, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(25, 'Avanceña Health Center', 'Barangay Health Center', 2, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(26, 'Mabini Health Center', 'Barangay Health Center', 9, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(27, 'San Jose Health Center', 'Barangay Health Center', 19, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(28, 'Caloocan Health Center', 'Barangay Health Center', 4, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(29, 'Rotonda Health Center', 'Barangay Health Center', 16, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31'),
+(30, 'Morales Health Center', 'Barangay Health Center', 12, 3, 'GPS District', 0, 3, 'active', '2025-09-21 04:06:30', '2025-09-25 05:34:31');
 
 -- --------------------------------------------------------
 
@@ -428,7 +462,8 @@ CREATE TABLE `family_history` (
 --
 
 INSERT INTO `family_history` (`id`, `patient_id`, `family_member`, `condition`, `age_diagnosed`, `current_status`) VALUES
-(2, 7, 'Mother', 'Depression', 35, 'Living');
+(2, 7, 'Mother', 'Depression', 35, 'Living'),
+(3, 7, 'Cousin', 'Diabetes Mellitus', 46, 'Deceased');
 
 -- --------------------------------------------------------
 
@@ -492,6 +527,13 @@ CREATE TABLE `immunizations` (
   `status` enum('Complete','Incomplete','Pending','Unknown') DEFAULT 'Unknown',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `immunizations`
+--
+
+INSERT INTO `immunizations` (`id`, `patient_id`, `vaccine`, `year_received`, `doses_completed`, `status`, `created_at`) VALUES
+(2, 7, 'Not Applicable', '2025', 0, '', '2025-09-25 04:55:08');
 
 -- --------------------------------------------------------
 
@@ -595,7 +637,7 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`patient_id`, `username`, `first_name`, `middle_name`, `last_name`, `suffix`, `date_of_birth`, `sex`, `contact_number`, `email`, `barangay_id`, `isPWD`, `pwd_id_number`, `isPhilHealth`, `philhealth_type`, `philhealth_id_number`, `isSenior`, `senior_citizen_id`, `password_hash`, `status`, `created_at`, `updated_at`) VALUES
-(7, 'P000007', 'David', 'Animo', 'Diaz', '', '2001-04-10', 'Male', '9451849538', 'daveynmdz.sti@gmail.com', 25, 0, NULL, 1, 'Indigent', '17-025789911-2', 0, NULL, '$2y$10$6t1A3Gzj9XJXDwIQBDLK/u8evghw/4To9ABSEetP7HETjfqCcV7Ra', 'active', '2025-09-21 09:42:03', '2025-09-21 16:34:21'),
+(7, 'P000007', 'David', 'Animo', 'Diaz', '', '2001-04-10', 'Male', '9451849538', 'daveynmdz.sti@gmail.com', 25, 0, NULL, 1, 'Indigent', '17-025789911-2', 0, NULL, '$2y$10$zZuOvrDPeGN1Ked0/LynaOUcxIQ7TJXDFbD7.9IOGGkEIA.PCqOAO', 'active', '2025-09-21 09:42:03', '2025-09-25 04:52:06'),
 (8, 'P000028', 'Juan', 'Santos', 'Cruz', NULL, '1980-02-14', 'Male', '09123456781', 'patient1@example.com', 1, 1, '12-7401-001-0000001', 1, 'Indigent', '31-123456789-4', 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
 (9, 'P000029', 'Maria', 'Lopez', 'Reyes', NULL, '1995-06-28', 'Female', '09123456782', 'patient2@example.com', 2, 0, NULL, 1, 'Indigent', '72-987654321-7', 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
 (10, 'P000030', 'Pedro', 'Dela', 'Rosa', NULL, '1962-11-30', 'Male', '09123456783', 'patient3@example.com', 3, 0, NULL, 1, 'Indigent', '65-192837465-3', 1, 'SC-4389', '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
@@ -622,7 +664,8 @@ INSERT INTO `patients` (`patient_id`, `username`, `first_name`, `middle_name`, `
 (31, 'P000024', 'Elena', 'Jimenez', 'Navarro', NULL, '2005-09-05', 'Female', '09123456804', 'patient24@example.com', 24, 0, NULL, 0, NULL, NULL, 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
 (32, 'P000025', 'Miguel', 'Ramos', 'Aguilar', NULL, '1957-03-30', 'Male', '09123456805', 'patient25@example.com', 25, 1, '12-7401-025-0000009', 0, NULL, NULL, 1, 'SC-9087', '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
 (33, 'P000026', 'Nora', 'Bautista', 'Villarin', NULL, '1986-01-19', 'Female', '09123456806', 'patient26@example.com', 26, 0, NULL, 1, 'Indigent', '14-475869132-4', 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
-(34, 'P000027', 'Ethan', 'Reyes', 'Dela Cruz', NULL, '1999-10-22', 'Male', '09123456807', 'patient27@example.com', 27, 1, '12-7401-027-0000010', 1, 'Indigent', '66-918273645-5', 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54');
+(34, 'P000027', 'Ethan', 'Reyes', 'Dela Cruz', NULL, '1999-10-22', 'Male', '09123456807', 'patient27@example.com', 27, 1, '12-7401-027-0000010', 1, 'Indigent', '66-918273645-5', 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
+(35, 'P000035', 'David', '', 'Dela Cruz', '', '2005-03-09', 'Female', '9547583525', 'kristalmaesulit696@gmail.com', 5, 0, '', 0, '', '', 0, '', '$2y$10$eQkxoiPfcaUjIU6xQ0dk5OWtYqMhPVnbqU2bAsBcu68wb7ucnZpgK', 'active', '2025-09-24 12:11:49', '2025-09-24 12:11:49');
 
 -- --------------------------------------------------------
 
@@ -751,7 +794,7 @@ CREATE TABLE `referrals` (
   `referral_reason` text DEFAULT NULL,
   `referred_by` int(10) UNSIGNED DEFAULT NULL,
   `referral_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `status` enum('active','pending','accepted','completed','cancelled') DEFAULT 'pending'
+  `status` enum('active','accepted','completed','cancelled') DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -868,6 +911,13 @@ CREATE TABLE `surgical_history` (
   `hospital` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `surgical_history`
+--
+
+INSERT INTO `surgical_history` (`id`, `patient_id`, `surgery`, `year`, `hospital`) VALUES
+(2, 7, 'Not Applicable', '2025', 'N/A');
+
 -- --------------------------------------------------------
 
 --
@@ -938,7 +988,8 @@ ALTER TABLE `appointments`
 -- Indexes for table `barangay`
 --
 ALTER TABLE `barangay`
-  ADD PRIMARY KEY (`barangay_id`);
+  ADD PRIMARY KEY (`barangay_id`),
+  ADD KEY `district_id` (`district_id`);
 
 --
 -- Indexes for table `billing`
@@ -979,6 +1030,12 @@ ALTER TABLE `current_medications`
   ADD KEY `fk_current_medications_patient` (`patient_id`);
 
 --
+-- Indexes for table `districts`
+--
+ALTER TABLE `districts`
+  ADD PRIMARY KEY (`district_id`);
+
+--
 -- Indexes for table `emergency_contact`
 --
 ALTER TABLE `emergency_contact`
@@ -1001,7 +1058,8 @@ ALTER TABLE `employees`
 ALTER TABLE `facilities`
   ADD PRIMARY KEY (`facility_id`),
   ADD KEY `fk_facilities_barangay` (`barangay_id`),
-  ADD KEY `fk_facilities_parent` (`parent_facility_id`);
+  ADD KEY `fk_facilities_parent` (`parent_facility_id`),
+  ADD KEY `district_id` (`district_id`);
 
 --
 -- Indexes for table `facility_services`
@@ -1238,7 +1296,13 @@ ALTER TABLE `consultations`
 -- AUTO_INCREMENT for table `current_medications`
 --
 ALTER TABLE `current_medications`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `districts`
+--
+ALTER TABLE `districts`
+  MODIFY `district_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `emergency_contact`
@@ -1262,7 +1326,7 @@ ALTER TABLE `facilities`
 -- AUTO_INCREMENT for table `family_history`
 --
 ALTER TABLE `family_history`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `feedback_answers`
@@ -1286,7 +1350,7 @@ ALTER TABLE `feedback_question_choices`
 -- AUTO_INCREMENT for table `immunizations`
 --
 ALTER TABLE `immunizations`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `lab_orders`
@@ -1310,7 +1374,7 @@ ALTER TABLE `past_medical_conditions`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `patient_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `patient_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `personal_information`
@@ -1370,7 +1434,7 @@ ALTER TABLE `service_items`
 -- AUTO_INCREMENT for table `surgical_history`
 --
 ALTER TABLE `surgical_history`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `visits`
@@ -1402,6 +1466,12 @@ ALTER TABLE `appointments`
   ADD CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`),
   ADD CONSTRAINT `fk_appointments_referral` FOREIGN KEY (`referral_id`) REFERENCES `referrals` (`referral_id`),
   ADD CONSTRAINT `fk_appointments_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`);
+
+--
+-- Constraints for table `barangay`
+--
+ALTER TABLE `barangay`
+  ADD CONSTRAINT `barangay_ibfk_1` FOREIGN KEY (`district_id`) REFERENCES `districts` (`district_id`);
 
 --
 -- Constraints for table `billing`
@@ -1453,6 +1523,7 @@ ALTER TABLE `employees`
 -- Constraints for table `facilities`
 --
 ALTER TABLE `facilities`
+  ADD CONSTRAINT `facilities_ibfk_1` FOREIGN KEY (`district_id`) REFERENCES `districts` (`district_id`),
   ADD CONSTRAINT `fk_facilities_barangay` FOREIGN KEY (`barangay_id`) REFERENCES `barangay` (`barangay_id`),
   ADD CONSTRAINT `fk_facilities_parent` FOREIGN KEY (`parent_facility_id`) REFERENCES `facilities` (`facility_id`);
 

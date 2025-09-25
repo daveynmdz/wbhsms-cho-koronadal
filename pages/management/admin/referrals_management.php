@@ -23,6 +23,12 @@ if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
 
 // Database connection
 require_once $root_path . '/config/db.php';
+
+// Check database connection
+if (!isset($conn) || $conn->connect_error) {
+    die("Database connection failed. Please contact administrator.");
+}
+
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
@@ -38,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             switch ($action) {
                 case 'complete':
-                    $stmt = $conn->prepare("UPDATE referrals SET status = 'completed' WHERE id = ?");
+                    $stmt = $conn->prepare("UPDATE referrals SET status = 'completed' WHERE referral_id = ?");
                     $stmt->bind_param("i", $referral_id);
                     $stmt->execute();
                     $message = "Referral marked as completed successfully.";
@@ -50,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (empty($void_reason)) {
                         $error = "Void reason is required.";
                     } else {
-                        $stmt = $conn->prepare("UPDATE referrals SET status = 'voided' WHERE id = ?");
+                        $stmt = $conn->prepare("UPDATE referrals SET status = 'voided' WHERE referral_id = ?");
                         $stmt->bind_param("i", $referral_id);
                         $stmt->execute();
                         $message = "Referral voided successfully.";
@@ -59,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
 
                 case 'reactivate':
-                    $stmt = $conn->prepare("UPDATE referrals SET status = 'active' WHERE id = ?");
+                    $stmt = $conn->prepare("UPDATE referrals SET status = 'active' WHERE referral_id = ?");
                     $stmt->bind_param("i", $referral_id);
                     $stmt->execute();
                     $message = "Referral reactivated successfully.";
@@ -123,15 +129,28 @@ if (!empty($where_conditions)) {
 }
 
 try {
+    // Auto-update expired referrals (over 48 hours old and still active/pending)
+    $expire_stmt = $conn->prepare("
+        UPDATE referrals 
+        SET status = 'cancelled' 
+        WHERE status IN ('active', 'pending') 
+        AND TIMESTAMPDIFF(HOUR, referral_date, NOW()) > 48
+    ");
+    $expire_stmt->execute();
+    $expire_stmt->close();
+    
     $sql = "
-        SELECT r.*, 
+        SELECT r.referral_id, r.referral_num, r.patient_id, r.referral_reason, r.destination_type, 
+               r.referred_to_facility_id, r.external_facility_name, r.referral_date, r.status,
                p.first_name, p.middle_name, p.last_name, p.username as patient_number, 
                b.barangay_name as barangay,
-               e.first_name as issuer_first_name, e.last_name as issuer_last_name
+               e.first_name as issuer_first_name, e.last_name as issuer_last_name,
+               f.name as referred_facility_name
         FROM referrals r
         LEFT JOIN patients p ON r.patient_id = p.patient_id
         LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
         LEFT JOIN employees e ON r.referred_by = e.employee_id
+        LEFT JOIN facilities f ON r.referred_to_facility_id = f.facility_id
         $where_clause
         ORDER BY r.referral_date DESC
         LIMIT 50
@@ -404,6 +423,7 @@ try {
             text-align: left;
             border-bottom: 1px solid #e9ecef;
             white-space: normal;
+            align-content: flex-start;
         }
 
         .table th {
@@ -972,8 +992,8 @@ try {
                                 <th>Referral #</th>
                                 <th>Patient</th>
                                 <th>Barangay</th>
-                                <th>Chief Complaint</th>
-                                <th>Destination</th>
+                                <th>Reason for Referral</th>
+                                <th>Referred Facility</th>
                                 <th>Status</th>
                                 <th>Issued Date</th>
                                 <th>Issued By</th>
@@ -984,7 +1004,13 @@ try {
                             <?php foreach ($referrals as $referral):
                                 $patient_name = trim($referral['first_name'] . ' ' . ($referral['middle_name'] ? $referral['middle_name'] . ' ' : '') . $referral['last_name']);
                                 $issuer_name = trim($referral['issuer_first_name'] . ' ' . $referral['issuer_last_name']);
-                                $destination = $referral['destination_type'] === 'external' ? $referral['referred_to_external'] : 'Internal Facility';
+                                
+                                // Determine destination based on destination_type
+                                if ($referral['destination_type'] === 'external') {
+                                    $destination = $referral['external_facility_name'] ?: 'External Facility';
+                                } else {
+                                    $destination = $referral['referred_facility_name'] ?: 'Internal Facility';
+                                }
 
                                 // Determine badge class based on status
                                 $badge_class = 'badge-secondary';
@@ -992,16 +1018,16 @@ try {
                                     case 'active':
                                         $badge_class = 'badge-success';
                                         break;
-                                    case 'pending':
-                                        $badge_class = 'badge-warning';
-                                        break;
-                                    case 'completed':
+                                    case 'accepted':
                                         $badge_class = 'badge-info';
                                         break;
-                                    case 'voided':
+                                    case 'completed':
+                                        $badge_class = 'badge-primary';
+                                        break;
+                                    case 'cancelled':
                                         $badge_class = 'badge-danger';
                                         break;
-                                    case 'expired':
+                                    default:
                                         $badge_class = 'badge-secondary';
                                         break;
                                 }
@@ -1017,7 +1043,7 @@ try {
                                     <td><?php echo htmlspecialchars($referral['barangay'] ?? 'N/A'); ?></td>
                                     <td>
                                         <div style="max-width: 200px; white-space: normal; word-wrap: break-word;">
-                                            <?php echo htmlspecialchars($referral['chief_complaint']); ?>
+                                            <?php echo htmlspecialchars($referral['referral_reason']); ?>
                                         </div>
                                     </td>
                                     <td>
@@ -1032,8 +1058,8 @@ try {
                                     </td>
                                     <td>
                                         <div style="font-size: 0.85rem;">
-                                            <?php echo date('M j, Y', strtotime($referral['date_of_referral'])); ?>
-                                            <br><small><?php echo date('g:i A', strtotime($referral['date_of_referral'])); ?></small>
+                                            <?php echo date('M j, Y', strtotime($referral['referral_date'])); ?>
+                                            <br><small><?php echo date('g:i A', strtotime($referral['referral_date'])); ?></small>
                                         </div>
                                     </td>
                                     <td><?php echo htmlspecialchars($issuer_name); ?></td>
@@ -1064,16 +1090,22 @@ try {
                     <?php foreach ($referrals as $referral):
                         $patient_name = trim($referral['first_name'] . ' ' . ($referral['middle_name'] ? $referral['middle_name'] . ' ' : '') . $referral['last_name']);
                         $issuer_name = trim($referral['issuer_first_name'] . ' ' . $referral['issuer_last_name']);
-                        $destination = $referral['destination_type'] === 'external' ? $referral['referred_to_external'] : 'Internal Facility';
+                        
+                        // Determine destination based on destination_type
+                        if ($referral['destination_type'] === 'external') {
+                            $destination = $referral['external_facility_name'] ?: 'External Facility';
+                        } else {
+                            $destination = $referral['referred_facility_name'] ?: 'Internal Facility';
+                        }
 
                         // Determine badge class based on status
                         $badge_class = 'badge-secondary';
                         switch ($referral['status']) {
                             case 'active': $badge_class = 'badge-success'; break;
-                            case 'pending': $badge_class = 'badge-warning'; break;
-                            case 'completed': $badge_class = 'badge-info'; break;
-                            case 'voided': $badge_class = 'badge-danger'; break;
-                            case 'expired': $badge_class = 'badge-secondary'; break;
+                            case 'accepted': $badge_class = 'badge-info'; break;
+                            case 'completed': $badge_class = 'badge-primary'; break;
+                            case 'cancelled': $badge_class = 'badge-danger'; break;
+                            default: $badge_class = 'badge-secondary'; break;
                         }
                     ?>
                         <div class="mobile-card">
@@ -1091,8 +1123,8 @@ try {
                                     <?php echo htmlspecialchars($referral['barangay'] ?? 'N/A'); ?>
                                 </div>
                                 <div class="mobile-card-field">
-                                    <span class="mobile-card-label">Complaint:</span>
-                                    <?php echo htmlspecialchars($referral['chief_complaint']); ?>
+                                    <span class="mobile-card-label">Referral Reason:</span>
+                                    <?php echo htmlspecialchars($referral['referral_reason']); ?>
                                 </div>
                                 <div class="mobile-card-field">
                                     <span class="mobile-card-label">Destination:</span>
@@ -1100,7 +1132,7 @@ try {
                                 </div>
                                 <div class="mobile-card-field">
                                     <span class="mobile-card-label">Date:</span>
-                                    <?php echo date('M j, Y g:i A', strtotime($referral['date_of_referral'])); ?>
+                                    <?php echo date('M j, Y g:i A', strtotime($referral['referral_date'])); ?>
                                 </div>
                                 <div class="mobile-card-field">
                                     <span class="mobile-card-label">Issued By:</span>
@@ -1110,7 +1142,7 @@ try {
                                     <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['id']; ?>)">
                                         <i class="fas fa-eye"></i> View Details
                                     </button>
-                                    <?php if ($referral['status'] === 'voided'): ?>
+                                    <?php if ($referral['status'] === 'cancelled'): ?>
                                         <form method="POST" style="display: inline;">
                                             <input type="hidden" name="action" value="reactivate">
                                             <input type="hidden" name="referral_id" value="<?php echo $referral['id']; ?>">

@@ -26,7 +26,7 @@ if (file_exists($root_dir . '/.env')) {
 // Database configuration with XAMPP-friendly defaults
 $host = $_ENV['DB_HOST'] ?? 'localhost';
 $port = $_ENV['DB_PORT'] ?? '3306';
-$db   = $_ENV['DB_NAME'] ?? 'wbhsms_cho';
+$db   = $_ENV['DB_NAME'] ?? 'wbhsms_database';
 $user = $_ENV['DB_USER'] ?? 'root';  // XAMPP default
 $pass = $_ENV['DB_PASS'] ?? '';      // XAMPP default (no password)
 

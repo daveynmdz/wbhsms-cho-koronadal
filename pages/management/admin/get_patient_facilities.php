@@ -17,11 +17,12 @@ if (!$patient_id) {
 }
 
 try {
-    // Get patient's barangay information
+    // Get patient's barangay and district information using proper joins
     $stmt = $conn->prepare("
-        SELECT p.barangay_id, b.barangay_name 
+        SELECT p.barangay_id, b.barangay_name, b.district_id, d.district_name 
         FROM patients p 
         JOIN barangay b ON p.barangay_id = b.barangay_id 
+        JOIN districts d ON b.district_id = d.district_id
         WHERE p.patient_id = ? AND p.status = 'active'
     ");
     $stmt->bind_param('i', $patient_id);
@@ -36,6 +37,8 @@ try {
     
     $patient_barangay_id = $patient_data['barangay_id'];
     $patient_barangay_name = $patient_data['barangay_name'];
+    $patient_district_id = $patient_data['district_id'];
+    $patient_district_name = $patient_data['district_name'];
     
     // Find barangay health center for this patient's barangay
     $stmt = $conn->prepare("
@@ -51,36 +54,33 @@ try {
     $result = $stmt->get_result();
     $barangay_facility = $result->fetch_assoc();
     
-    // Find district based on patient's barangay
-    $stmt = $conn->prepare("
-        SELECT DISTINCT district 
-        FROM facilities 
-        WHERE barangay_id = ? 
-        LIMIT 1
-    ");
-    $stmt->bind_param('i', $patient_barangay_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $district_data = $result->fetch_assoc();
-    
-    $district_office = null;
-    if ($district_data) {
-        $district = $district_data['district'];
-        
-        // Find district health office
+    // Find district health office using the district_id from barangay
+    // Special case: Main District (district_id = 1) uses City Health Office as district office
+    if ($patient_district_id == 1) {
+        // For Main District, City Health Office serves as both city and district office
+        $stmt = $conn->prepare("
+            SELECT facility_id, name, type, district 
+            FROM facilities 
+            WHERE type = 'City Health Office' 
+            AND district_id = ? 
+            AND status = 'active'
+            LIMIT 1
+        ");
+    } else {
+        // For Concepcion and GPS Districts, use their respective District Health Offices
         $stmt = $conn->prepare("
             SELECT facility_id, name, type, district 
             FROM facilities 
             WHERE type = 'District Health Office' 
-            AND district = ? 
+            AND district_id = ? 
             AND status = 'active'
             LIMIT 1
         ");
-        $stmt->bind_param('s', $district);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $district_office = $result->fetch_assoc();
     }
+    $stmt->bind_param('i', $patient_district_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $district_office = $result->fetch_assoc();
     
     // Get city health office (main facility)
     $stmt = $conn->prepare("
@@ -99,7 +99,9 @@ try {
         'success' => true,
         'patient' => [
             'barangay_id' => $patient_barangay_id,
-            'barangay_name' => $patient_barangay_name
+            'barangay_name' => $patient_barangay_name,
+            'district_id' => $patient_district_id,
+            'district_name' => $patient_district_name
         ],
         'facilities' => [
             'barangay_center' => $barangay_facility,
