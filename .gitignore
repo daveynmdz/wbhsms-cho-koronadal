@@ -1,26 +1,25 @@
 # Environment files with sensitive data
-/config/.env
-/config/.env.local
+.env
+config/.env
+config/.env.local
 .env.local
 
-# Dependencies
+# Dependencies (install with composer install)
 /vendor/
 
-# Test files and utilities (should not be in production)
-/tests/test_*.php
-/tests/debug_*.php
-
-# Temporary files
+# Temporary and cache files
 *.tmp
 *.log
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
 
 # IDE files
 /.vscode/
 /.idea/
-*.swp
-*.swo
+.project
+.settings/
 
 # Cache and temp directories
 /tmp/
@@ -31,12 +30,16 @@ Thumbs.db
 *.bak
 *.backup
 *~
+README.md.backup
 
 # OS generated files
 .DS_Store*
 ehthumbs.db
 Icon?
 
-# Development files
-/debug/
-*.debug
+# User uploaded files (if any)
+/uploads/
+
+# Keep essential test files but ignore specific debug files
+# Note: testdb.php in root is kept for XAMPP users
+tests/mail_error.log
