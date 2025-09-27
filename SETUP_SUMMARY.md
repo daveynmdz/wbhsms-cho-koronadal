@@ -103,6 +103,35 @@ The repository is now clean, organized, and ready for XAMPP deployment. Users ca
 4. Access both patient and staff portals
 5. Utilize diagnostic tools for troubleshooting
 
+## 🔄 Troubleshooting Redirect Loops
+
+If you encounter "ERR_TOO_MANY_REDIRECTS" errors when accessing role dashboards:
+
+### Quick Solutions:
+1. **Clear your browser cookies and session data**
+2. **Visit `/setup_debug.php` and click "Clear Session"**
+3. **Verify database role mappings in the `roles` table**
+
+### Common Causes & Fixes:
+
+#### 1. Path Inconsistency
+- **Problem**: Dashboard files using different paths to include session/database files
+- **Solution**: All role dashboard files should use absolute paths with `$root_path` variable
+
+#### 2. Session Confusion
+- **Problem**: Different session handling between role dashboards
+- **Solution**: Ensure all dashboards follow the same pattern as admin dashboard
+
+#### 3. Database Role Issues
+- **Problem**: Role ID in database doesn't match expected role name
+- **Solution**: Check role_id and role_name mappings in the roles table
+
+For complete debugging, use the `setup_debug.php` tool which provides:
+- Session status and data inspection
+- Database connection testing
+- Tools to clear stuck sessions
+- Configuration diagnostics
+
 ---
 
 **City Health Office of Koronadal** - Healthcare Management System

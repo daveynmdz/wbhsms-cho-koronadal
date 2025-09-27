@@ -160,7 +160,7 @@ if (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/profile/') !== false) {
 </nav>
 
 <!-- Hidden logout form -->
-<form id="logoutForm" action="../auth/logout.php" method="post" style="display:none;"></form>
+<form id="logoutForm" action="<?= $nav_base ?>auth/logout.php" method="post" style="display:none;"></form>
 
 <!-- Logout Modal (can be styled via your site-wide CSS) -->
 <div id="logoutModal" class="modal-overlay" style="display:none;">

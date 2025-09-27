@@ -1,18 +1,46 @@
 <?php
 // dashboard_cashier.php
-session_start();
+// Using the same approach as admin dashboard for consistency
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
+
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// If user is not logged in or not a cashier, bounce to login
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'cashier') {
+// Authentication check - refactored to eliminate redirect loops
+// Check 1: Is the user logged in at all?
+if (!isset($_SESSION['employee_id']) || empty($_SESSION['employee_id'])) {
+    // User is not logged in - redirect to login
+    error_log('Cashier Dashboard: No session found, redirecting to login');
     header('Location: ../auth/employee_login.php');
     exit();
 }
 
-// DB
-require_once '../../config/db.php';
+// Check 2: Does the user have the correct role?
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'cashier') {
+    // User is logged in but has wrong role - log and redirect
+    error_log('Access denied to cashier dashboard - User: ' . $_SESSION['employee_id'] . ' with role: ' . 
+              ($_SESSION['role'] ?? 'none'));
+    
+    // Clear any redirect loop detection
+    unset($_SESSION['redirect_attempt']);
+    
+    // Return to login with access denied message
+    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'Access denied. You do not have permission to view that page.');
+    header('Location: ../auth/employee_login.php?access_denied=1');
+    exit();
+}
+
+// Log session data for debugging
+error_log('Cashier Dashboard - Session Data: ' . print_r($_SESSION, true));
+
+// DB - Use the absolute path like admin dashboard
+require_once $root_path . '/config/db.php';
+
+// Debug connection status
+error_log('DB Connection Status: MySQLi=' . ($conn ? 'Connected' : 'Failed') . ', PDO=' . ($pdo ? 'Connected' : 'Failed'));
+
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
@@ -248,27 +276,33 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CHO Koronadal — Cashier Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <!-- Reuse your existing styles -->
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/sidebar.css">
+    <!-- Use absolute paths for consistency -->
+    <link rel="stylesheet" href="<?= $root_path ?>/assets/css/dashboard.css">
+    <link rel="stylesheet" href="<?= $root_path ?>/assets/css/sidebar.css">
     <style>
         :root {
             --primary: #28a745;
+            --primary-light: #34ce57;
             --primary-dark: #1e7e34;
             --secondary: #6c757d;
+            --secondary-light: #adb5bd;
             --success: #28a745;
             --info: #17a2b8;
             --warning: #ffc107;
             --danger: #dc3545;
             --light: #f8f9fa;
+            --light-hover: #e2e6ea;
             --dark: #343a40;
             --white: #ffffff;
             --border: #dee2e6;
-            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            --border-light: #f1f1f1;
+            --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
+            --shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+            --shadow-lg: 0 1rem 3rem rgba(0,0,0,.1);
             --border-radius: 0.5rem;
             --border-radius-lg: 1rem;
             --transition: all 0.3s ease;
+            --card-hover-y: -4px;
         }
 
         * {
@@ -284,7 +318,7 @@ try {
         }
 
         .content-wrapper {
-            margin-left: var(--sidebar-width, 260px);
+            margin-left: var(--sidebar-width, 280px);
             padding: 2rem;
             min-height: 100vh;
             transition: var(--transition);
@@ -294,22 +328,104 @@ try {
             .content-wrapper {
                 margin-left: 0;
                 padding: 1rem;
+                margin-top: 70px;
             }
         }
 
-        /* Welcome Header */
-        .welcome-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: var(--border-radius-lg);
+        /* Dashboard Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 2rem;
-            box-shadow: var(--shadow-lg);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .welcome-message h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--primary-dark);
+            line-height: 1.2;
+        }
+
+        .welcome-message p {
+            margin: 0.5rem 0 0;
+            color: var(--secondary);
+            font-size: 1rem;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background: var(--dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Info Card */
+        .info-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            color: white;
+            margin-bottom: 2rem;
             position: relative;
             overflow: hidden;
         }
 
-        .welcome-header::before {
+        .info-card::before {
             content: '';
             position: absolute;
             top: -50%;
@@ -320,22 +436,35 @@ try {
             border-radius: 50%;
         }
 
-        .welcome-header h1 {
-            margin: 0;
-            font-size: 2.5rem;
-            font-weight: 300;
-            line-height: 1.2;
+        .info-card h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
-        .welcome-header .subtitle {
-            margin-top: 0.5rem;
-            font-size: 1.1rem;
+        .info-card p {
+            margin: 0;
+            font-size: 1rem;
             opacity: 0.9;
+            line-height: 1.6;
         }
 
         @media (max-width: 768px) {
-            .welcome-header h1 {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .welcome-message h1 {
                 font-size: 1.8rem;
+            }
+            
+            .dashboard-actions {
+                justify-content: center;
+                flex-wrap: wrap;
             }
         }
 
@@ -426,66 +555,100 @@ try {
             margin-bottom: 2rem;
         }
 
+        /* Quick Actions */
+        .quick-actions-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
         .action-card {
-            background: var(--white);
+            background: white;
             border-radius: var(--border-radius-lg);
             padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
             text-decoration: none;
-            color: inherit;
-            transition: var(--transition);
+            color: var(--dark);
             box-shadow: var(--shadow);
+            transition: var(--transition);
             border: 1px solid var(--border);
             position: relative;
-            overflow: hidden;
         }
 
         .action-card::before {
             content: '';
             position: absolute;
-            top: 0;
             left: 0;
-            width: 4px;
+            top: 0;
             height: 100%;
+            width: 4px;
             background: var(--card-color, var(--primary));
-            transition: var(--transition);
+            transition: width 0.3s ease;
         }
 
         .action-card:hover {
             transform: translateY(-4px);
             box-shadow: var(--shadow-lg);
-            text-decoration: none;
         }
 
         .action-card:hover::before {
             width: 8px;
         }
 
-        .action-card.green { --card-color: #28a745; }
-        .action-card.blue { --card-color: #007bff; }
-        .action-card.orange { --card-color: #fd7e14; }
-        .action-card.purple { --card-color: #6f42c1; }
-        .action-card.teal { --card-color: #17a2b8; }
-        .action-card.red { --card-color: #dc3545; }
-
-        .action-card .icon {
-            font-size: 2.5rem;
+        .action-icon {
+            font-size: 1.5rem;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(var(--card-color-rgb, 40, 167, 69), 0.1);
             color: var(--card-color, var(--primary));
-            margin-bottom: 1rem;
-            display: block;
+            border-radius: 12px;
+            flex-shrink: 0;
         }
 
-        .action-card h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: 1.25rem;
+        .action-content {
+            flex-grow: 1;
+        }
+
+        .action-content h3 {
+            margin: 0 0 0.35rem;
+            font-size: 1.15rem;
             font-weight: 600;
             color: var(--dark);
         }
 
-        .action-card p {
+        .action-content p {
             margin: 0;
             color: var(--secondary);
             font-size: 0.9rem;
         }
+
+        .action-arrow {
+            color: var(--card-color, var(--primary));
+            font-size: 1rem;
+            opacity: 0.7;
+            transition: transform 0.2s;
+        }
+
+        .action-card:hover .action-arrow {
+            transform: translateX(4px);
+            opacity: 1;
+        }
+
+        .action-card.green { --card-color: #28a745; --card-color-rgb: 40, 167, 69; }
+        .action-card.blue { --card-color: #007bff; --card-color-rgb: 0, 123, 255; }
+        .action-card.orange { --card-color: #fd7e14; --card-color-rgb: 253, 126, 20; }
+        .action-card.purple { --card-color: #6f42c1; --card-color-rgb: 111, 66, 193; }
+        .action-card.teal { --card-color: #17a2b8; --card-color-rgb: 23, 162, 184; }
+        .action-card.red { --card-color: #dc3545; --card-color-rgb: 220, 53, 69; }
 
         /* Info Layout */
         .info-layout {
@@ -705,18 +868,35 @@ try {
     <?php
     // Tell the sidebar which menu item to highlight
     $activePage = 'dashboard';
-    include '../../includes/sidebar_cashier.php';
+    include $root_path . '/includes/sidebar_cashier.php';
     ?>
 
-    <section class="content-wrapper">
-        <!-- Welcome Header -->
-        <div class="welcome-header">
-            <h1>Good day, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
-            <p class="subtitle">
-                Cashier Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> 
-                • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?>
-            </p>
-        </div>
+    <main class="content-wrapper">
+        <!-- Dashboard Header with Actions -->
+        <section class="dashboard-header">
+            <div class="welcome-message">
+                <h1 class="dashboard-title">Good day, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
+                <p>Cashier Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?></p>
+            </div>
+            
+            <div class="dashboard-actions">
+                <a href="../billing/process_payment.php" class="btn btn-primary">
+                    <i class="fas fa-cash-register"></i> Process Payment
+                </a>
+                <a href="../billing/generate_invoice.php" class="btn btn-secondary">
+                    <i class="fas fa-file-invoice"></i> Generate Invoice
+                </a>
+                <a href="../auth/employee_logout.php" class="btn btn-outline">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </section>
+        
+        <!-- System Overview Card -->
+        <section class="info-card">
+            <h2><i class="fas fa-cash-register"></i> Billing & Payment Overview</h2>
+            <p>Welcome to your cashier dashboard. Here you can process payments, generate invoices, manage outstanding bills, and access comprehensive financial reporting tools.</p>
+        </section>
 
         <!-- Statistics Overview -->
         <h2 class="section-title">
@@ -773,37 +953,86 @@ try {
             <i class="fas fa-bolt"></i>
             Quick Actions
         </h2>
-        <div class="action-grid">
-            <a href="../billing/process_payment.php" class="action-card green">
-                <i class="fas fa-cash-register icon"></i>
-                <h3>Process Payment</h3>
-                <p>Accept and process patient payments</p>
-            </a>
-            <a href="../billing/generate_invoice.php" class="action-card blue">
-                <i class="fas fa-file-invoice icon"></i>
-                <h3>Generate Invoice</h3>
-                <p>Create and print patient invoices</p>
-            </a>
-            <a href="../billing/payment_history.php" class="action-card purple">
-                <i class="fas fa-history icon"></i>
-                <h3>Payment History</h3>
-                <p>View and manage payment records</p>
-            </a>
-            <a href="../billing/outstanding_bills.php" class="action-card orange">
-                <i class="fas fa-exclamation-circle icon"></i>
-                <h3>Outstanding Bills</h3>
-                <p>Manage overdue and pending payments</p>
-            </a>
-            <a href="../billing/financial_reports.php" class="action-card teal">
-                <i class="fas fa-chart-bar icon"></i>
-                <h3>Financial Reports</h3>
-                <p>Generate revenue and payment reports</p>
-            </a>
-            <a href="../billing/refunds.php" class="action-card red">
-                <i class="fas fa-undo icon"></i>
-                <h3>Refunds & Adjustments</h3>
-                <p>Process refunds and billing adjustments</p>
-            </a>
+        <div class="quick-actions-section">
+            <div class="action-grid">
+                <a href="../billing/process_payment.php" class="action-card green">
+                    <div class="action-icon">
+                        <i class="fas fa-cash-register"></i>
+                    </div>
+                    <div class="action-content">
+                        <h3>Process Payment</h3>
+                        <p>Accept and process patient payments</p>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+                
+                <a href="../billing/generate_invoice.php" class="action-card blue">
+                    <div class="action-icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <div class="action-content">
+                        <h3>Generate Invoice</h3>
+                        <p>Create and print patient invoices</p>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+                
+                <a href="../billing/payment_history.php" class="action-card purple">
+                    <div class="action-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div class="action-content">
+                        <h3>Payment History</h3>
+                        <p>View and manage payment records</p>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+                
+                <a href="../billing/outstanding_bills.php" class="action-card orange">
+                    <div class="action-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="action-content">
+                        <h3>Outstanding Bills</h3>
+                        <p>Manage overdue and pending payments</p>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+                
+                <a href="../billing/financial_reports.php" class="action-card teal">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="action-content">
+                        <h3>Financial Reports</h3>
+                        <p>Generate revenue and payment reports</p>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+                
+                <a href="../billing/refunds.php" class="action-card red">
+                    <div class="action-icon">
+                        <i class="fas fa-undo"></i>
+                    </div>
+                    <div class="action-content">
+                        <h3>Refunds & Adjustments</h3>
+                        <p>Process refunds and billing adjustments</p>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </a>
+            </div>
         </div>
 
         <!-- Info Layout -->
@@ -964,7 +1193,7 @@ try {
                 </div>
             </div>
         </div>
-    </section>
+    </main>
 </body>
 
 </html>

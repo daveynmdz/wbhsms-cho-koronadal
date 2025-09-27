@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 25, 2025 at 07:35 AM
+-- Generation Time: Sep 26, 2025 at 01:31 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -294,42 +294,42 @@ CREATE TABLE `employees` (
 --
 
 INSERT INTO `employees` (`employee_id`, `employee_number`, `first_name`, `middle_name`, `last_name`, `email`, `contact_num`, `role_id`, `facility_id`, `password`, `status`, `license_number`, `birth_date`, `gender`, `created_at`, `updated_at`) VALUES
-(1, 'EMP00001', 'Alice', 'Marie', 'Smith', 'daveynmdz.sti@gmail.com', '09170000001', 1, 1, '$2y$10$QHY4Gi2CHXbHYzYsVyyPTeW4TRviSJ5X0Ohfva.kLxMowFdpgUota', 'active', NULL, '1985-02-10', 'female', '2025-09-21 04:42:45', '2025-09-24 05:50:12'),
-(2, 'EMP00002', 'Bob', 'James', 'Johnson', 'bob.johnson@example.com', '09170000002', 2, 1, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', 'MD12345', '1982-11-05', 'male', '2025-09-21 04:42:45', '2025-09-21 04:43:18'),
-(3, 'EMP00003', 'Carol', 'Anne', 'Williams', 'carol.williams@example.com', '09170000003', 3, 1, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', 'RN67890', '1988-07-15', 'female', '2025-09-21 04:42:45', '2025-09-21 04:43:18'),
-(4, 'EMP00004', 'David', 'Lee', 'Brown', 'david.brown@example.com', '09170000004', 4, 1, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', 'PH54321', '1980-09-20', 'male', '2025-09-21 04:42:45', '2025-09-21 04:43:18'),
-(5, 'EMP00005', 'Frank', 'Oscar', 'Garcia', 'frank.garcia@example.com', '09170000005', 6, 1, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1987-03-25', 'male', '2025-09-21 04:42:45', '2025-09-21 04:43:18'),
-(6, 'EMP00006', 'Henry', 'Paul', 'Davis', 'henry.davis@example.com', '09170000006', 7, 1, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1989-12-08', 'male', '2025-09-21 04:42:45', '2025-09-21 04:43:18'),
-(7, 'EMP00007', 'Gina', 'Hope', 'Martinez', 'gina.martinez@example.com', '09170000007', 8, 1, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1990-04-18', 'female', '2025-09-21 04:42:45', '2025-09-21 04:43:18'),
-(8, 'EMP00008', 'Frank', 'Oscar', 'Garcia', 'frank.garcia.dho@example.com', '09170000101', 5, 2, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', 'DHO123', '1980-05-21', 'male', '2025-09-21 04:42:58', '2025-09-21 04:43:18'),
-(9, 'EMP00009', 'Laura', 'Mae', 'Santos', 'laura.santos.dho@example.com', '09170000102', 5, 3, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', 'DHO124', '1979-08-11', 'female', '2025-09-21 04:42:58', '2025-09-21 04:43:18'),
-(10, 'EMP00010', 'Oscar', 'Lee', 'Fernandez', 'oscar.fernandez.bhw4@example.com', '09170001004', 6, 4, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1992-03-10', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(11, 'EMP00011', 'Paula', 'Ann', 'Cruz', 'paula.cruz.bhw5@example.com', '09170001005', 6, 5, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1994-06-22', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(12, 'EMP00012', 'Mark', 'Joseph', 'Reyes', 'mark.reyes.bhw6@example.com', '09170001006', 6, 6, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1991-11-12', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(13, 'EMP00013', 'Nina', 'Rose', 'Torres', 'nina.torres.bhw7@example.com', '09170001007', 6, 7, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1995-08-03', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(14, 'EMP00014', 'Yolanda', 'Marie', 'Flores', 'yolanda.flores.bhw8@example.com', '09170001008', 6, 8, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1990-04-18', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(15, 'EMP00015', 'Bianca', 'Ivy', 'Ramos', 'bianca.ramos.bhw9@example.com', '09170001009', 6, 9, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1993-02-22', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(16, 'EMP00016', 'Carlos', 'Pineda', 'Dion', 'carlos.pineda.bhw10@example.com', '09170001010', 6, 10, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1989-11-30', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(17, 'EMP00017', 'Laura', 'Mae', 'Santos', 'laura.santos.bhw11@example.com', '09170001011', 6, 11, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1997-05-05', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(18, 'EMP00018', 'Edwin', 'Francis', 'De Leon', 'edwin.deleon.bhw12@example.com', '09170001012', 6, 12, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1987-08-19', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(19, 'EMP00019', 'Felix', 'Gutierrez', 'Dela Cruz', 'felix.gutierrez.bhw13@example.com', '09170001013', 6, 13, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1996-12-25', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(20, 'EMP00020', 'Grace', 'Lourdes', 'Delos Santos', 'grace.delossantos.bhw14@example.com', '09170001014', 6, 14, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1982-06-15', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(21, 'EMP00021', 'Hector', 'Ivan', 'Marquez', 'hector.marquez.bhw15@example.com', '09170001015', 6, 15, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1992-09-27', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(22, 'EMP00022', 'Gina', 'Lopez', 'Cruz', 'gina.lopez.bhw16@example.com', '09170001016', 6, 16, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1985-01-09', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(23, 'EMP00023', 'Mark', 'Joseph', 'Reyes', 'mark.reyes.bhw17@example.com', '09170001017', 6, 17, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1994-01-22', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(24, 'EMP00024', 'Nina', 'Rose', 'Torres', 'nina.torres.bhw18@example.com', '09170001018', 6, 18, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1995-08-03', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(25, 'EMP00025', 'Paula', 'Ann', 'Cruz', 'paula.cruz.bhw19@example.com', '09170001019', 6, 19, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1994-06-22', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(26, 'EMP00026', 'Oscar', 'Lee', 'Fernandez', 'oscar.fernandez.bhw20@example.com', '09170001020', 6, 20, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1992-03-10', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(27, 'EMP00027', 'Bianca', 'Ivy', 'Ramos', 'bianca.ramos.bhw21@example.com', '09170001021', 6, 21, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1993-02-22', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(28, 'EMP00028', 'Carlos', 'Pineda', 'Dion', 'carlos.pineda.bhw22@example.com', '09170001022', 6, 22, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1989-11-30', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(29, 'EMP00029', 'Laura', 'Mae', 'Santos', 'laura.santos.bhw23@example.com', '09170001023', 6, 23, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1997-05-05', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(30, 'EMP00030', 'Edwin', 'Francis', 'De Leon', 'edwin.deleon.bhw24@example.com', '09170001024', 6, 24, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1987-08-19', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(31, 'EMP00031', 'Felix', 'Gutierrez', 'Dela Cruz', 'felix.gutierrez.bhw25@example.com', '09170001025', 6, 25, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1996-12-25', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(32, 'EMP00032', 'Grace', 'Lourdes', 'Delos Santos', 'grace.delossantos.bhw26@example.com', '09170001026', 6, 26, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1982-06-15', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(33, 'EMP00033', 'Hector', 'Ivan', 'Marquez', 'hector.marquez.bhw27@example.com', '09170001027', 6, 27, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1992-09-27', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(34, 'EMP00034', 'Gina', 'Lopez', 'Cruz', 'gina.lopez.bhw28@example.com', '09170001028', 6, 28, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1985-01-09', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(35, 'EMP00035', 'Mark', 'Joseph', 'Reyes', 'mark.reyes.bhw29@example.com', '09170001029', 6, 29, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1994-01-22', 'male', '2025-09-21 04:43:09', '2025-09-21 04:43:18'),
-(36, 'EMP00036', 'Nina', 'Rose', 'Torres', 'nina.torres.bhw30@example.com', '09170001030', 6, 30, '$2a$12$r3f6QpKgxQh6pLZB1EwUOeTeJwBjE3b3AkkA4cKx8r7U2M7r4a2vW', 'active', NULL, '1995-08-03', 'female', '2025-09-21 04:43:09', '2025-09-21 04:43:18');
+(1, 'EMP00001', 'Alice', 'Marie', 'Smith', 'daveynmdz.sti@gmail.com', '09170000001', 1, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1985-02-10', 'female', '2025-09-21 04:42:45', '2025-09-26 10:28:26'),
+(2, 'EMP00002', 'John', 'Michael', 'Doe', 'daveynmdz.sti@gmail.com', '09170000002', 2, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-01-01', 'male', '2025-09-26 10:55:53', '2025-09-26 10:56:21'),
+(3, 'EMP00003', 'Anna', 'Marie', 'Reyes', 'daveynmdz.sti@gmail.com', '09170000003', 3, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-02-02', 'female', '2025-09-26 10:55:53', '2025-09-26 10:56:26'),
+(4, 'EMP00004', 'David', 'Lee', 'Santos', 'daveynmdz.sti@gmail.com', '09170000004', 4, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-03-03', 'male', '2025-09-26 10:55:53', '2025-09-26 10:56:30'),
+(5, 'EMP00005', 'Maria', 'Elena', 'Torres', 'daveynmdz.sti@gmail.com', '09170000005', 7, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1993-04-04', 'female', '2025-09-26 10:55:53', '2025-09-26 10:56:35'),
+(6, 'EMP00006', 'Carlos', 'Andres', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000006', 8, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1994-05-05', 'male', '2025-09-26 10:55:53', '2025-09-26 10:56:40'),
+(7, 'EMP00007', 'Sofia', 'Grace', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000007', 9, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1995-06-06', 'female', '2025-09-26 10:55:53', '2025-09-26 10:56:47'),
+(8, 'EMP00008', 'Miguel', 'Antonio', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000008', 5, 2, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-07-07', 'male', '2025-09-26 10:59:11', '2025-09-26 10:59:21'),
+(9, 'EMP00009', 'Isabella', 'Marie', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000009', 5, 3, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1993-08-08', 'female', '2025-09-26 10:59:11', '2025-09-26 10:59:26'),
+(10, 'EMP00010', 'Daniel', 'Reyes', 'Morales', 'daveynmdz.sti@gmail.com', '09170000010', 6, 4, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-09-09', 'male', '2025-09-26 11:02:18', '2025-09-26 11:02:39'),
+(46, 'EMP00046', 'Lucas', 'Antonio', 'Reyes', 'daveynmdz.sti@gmail.com', '09170000046', 6, 5, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-01-01', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(47, 'EMP00047', 'Sofia', 'Marie', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000047', 6, 6, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-02-02', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(48, 'EMP00048', 'Carlos', 'David', 'Torres', 'daveynmdz.sti@gmail.com', '09170000048', 6, 7, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-03-03', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(49, 'EMP00049', 'Maria', 'Elena', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000049', 6, 8, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-04-04', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(50, 'EMP00050', 'Diego', 'Andres', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000050', 6, 9, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-05-05', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(51, 'EMP00051', 'Elena', 'Grace', 'Santos', 'daveynmdz.sti@gmail.com', '09170000051', 6, 10, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-06-06', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(52, 'EMP00052', 'Mateo', 'Jose', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000052', 6, 11, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-07-07', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(53, 'EMP00053', 'Camila', 'Isabel', 'Flores', 'daveynmdz.sti@gmail.com', '09170000053', 6, 12, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-08-08', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(54, 'EMP00054', 'Javier', 'Luis', 'Mendoza', 'daveynmdz.sti@gmail.com', '09170000054', 6, 13, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-09-09', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(55, 'EMP00055', 'Valeria', 'Anne', 'Diaz', 'daveynmdz.sti@gmail.com', '09170000055', 6, 14, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-10-10', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(56, 'EMP00056', 'Andres', 'Miguel', 'Navarro', 'daveynmdz.sti@gmail.com', '09170000056', 6, 15, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-11-11', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(57, 'EMP00057', 'Lucia', 'Marina', 'Ortiz', 'daveynmdz.sti@gmail.com', '09170000057', 6, 16, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-12-12', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(58, 'EMP00058', 'Ricardo', 'Jose', 'Fernandez', 'daveynmdz.sti@gmail.com', '09170000058', 6, 17, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-01-13', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(59, 'EMP00059', 'Gabriela', 'Rosa', 'Martinez', 'daveynmdz.sti@gmail.com', '09170000059', 6, 18, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-02-14', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(60, 'EMP00060', 'Francisco', 'Antonio', 'Castro', 'daveynmdz.sti@gmail.com', '09170000060', 6, 19, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-03-15', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(61, 'EMP00061', 'Natalia', 'Beatriz', 'Gutierrez', 'daveynmdz.sti@gmail.com', '09170000061', 6, 20, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-04-16', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(62, 'EMP00062', 'Rafael', 'Manuel', 'Dominguez', 'daveynmdz.sti@gmail.com', '09170000062', 6, 21, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-05-17', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(63, 'EMP00063', 'Clara', 'Isidora', 'Herrera', 'daveynmdz.sti@gmail.com', '09170000063', 6, 22, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-06-18', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(64, 'EMP00064', 'Fernando', 'Ignacio', 'Silva', 'daveynmdz.sti@gmail.com', '09170000064', 6, 23, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-07-19', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(65, 'EMP00065', 'Daniela', 'Sofia', 'Vargas', 'daveynmdz.sti@gmail.com', '09170000065', 6, 24, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-08-20', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(66, 'EMP00066', 'Hector', 'Julio', 'Jimenez', 'daveynmdz.sti@gmail.com', '09170000066', 6, 25, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-09-21', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(67, 'EMP00067', 'Andrea', 'Lucia', 'Romero', 'daveynmdz.sti@gmail.com', '09170000067', 6, 26, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-10-22', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(68, 'EMP00068', 'Manuel', 'Diego', 'Paredes', 'daveynmdz.sti@gmail.com', '09170000068', 6, 27, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-11-23', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(69, 'EMP00069', 'Angela', 'Teresa', 'Suarez', 'daveynmdz.sti@gmail.com', '09170000069', 6, 28, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-12-24', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(70, 'EMP00070', 'Roberto', 'Alonso', 'Cabrera', 'daveynmdz.sti@gmail.com', '09170000070', 6, 29, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-01-25', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
+(71, 'EMP00071', 'Paula', 'Ines', 'Aguilar', 'daveynmdz.sti@gmail.com', '09170000071', 6, 30, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-02-26', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35');
 
 -- --------------------------------------------------------
 
@@ -637,7 +637,7 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`patient_id`, `username`, `first_name`, `middle_name`, `last_name`, `suffix`, `date_of_birth`, `sex`, `contact_number`, `email`, `barangay_id`, `isPWD`, `pwd_id_number`, `isPhilHealth`, `philhealth_type`, `philhealth_id_number`, `isSenior`, `senior_citizen_id`, `password_hash`, `status`, `created_at`, `updated_at`) VALUES
-(7, 'P000007', 'David', 'Animo', 'Diaz', '', '2001-04-10', 'Male', '9451849538', 'daveynmdz.sti@gmail.com', 25, 0, NULL, 1, 'Indigent', '17-025789911-2', 0, NULL, '$2y$10$zZuOvrDPeGN1Ked0/LynaOUcxIQ7TJXDFbD7.9IOGGkEIA.PCqOAO', 'active', '2025-09-21 09:42:03', '2025-09-25 04:52:06'),
+(7, 'P000007', 'David', 'Animo', 'Diaz', '', '2001-04-10', 'Male', '9451849538', 'daveynmdz.sti@gmail.com', 25, 0, NULL, 1, 'Indigent', '17-025789911-2', 0, NULL, '$2y$10$6UaPkkHa69NsEDYMHnnlBes3OWxJgHsBKnML5JXM1u2Zr7bvDcj3C', 'active', '2025-09-21 09:42:03', '2025-09-26 11:08:24'),
 (8, 'P000028', 'Juan', 'Santos', 'Cruz', NULL, '1980-02-14', 'Male', '09123456781', 'patient1@example.com', 1, 1, '12-7401-001-0000001', 1, 'Indigent', '31-123456789-4', 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
 (9, 'P000029', 'Maria', 'Lopez', 'Reyes', NULL, '1995-06-28', 'Female', '09123456782', 'patient2@example.com', 2, 0, NULL, 1, 'Indigent', '72-987654321-7', 0, NULL, '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
 (10, 'P000030', 'Pedro', 'Dela', 'Rosa', NULL, '1962-11-30', 'Male', '09123456783', 'patient3@example.com', 3, 0, NULL, 1, 'Indigent', '65-192837465-3', 1, 'SC-4389', '$2y$10$8f1A3Gzj0XJDwlQGBDKUv.8vghw4To4AS8SErP7HE49p.buovkWFi', 'active', '2025-09-22 07:07:54', '2025-09-22 07:07:54'),
@@ -797,6 +797,13 @@ CREATE TABLE `referrals` (
   `status` enum('active','accepted','completed','cancelled') DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `referrals`
+--
+
+INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring_facility_id`, `referred_to_facility_id`, `external_facility_name`, `vitals_id`, `service_id`, `destination_type`, `referral_reason`, `referred_by`, `referral_date`, `status`) VALUES
+(1, 'REF-20250925-0001', 7, 1, NULL, 'sassasa', 1, NULL, 'external', 'Needs lambing; kulang sa aruga\n\nRequested Service: sadaffasdf', 1, '2025-09-25 15:32:52', 'active');
+
 -- --------------------------------------------------------
 
 --
@@ -818,8 +825,8 @@ INSERT INTO `roles` (`role_id`, `role_name`, `description`) VALUES
 (2, 'doctor', 'Licensed medical doctor'),
 (3, 'nurse', 'Registered nurse'),
 (4, 'pharmacist', 'Licensed pharmacist'),
-(5, 'bhw', 'Barangay Health Worker'),
-(6, 'dho', 'District Health Officer'),
+(5, 'dho', 'District Health Officer'),
+(6, 'bhw', 'Barangay Health Worker'),
 (7, 'records_officer', 'Responsible for clinic records'),
 (8, 'cashier', 'Handles payments and billing'),
 (9, 'laboratory_tech', 'Laboratory technician');
@@ -964,6 +971,13 @@ CREATE TABLE `vitals` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
+-- Dumping data for table `vitals`
+--
+
+INSERT INTO `vitals` (`vitals_id`, `patient_id`, `systolic_bp`, `diastolic_bp`, `heart_rate`, `respiratory_rate`, `temperature`, `weight`, `height`, `bmi`, `recorded_by`, `recorded_at`, `remarks`) VALUES
+(1, 7, 120, 80, 72, 18, 36.00, 75.00, 173.00, 25.00, 1, '2025-09-25 15:32:52', 'Miss na hatdog niya');
+
+--
 -- Indexes for dumped tables
 --
 
@@ -1047,7 +1061,6 @@ ALTER TABLE `emergency_contact`
 --
 ALTER TABLE `employees`
   ADD PRIMARY KEY (`employee_id`),
-  ADD UNIQUE KEY `email` (`email`),
   ADD UNIQUE KEY `employee_number` (`employee_number`),
   ADD KEY `fk_employees_role` (`role_id`),
   ADD KEY `fk_employees_facility` (`facility_id`);
@@ -1314,7 +1327,7 @@ ALTER TABLE `emergency_contact`
 -- AUTO_INCREMENT for table `employees`
 --
 ALTER TABLE `employees`
-  MODIFY `employee_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `employee_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
 
 --
 -- AUTO_INCREMENT for table `facilities`
@@ -1410,7 +1423,7 @@ ALTER TABLE `receipts`
 -- AUTO_INCREMENT for table `referrals`
 --
 ALTER TABLE `referrals`
-  MODIFY `referral_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `referral_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1446,7 +1459,7 @@ ALTER TABLE `visits`
 -- AUTO_INCREMENT for table `vitals`
 --
 ALTER TABLE `vitals`
-  MODIFY `vitals_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `vitals_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- Constraints for dumped tables

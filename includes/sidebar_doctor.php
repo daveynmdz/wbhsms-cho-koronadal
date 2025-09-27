@@ -1,7 +1,6 @@
 <?php
-// sidebar_admin.php
+// sidebar_doctor.php - Doctor sidebar navigation
 // Expected (optional) from caller: $activePage, $defaults['name'], $defaults['employee_number'], $employee_id
-// This file does NOT open/close <html> or <body>.
 
 if (session_status() === PHP_SESSION_NONE) {
     // Include employee session configuration
@@ -13,12 +12,12 @@ $activePage = $activePage ?? '';
 $employee_id = $employee_id ?? ($_SESSION['employee_id'] ?? null);
 
 // Initial display values from caller/session; will be refined from DB if needed.
-$displayName = $defaults['name'] ?? ($_SESSION['employee_name'] ?? ($_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name']) ?? 'Admin');
+$displayName = $defaults['name'] ?? ($_SESSION['employee_name'] ?? ($_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name']) ?? 'Doctor');
 $employeeNo = $defaults['employee_number'] ?? ($_SESSION['employee_number'] ?? '');
-$role = $_SESSION['role'] ?? 'Admin';
+$role = $_SESSION['role'] ?? 'Doctor';
 
 // If we don't have good display values yet, pull from DB (only if we have an id)
-$needsName = empty($displayName) || $displayName === 'Admin';
+$needsName = empty($displayName) || $displayName === 'Doctor';
 $needsNo = empty($employeeNo);
 
 if (($needsName || $needsNo) && $employee_id) {
@@ -50,7 +49,7 @@ if (($needsName || $needsNo) && $employee_id) {
                     $parts[] = $row['last_name'];
                 }
                 $full = trim(implode(' ', $parts));
-                $displayName = $full ?: 'Admin';
+                $displayName = $full ?: 'Doctor';
             }
             if ($needsNo && !empty($row['employee_number'])) {
                 $employeeNo = $row['employee_number'];
@@ -96,72 +95,60 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="<?= $nav_base ?>dashboard/dashboard_admin.php">
+    <a href="<?= $nav_base ?>management/doctor/dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
 <button class="mobile-toggle" onclick="toggleNav()" aria-label="Toggle Menu">
     <i id="menuIcon" class="fas fa-bars"></i>
 </button>
+
 <!-- Sidebar -->
-<nav class="nav" id="sidebarNav" aria-label="Admin sidebar">
+<nav class="nav" id="sidebarNav" aria-label="Doctor sidebar">
     <button class="close-btn" type="button" onclick="closeNav()" aria-label="Close navigation">
         <i class="fas fa-times"></i>
     </button>
 
-        <a href="<?= $nav_base ?>management/admin/dashboard.php">
+    <a href="<?= $nav_base ?>management/doctor/dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
     <div class="menu" role="menu">
-        <a href="<?= $nav_base ?>management/admin/dashboard.php"
+        <a href="<?= $nav_base ?>management/doctor/dashboard.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= $nav_base ?>management/admin/patient_records_management.php"
-            class="<?= $activePage === 'patient_records' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-users"></i> Patient Records
-        </a>
-        <a href="<?= $nav_base ?>management/admin/appointments_management.php"
+        <a href="<?= $nav_base ?>management/doctor/appointments.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments
         </a>
-        <a href="<?= $nav_base ?>management/admin/employee_management.php"
-            class="<?= $activePage === 'employees' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-user-tie"></i> Employee Management
+        <a href="<?= $nav_base ?>management/doctor/patient_consultations.php"
+            class="<?= $activePage === 'consultations' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-stethoscope"></i> Consultations
         </a>
-        <!-- These links are placeholders for pages not yet created -->
-        <a href="#"
-            class="<?= $activePage === 'clinical' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-stethoscope"></i> Clinical Records
+        <a href="<?= $nav_base ?>management/doctor/patient_records_management.php"
+            class="<?= $activePage === 'medical_records' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-file-medical"></i> Medical Records
         </a>
-        <a href="#"
-            class="<?= $activePage === 'laboratory' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-vials"></i> Laboratory
+        <a href="<?= $nav_base ?>management/doctor/prescriptions.php"
+            class="<?= $activePage === 'prescriptions' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-prescription"></i> Prescriptions
         </a>
-        <a href="#"
-            class="<?= $activePage === 'billing' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-file-invoice-dollar"></i> Billing Management
-        </a>
-        <a href="#"
-            class="<?= $activePage === 'reports' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-chart-bar"></i> Reports
-        </a>
-        <a href="#"
-            class="<?= $activePage === 'queueing' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-list-ol"></i> Queue Management
-        </a>
-        <a href="<?= $nav_base ?>management/admin/referrals_management.php"
+        <a href="<?= $nav_base ?>management/doctor/referrals.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-share"></i> Referrals
         </a>
-        <a href="#"
-            class="<?= $activePage === 'notifications' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-bell"></i> Notifications
+        <a href="<?= $nav_base ?>management/doctor/laboratory_results.php"
+            class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-vials"></i> Laboratory Results
+        </a>
+        <a href="<?= $nav_base ?>management/doctor/patient_history.php"
+            class="<?= $activePage === 'patient_history' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-history"></i> Patient History
         </a>
     </div>
 
-    <a href="<?= $nav_base ?>user/admin_profile.php"
+    <a href="<?= $nav_base ?>user/doctor_profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
             <div class="user-info">
@@ -179,7 +166,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
                         <i class="fas fa-id-badge" style="margin-right:5px;color:#90e0ef;"></i>: <span style="font-weight:500;"><?= htmlspecialchars($employeeNo, ENT_QUOTES, 'UTF-8') ?></span>
                     </div>
                     <div class="user-role" style="font-size:11px;color:#b3d9ff;margin-top:2px;">
-                        <i class="fas fa-user-shield" style="margin-right:3px;"></i><?= htmlspecialchars($role, ENT_QUOTES, 'UTF-8') ?>
+                        <i class="fas fa-user-md" style="margin-right:3px;"></i><?= htmlspecialchars($role, ENT_QUOTES, 'UTF-8') ?>
                     </div>
                 </div>
                 <span class="tooltip">View Profile</span>
@@ -188,7 +175,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
     </a>
 
     <div class="user-actions">
-        <a href="<?= $nav_base ?>user/admin_settings.php"><i class="fas fa-cog"></i> Settings</a>
+        <a href="<?= $nav_base ?>user/doctor_settings.php"><i class="fas fa-cog"></i> Settings</a>
         <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>
@@ -219,7 +206,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
     <?php endif; ?>
 </form>
 
-<!-- Logout Modal (can be styled via your site-wide CSS) -->
+<!-- Logout Modal -->
 <div id="logoutModal" class="modal-overlay" style="display:none;">
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
         <h2 id="logoutTitle">Sign Out</h2>
@@ -231,7 +218,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
     </div>
 </div>
 
-<!-- Optional overlay (if your layout uses it). Safe if duplicated; JS guards for missing element. -->
+<!-- Optional overlay -->
 <div class="overlay" id="overlay" onclick="closeNav()"></div>
 
 <script>

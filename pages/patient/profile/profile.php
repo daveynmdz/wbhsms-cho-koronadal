@@ -7,22 +7,42 @@ error_reporting(E_ALL);
 require_once '../../../config/session/patient_session.php';
 require_once '../../../config/db.php';
 
-// Get patient ID from different sources (session or URL parameter for admin view)
+// Get patient ID from different sources (session or URL parameter for admin/bhw view)
 $view_mode = $_GET['view_mode'] ?? null;
 $patient_id = null;
 
-// If in admin view mode, get patient_id from URL parameter
-if ($view_mode === 'admin') {
+// If in admin, bhw, dho, doctor, or nurse view mode, get patient_id from URL parameter
+if ($view_mode === 'admin' || $view_mode === 'bhw' || $view_mode === 'dho' || $view_mode === 'doctor' || $view_mode === 'nurse') {
     $patient_id = $_GET['patient_id'] ?? null;
     if (!$patient_id) {
         die('Error: No patient ID provided');
     }
 
-    // Verify admin is logged in
-    if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+    // Verify admin, bhw, dho, or doctor is logged in
+    if ($view_mode === 'admin' && (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin')) {
         // For development purposes, we're allowing access without strict validation
         // In production, you would want to uncomment the following:
         // header('Location: ../auth/login.php');
+        // exit();
+    } elseif ($view_mode === 'bhw' && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'bhw')) {
+        // For development purposes, we're allowing access without strict validation
+        // In production, you would want to uncomment the following:
+        // header('Location: ../auth/employee_login.php');
+        // exit();
+    } elseif ($view_mode === 'dho' && (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'dho')) {
+        // For development purposes, we're allowing access without strict validation
+        // In production, you would want to uncomment the following:
+        // header('Location: ../auth/employee_login.php');
+        // exit();
+    } elseif ($view_mode === 'doctor' && (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'doctor')) {
+        // For development purposes, we're allowing access without strict validation
+        // In production, you would want to uncomment the following:
+        // header('Location: ../auth/employee_login.php');
+        // exit();
+    } elseif ($view_mode === 'nurse' && (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'nurse')) {
+        // For development purposes, we're allowing access without strict validation
+        // In production, you would want to uncomment the following:
+        // header('Location: ../auth/employee_login.php');
         // exit();
     }
 } else {
@@ -59,6 +79,24 @@ try {
 
     if (!$patient_row) {
         throw new Exception('Patient not found.');
+    }
+
+    // DHO access control: verify patient is within DHO's assigned district
+    if ($view_mode === 'dho' && isset($_SESSION['employee_id'])) {
+        $dho_district_check = $pdo->prepare("
+            SELECT COUNT(*) as can_access 
+            FROM patients p
+            JOIN barangay b ON p.barangay_id = b.barangay_id
+            JOIN facilities f ON b.district_id = f.district_id
+            JOIN employees e ON e.facility_id = f.facility_id
+            WHERE e.employee_id = ? AND (p.id = ? OR p.patient_id = ?)
+        ");
+        $dho_district_check->execute([$_SESSION['employee_id'], $patient_id, $patient_id]);
+        $access_result = $dho_district_check->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$access_result || $access_result['can_access'] == 0) {
+            die('Access denied: This patient is not within your assigned district.');
+        }
     }
 } catch (Exception $e) {
     error_log("Error fetching patient data: " . $e->getMessage());
@@ -384,7 +422,13 @@ if (isset($_GET['logout'])) {
 
 <head>
     <meta charset="UTF-8" />
-    <title><?= $view_mode === 'admin' ? "Admin View - Patient Profile" : "Patient Profile" ?> - WBHSMS</title>
+    <title><?= 
+        $view_mode === 'admin' ? "Admin View - Patient Profile" : 
+        ($view_mode === 'bhw' ? "BHW View - Patient Profile" : 
+        ($view_mode === 'dho' ? "DHO View - Patient Profile" : 
+        ($view_mode === 'doctor' ? "Doctor View - Patient Profile" : 
+        ($view_mode === 'nurse' ? "Nurse View - Patient Profile" : "Patient Profile")))) 
+    ?> - WBHSMS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../../assets/css/patient_profile.css" />
@@ -833,6 +877,18 @@ if (isset($_GET['logout'])) {
     if ($view_mode === 'admin') {
         $activePage = 'patient_records';
         include '../../../includes/sidebar_admin.php';
+    } elseif ($view_mode === 'bhw') {
+        $activePage = 'patients';
+        include '../../../includes/sidebar_bhw.php';
+    } elseif ($view_mode === 'dho') {
+        $activePage = 'patient_records';
+        include '../../../includes/sidebar_dho.php';
+    } elseif ($view_mode === 'doctor') {
+        $activePage = 'patients';
+        include '../../../includes/sidebar_doctor.php';
+    } elseif ($view_mode === 'nurse') {
+        $activePage = 'patients';
+        include '../../../includes/sidebar_nurse.php';
     } else {
         $activePage = 'profile';
         include '../../../includes/sidebar_patient.php';
@@ -846,8 +902,16 @@ if (isset($_GET['logout'])) {
             <h1 style="margin:0;font-size:2.2em;letter-spacing:1px;">
                 <?php if ($view_mode === 'admin'): ?>
                     <i class="fas fa-user-shield"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">ADMIN VIEW</span>
+                <?php elseif ($view_mode === 'bhw'): ?>
+                    <i class="fas fa-user-nurse"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">BHW VIEW</span>
+                <?php elseif ($view_mode === 'dho'): ?>
+                    <i class="fas fa-user-md"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">DHO VIEW</span>
+                <?php elseif ($view_mode === 'doctor'): ?>
+                    <i class="fas fa-stethoscope"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">DOCTOR VIEW</span>
+                <?php elseif ($view_mode === 'nurse'): ?>
+                    <i class="fas fa-user-nurse"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">NURSE VIEW</span>
                 <?php else: ?>
-                    PATIENT PROFILE
+                    <i class="fas fa-user"></i> PATIENT PROFILE
                 <?php endif; ?>
             </h1>
             <div class="utility-btn-group" style="display:flex;gap:0.7em;flex-wrap:wrap;">
@@ -864,6 +928,54 @@ if (isset($_GET['logout'])) {
                     <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
                         style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
                         <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Medical Record</span>
+                    </button>
+                <?php elseif ($view_mode === 'bhw'): ?>
+                    <!-- BHW view buttons -->
+                    <a href="../../management/bhw/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Records</span>
+                    </a>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Patient Info</span>
+                    </button>
+                <?php elseif ($view_mode === 'doctor'): ?>
+                    <!-- Doctor view buttons -->
+                    <a href="../../management/doctor/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Records</span>
+                    </a>
+                    <button class="utility-btn" onclick="downloadPatientFile()" title="Download Patient File"
+                        style="background:#2980b9;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(41,128,185,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-file-download"></i> <span class="hide-on-mobile">Export Medical Record</span>
+                    </button>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Medical Record</span>
+                    </button>
+                <?php elseif ($view_mode === 'dho'): ?>
+                    <!-- DHO view buttons -->
+                    <a href="../../management/dho/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Records</span>
+                    </a>
+                    <button class="utility-btn" onclick="downloadPatientFile()" title="Download Patient File"
+                        style="background:#2980b9;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(41,128,185,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-file-download"></i> <span class="hide-on-mobile">Export Medical Record</span>
+                    </button>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Medical Record</span>
+                    </button>
+                <?php elseif ($view_mode === 'nurse'): ?>
+                    <!-- Nurse view buttons -->
+                    <a href="../../management/nurse/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Records</span>
+                    </a>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Patient Info</span>
                     </button>
                 <?php else: ?>
                     <!-- Regular patient view buttons -->
@@ -883,7 +995,7 @@ if (isset($_GET['logout'])) {
             </div>
         </div>
 
-        <?php if ($view_mode !== 'admin'): ?>
+        <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
             <div class="completion-row" style="display: flex; align-items: stretch; gap: 2em; width: 100%; flex-wrap: wrap;">
                 <!-- Profile Completion Card -->
                 <div class="completion-card" style="flex: 1; display: flex; flex-direction: column; justify-content: stretch; min-width: 350px;">
@@ -1217,7 +1329,7 @@ if (isset($_GET['logout'])) {
                     </div>
 
                     <!-- Edit Profile Button - Only shown in patient view -->
-                    <?php if ($view_mode !== 'admin'): ?>
+                    <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
                         <div class="profile-actions" style="z-index: 2; position: relative;">
                             <a href="profile_edit.php" style="
                                 background: linear-gradient(135deg, #007bff, #0056b3);
@@ -1363,7 +1475,7 @@ if (isset($_GET['logout'])) {
                     </div>
                 <?php endforeach; ?>
 
-                <?php if (!empty($missing_personal_fields) && $view_mode !== 'admin'): ?>
+                <?php if (!empty($missing_personal_fields) && !in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
                     <div class="missing-info-alert">
                         <div class="icon">
                             <i class="fas fa-info-circle"></i>
@@ -1413,7 +1525,7 @@ if (isset($_GET['logout'])) {
                         </div>
                     <?php endforeach; ?>
 
-                    <?php if (!empty($missing_emergency) && $view_mode !== 'admin'): ?>
+                    <?php if (!empty($missing_emergency) && !in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
                         <div class="missing-info-alert">
                             <div class="icon">
                                 <i class="fas fa-exclamation-triangle"></i>
@@ -1464,7 +1576,7 @@ if (isset($_GET['logout'])) {
                         </div>
                     <?php endforeach; ?>
 
-                    <?php if (!empty($missing_lifestyle) && $view_mode !== 'admin'): ?>
+                    <?php if (!empty($missing_lifestyle) && !in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
                         <div class="missing-info-alert">
                             <div class="icon">
                                 <i class="fas fa-heart"></i>
@@ -1782,7 +1894,7 @@ if (isset($_GET['logout'])) {
             <div class="summary-card enhanced-card medical-history-section">
                 <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5em; flex-wrap: wrap; gap: 0.5em;">
                     <h2><i class="fas fa-notes-medical"></i> Medical History</h2>
-                    <?php if ($view_mode !== 'admin'): ?>
+                    <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
                         <a href="medical_history_edit.php" style="
                                 background: linear-gradient(135deg, #007bff, #0056b3);
                                 color: white;

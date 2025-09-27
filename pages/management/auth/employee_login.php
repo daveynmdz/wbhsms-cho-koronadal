@@ -1,14 +1,18 @@
 <?php
 // Main entry point for employee authentication
-// At the VERY TOP of your PHP file (before session_start or other code)
-$debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
+// Enable error reporting for debugging
 error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/logs/employee_login_errors.log');
 
-// Hide errors in production
-if (!$debug) {
-    ini_set('display_errors', '0');
-    ini_set('log_errors', '1');
-}
+// Log every request to help debug redirect issues
+error_log('Login page accessed - Request data: ' . json_encode([
+    'SESSION' => $_SESSION ?? 'none', 
+    'GET' => $_GET ?? [],
+    'URI' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+    'REFERER' => $_SERVER['HTTP_REFERER'] ?? 'none'
+]));
 
 // Include employee session configuration - Use absolute path resolution
 $root_path = dirname(dirname(dirname(__DIR__)));
@@ -16,28 +20,54 @@ require_once $root_path . '/config/session/employee_session.php';
 
 include_once $root_path . '/config/db.php';
 
-// If already logged in, redirect to appropriate dashboard
+// Enhanced session validation and redirect logic
 if (!empty($_SESSION['employee_id'])) {
     $role = strtolower(trim($_SESSION['role'] ?? ''));
-    $dashboardMap = [
-        'admin' => '../admin/dashboard.php',
-        'administrator' => '../admin/dashboard.php',
-        'doctor' => '../doctor/dashboard.php',
-        'nurse' => '../nurse/dashboard.php',
-        'pharmacist' => '../pharmacist/dashboard.php',
-        'bhw' => '../bhw/dashboard.php',
-        'barangay health worker' => '../bhw/dashboard.php',
-        'dho' => '../dho/dashboard.php',
-        'district health officer' => '../dho/dashboard.php',
-        'records officer' => '../records_officer/dashboard.php',
-        'cashier' => '../cashier/dashboard.php',
-        'laboratory tech.' => '../laboratory_tech/dashboard.php',
-        'laboratory technician' => '../laboratory_tech/dashboard.php',
-        'lab tech' => '../laboratory_tech/dashboard.php'
-    ];
-    $redirect = $dashboardMap[$role] ?? '../dashboard/dashboard_admin.php';
-    header('Location: ' . $redirect);
-    exit;
+    
+    // If session exists but no role is set, clear the broken session
+    if (empty($role)) {
+        error_log('Employee login - Invalid session state: Employee ID exists but no role');
+        // Clear invalid session
+        session_unset();
+        $_SESSION['flash'] = array('type' => 'error', 'msg' => 'Invalid session state. Please login again.');
+        // Continue to login page
+    } else {
+        // Valid role-based redirection
+        $dashboardMap = [
+            'admin' => '../admin/dashboard.php',
+            'doctor' => '../doctor/dashboard.php',
+            'nurse' => '../nurse/dashboard.php',
+            'pharmacist' => '../pharmacist/dashboard.php',
+            'bhw' => '../bhw/dashboard.php',
+            'dho' => '../dho/dashboard.php',
+            'records_officer' => '../records_officer/dashboard.php',
+            'cashier' => '../cashier/dashboard.php',
+            'laboratory_tech' => '../laboratory_tech/dashboard.php'
+        ];
+        
+        // Prevent redirect loops by checking if this is a repeated redirect
+        $redirectAttempt = $_SESSION['redirect_attempt'] ?? 0;
+        
+        // Increment the redirect attempt counter
+        $_SESSION['redirect_attempt'] = $redirectAttempt + 1;
+        
+        // If we've tried redirecting too many times, there's a loop - break it
+        if ($redirectAttempt > 2) {
+            error_log('Employee login - Breaking redirect loop for role: ' . $role);
+            session_unset();
+            $_SESSION['flash'] = array('type' => 'error', 'msg' => 'Redirect loop detected. Please try logging in again.');
+            // Continue to login page
+        } else {
+            // Determine where to redirect
+            $redirect = isset($dashboardMap[$role]) ? $dashboardMap[$role] : '../admin/dashboard.php';
+            
+            // Debug log
+            error_log('Employee login - Redirecting user to role dashboard: ' . $role . ' -> ' . $redirect);
+            
+            header('Location: ' . $redirect);
+            exit;
+        }
+    }
 }
 
 // Handle flashes from redirects
@@ -148,85 +178,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException("Account configuration error. Please contact administrator.");
             }
 
-            if ($isPasswordValid) {
-                // Check if role_id exists
-                if (empty($row['role_id'])) {
-                    error_log('[employee_login] No role_id found for user: ' . $employee_number);
-                    throw new RuntimeException("Role not configured. Please contact administrator.");
-                }
-
-                // Map role_id to role name (adjust these mappings based on your actual role_id values)
-                $roleMap = [
-                    1 => 'admin',
-                    2 => 'doctor', 
-                    3 => 'nurse',
-                    4 => 'pharmacist',
-                    5 => 'bhw',
-                    6 => 'dho',
-                    7 => 'records officer',
-                    8 => 'cashier',
-                    9 => 'laboratory tech'
-                ];
-                
-                $role = $roleMap[$row['role_id']] ?? 'admin'; // Default to admin if role_id not found
-
-                // Successful login - reset rate limit
-                unset($_SESSION[$rate_limit_key], $_SESSION['last_login_attempt']);
-                
-                // Prevent session fixation
-                session_regenerate_id(true);
-
-                // Set session variables
-                $_SESSION['employee_id'] = $row['employee_id'];
-                $_SESSION['employee_number'] = $row['employee_number'];
-                $_SESSION['employee_last_name'] = $row['last_name'];
-                $_SESSION['employee_first_name'] = $row['first_name'];
-                $_SESSION['employee_middle_name'] = $row['middle_name'];
-                
-                // Create full name for dashboard compatibility
-                $full_name = $row['first_name'];
-                if (!empty($row['middle_name'])) $full_name .= ' ' . $row['middle_name'];
-                $full_name .= ' ' . $row['last_name'];
-                $_SESSION['employee_name'] = trim($full_name);
-                
-                $_SESSION['role'] = $role;
-                $_SESSION['role_id'] = $row['role_id'];
-                $_SESSION['login_time'] = time();
-                $_SESSION['user_type'] = $role; // For compatibility
-                $_SESSION['user_id'] = $row['employee_id']; // For admin dashboard compatibility
-
-                // Role-based dashboard redirection
-                $dashboardMap = [
-                    'admin' => '../admin/dashboard.php',
-                    'administrator' => '../admin/dashboard.php',
-                    'doctor' => '../doctor/dashboard.php',
-                    'nurse' => '../nurse/dashboard.php',
-                    'pharmacist' => '../pharmacist/dashboard.php',
-                    'bhw' => '../bhw/dashboard.php',
-                    'barangay health worker' => '../bhw/dashboard.php',
-                    'dho' => '../dho/dashboard.php',
-                    'district health officer' => '../dho/dashboard.php',
-                    'records officer' => '../records_officer/dashboard.php',
-                    'cashier' => '../cashier/dashboard.php',
-                    'laboratory tech' => '../laboratory_tech/dashboard.php',
-                    'laboratory technician' => '../laboratory_tech/dashboard.php',
-                    'lab tech' => '../laboratory_tech/dashboard.php'
-                ];
-                
-                if (array_key_exists($role, $dashboardMap)) {
-                    header('Location: ' . $dashboardMap[$role]);
-                    exit();
-                } else {
-                    error_log('[employee_login] Unknown role: ' . $role . ' (role_id: ' . $row['role_id'] . ') for user: ' . $employee_number);
-                    // Default to admin dashboard for unrecognized roles but log it
-                    header('Location: ../admin/dashboard.php');
-                    exit();
-                }
-            } else {
+            if (!$isPasswordValid) {
                 $_SESSION[$rate_limit_key]++;
                 usleep(500000); // Delay for failed authentication
                 throw new RuntimeException("Invalid employee number or password.");
             }
+
+            // Check if role_id exists
+            if (empty($row['role_id'])) {
+                error_log('[employee_login] No role_id found for user: ' . $employee_number);
+                throw new RuntimeException("Role not configured. Please contact administrator.");
+            }
+
+            // Get role name from roles table with error logging
+            $roleStmt = $conn->prepare("SELECT role_name FROM roles WHERE role_id = ?");
+            if (!$roleStmt) {
+                error_log('[employee_login] Role query prepare failed: ' . $conn->error . ' for employee: ' . $employee_number);
+                throw new RuntimeException('Service temporarily unavailable. Please try again later.');
+            }
+            
+            $roleStmt->bind_param("i", $row['role_id']);
+            if (!$roleStmt->execute()) {
+                error_log('[employee_login] Role query execute failed: ' . $roleStmt->error . ' for employee: ' . $employee_number);
+                throw new RuntimeException('Service temporarily unavailable. Please try again later.');
+            }
+            
+            $roleResult = $roleStmt->get_result();
+            $roleRow = $roleResult->fetch_assoc();
+            $roleStmt->close();
+            
+            if (!$roleRow || empty($roleRow['role_name'])) {
+                error_log('[employee_login] No role found for employee_id: ' . $row['employee_id'] . ' role_id: ' . $row['role_id']);
+                throw new RuntimeException('Account configuration error. Please contact administrator.');
+            }
+            
+            $role = strtolower($roleRow['role_name']);
+            
+            // Validate role against known roles
+            $validRoles = ['admin', 'doctor', 'nurse', 'pharmacist', 'bhw', 'dho', 'records_officer', 'cashier', 'laboratory_tech'];
+            if (!in_array($role, $validRoles)) {
+                error_log('[employee_login] Invalid role found: ' . $role . ' for employee: ' . $employee_number);
+                throw new RuntimeException('Account configuration error. Please contact administrator.');
+            }
+            
+            // Successful login - reset rate limit and redirect counters
+            unset(
+                $_SESSION[$rate_limit_key], 
+                $_SESSION['last_login_attempt'],
+                $_SESSION['redirect_attempt'] // Reset any redirect loop detection
+            );
+            
+            // Prevent session fixation
+            session_regenerate_id(true);
+
+            // Set session variables
+            $_SESSION['employee_id'] = $row['employee_id'];
+            $_SESSION['employee_number'] = $row['employee_number'];
+            $_SESSION['employee_last_name'] = $row['last_name'];
+            $_SESSION['employee_first_name'] = $row['first_name'];
+            $_SESSION['employee_middle_name'] = $row['middle_name'];
+            $_SESSION['employee_name'] = trim($row['first_name'] . ' ' . ($row['middle_name'] ? $row['middle_name'] . ' ' : '') . $row['last_name']);
+            $_SESSION['role'] = $role;
+            $_SESSION['role_id'] = $row['role_id'];
+            $_SESSION['login_time'] = time();
+            $_SESSION['user_type'] = $role;
+            $_SESSION['user_id'] = $row['employee_id'];
+
+            // Simplified dashboard redirection
+            error_log('[employee_login] Successful login for ' . $employee_number . ' with role ' . $role);
+            $redirectPath = '../' . $role . '/dashboard.php';
+            header('Location: ' . $redirectPath);
+            exit();
         } else {
             $_SESSION[$rate_limit_key]++;
             usleep(500000); // Delay for non-existent user
@@ -254,7 +276,7 @@ $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error]
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0" />
     <meta name="theme-color" content="#2563eb">
-    <title>CHO – Employee Login</title>
+    <title>CHO - Employee Login</title>
     <!-- Icons & Styles -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="../../../assets/css/login.css" />
@@ -367,7 +389,7 @@ $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error]
 
                 <p class="alt-action">
                     Patient Login? 
-                    <a class="register-link" href="../../auth/patient_login.php">Go to Patient Portal</a>
+                    <a class="register-link" href="../../patient/auth/patient_login.php">Go to Patient Portal</a>
                 </p>
 
                 <!-- Live region for client-side validation or server messages -->

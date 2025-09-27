@@ -1,18 +1,49 @@
 <?php
 // dashboard_doctor.php
-session_start();
+// Using the same approach as admin dashboard for consistency
+// Include employee session configuration - Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
+
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// If user is not logged in or not a doctor, bounce to login
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'doctor') {
+// Authentication check - refactored to eliminate redirect loops
+// Check 1: Is the user logged in at all?
+if (!isset($_SESSION['employee_id']) || empty($_SESSION['employee_id'])) {
+    // User is not logged in - redirect to login, but prevent redirect loops
+    error_log('Doctor Dashboard: No session found, redirecting to login');
     header('Location: ../auth/employee_login.php');
     exit();
 }
 
-// DB
-require_once '../../config/db.php';
+// Check 2: Does the user have the correct role?
+// Make sure role comparison is case-insensitive
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'doctor') {
+    // User has wrong role - log and redirect
+    error_log('Access denied: User ' . $_SESSION['employee_id'] . ' with role ' . 
+              ($_SESSION['role'] ?? 'none') . ' attempted to access doctor dashboard');
+    
+    // Clear any redirect loop detection
+    unset($_SESSION['redirect_attempt']);
+    
+    // Return to login with access denied message
+    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'Access denied. You do not have permission to view that page.');
+    header('Location: ../auth/employee_login.php?access_denied=1');
+    exit();
+}
+
+// Log session data for debugging
+error_log('Doctor Dashboard - Session Data: ' . print_r($_SESSION, true));
+
+// DB - Use the absolute path like admin dashboard
+require_once $root_path . '/config/db.php';
+
+// Debug connection status - should log both connections
+error_log('DB Connection Status: MySQLi=' . ($conn ? 'Connected' : 'Failed') . ', PDO=' . ($pdo ? 'Connected' : 'Failed'));
+
+// Set variables
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
@@ -208,9 +239,9 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CHO Koronadal — Doctor Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <!-- Reuse your existing styles -->
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/sidebar.css">
+    <!-- Reuse your existing styles with corrected paths -->
+    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
         :root {
             --primary: #28a745;
@@ -244,7 +275,7 @@ try {
         }
 
         .content-wrapper {
-            margin-left: var(--sidebar-width, 260px);
+            margin-left: var(--sidebar-width, 280px);
             padding: 2rem;
             min-height: 100vh;
             transition: var(--transition);
@@ -254,7 +285,82 @@ try {
             .content-wrapper {
                 margin-left: 0;
                 padding: 1rem;
+                margin-top: 70px;
             }
+        }
+        
+        /* Dashboard Header Styling */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .dashboard-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin: 0;
+        }
+        
+        .dashboard-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .btn-secondary {
+            background-color: #f3f4f6;
+            color: var(--dark);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e5e7eb;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        
+        .info-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .info-card h2 {
+            font-size: 1.4rem;
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         /* Welcome Header */
@@ -309,28 +415,16 @@ try {
 
         .stat-card {
             background: var(--white);
-            border-radius: var(--border-radius-lg);
+            border-radius: 10px;
             padding: 1.5rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            position: relative;
-            overflow: hidden;
-            transition: var(--transition);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--card-color, var(--primary));
+            transition: transform 0.3s, box-shadow 0.3s;
         }
 
         .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--card-color, var(--primary));
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
 
         .stat-card.appointments { --card-color: #28a745; }
@@ -535,6 +629,47 @@ try {
             color: var(--secondary);
         }
 
+        /* Card entry animation */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .animated-card {
+            animation: slideInRight 0.5s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .animated-card:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+        
+        .animated-card:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+        
+        .animated-card:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+        
+        .animated-card:nth-child(4) {
+            animation-delay: 0.8s;
+        }
+        
+        .animated-card:nth-child(5) {
+            animation-delay: 1.0s;
+        }
+        
+        .animated-card:nth-child(6) {
+            animation-delay: 1.2s;
+        }
+        
         /* Status Badges */
         .status-badge {
             display: inline-block;
@@ -628,18 +763,32 @@ try {
     <?php
     // Tell the sidebar which menu item to highlight
     $activePage = 'dashboard';
-    include '../../includes/sidebar_doctor.php';
+    include $root_path . '/includes/sidebar_doctor.php';
     ?>
 
-    <section class="content-wrapper">
-        <!-- Welcome Header -->
-        <div class="welcome-header">
-            <h1>Good day, Dr. <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
-            <p class="subtitle">
-                Medical Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> 
-                • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?>
-            </p>
-        </div>
+    <main class="content-wrapper">
+        <!-- Dashboard Header with Actions -->
+        <section class="dashboard-header">
+            <div class="welcome-message">
+                <h1 class="dashboard-title">Good day, Dr. <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
+                <p>Medical Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?></p>
+            </div>
+            
+            <div class="dashboard-actions">
+                <a href="patient_consultations.php" class="btn btn-primary">
+                    <i class="fas fa-stethoscope"></i> New Consultation
+                </a>
+                <a href="prescriptions.php" class="btn btn-secondary">
+                    <i class="fas fa-prescription"></i> Prescriptions
+                </a>
+            </div>
+        </section>
+        
+        <!-- System Overview Card -->
+        <section class="info-card">
+            <h2><i class="fas fa-heartbeat"></i> Medical Practice Overview</h2>
+            <p>Welcome to your medical dashboard. Here's a quick overview of your appointments and patient care statistics.</p>
+        </section>
 
         <!-- Statistics Overview -->
         <h2 class="section-title">
@@ -868,7 +1017,18 @@ try {
                 </div>
             </div>
         </div>
-    </section>
+    </main>
+    
+    <script>
+        // Simple animation for the cards
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add animation classes to stat cards
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach((card, index) => {
+                card.classList.add('animated-card');
+            });
+        });
+    </script>
 </body>
 
 </html>

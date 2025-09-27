@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 // Include patient session configuration
-require_once __DIR__ . '/../../config/session/patient_session.php';
+require_once __DIR__ . '/../../../config/session/patient_session.php';
 
 // Enforce POST only
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

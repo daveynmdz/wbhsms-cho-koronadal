@@ -1303,13 +1303,9 @@ try {
                 <div class="stat-number"><?php echo number_format($stats['completed'] ?? 0); ?></div>
                 <div class="stat-label">Completed</div>
             </div>
-            <div class="stat-card pending">
-                <div class="stat-number"><?php echo number_format($stats['pending'] ?? 0); ?></div>
-                <div class="stat-label">Pending</div>
-            </div>
-            <div class="stat-card voided">
-                <div class="stat-number"><?php echo number_format($stats['voided'] ?? 0); ?></div>
-                <div class="stat-label">Voided</div>
+            <div class="stat-card canceled">
+                <div class="stat-number"><?php echo number_format($stats['canceled'] ?? 0); ?></div>
+                <div class="stat-label">Canceled</div>
             </div>
         </div>
 
@@ -1348,7 +1344,6 @@ try {
                     <select id="status" name="status">
                         <option value="">All Statuses</option>
                         <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
-                        <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
                         <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
                         <option value="voided" <?php echo $status_filter === 'voided' ? 'selected' : ''; ?>>Voided</option>
                     </select>

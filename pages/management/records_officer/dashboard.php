@@ -1,18 +1,46 @@
 <?php
 // dashboard_records_officer.php
-session_start();
+// Using the same approach as admin dashboard for consistency
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
+
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// If user is not logged in or not a records officer, bounce to login
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'records_officer') {
+// Authentication check - refactored to eliminate redirect loops
+// Check 1: Is the user logged in at all?
+if (!isset($_SESSION['employee_id']) || empty($_SESSION['employee_id'])) {
+    // User is not logged in - redirect to login
+    error_log('Records Officer Dashboard: No session found, redirecting to login');
     header('Location: ../auth/employee_login.php');
     exit();
 }
 
-// DB
-require_once '../../config/db.php';
+// Check 2: Does the user have the correct role?
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'records_officer') {
+    // User is logged in but has wrong role - log and redirect
+    error_log('Access denied to records officer dashboard - User: ' . $_SESSION['employee_id'] . ' with role: ' . 
+              ($_SESSION['role'] ?? 'none'));
+    
+    // Clear any redirect loop detection
+    unset($_SESSION['redirect_attempt']);
+    
+    // Return to login with access denied message
+    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'Access denied. You do not have permission to view that page.');
+    header('Location: ../auth/employee_login.php?access_denied=1');
+    exit();
+}
+
+// Log session data for debugging
+error_log('Records Officer Dashboard - Session Data: ' . print_r($_SESSION, true));
+
+// DB - Use the absolute path like admin dashboard
+require_once $root_path . '/config/db.php';
+
+// Debug connection status
+error_log('DB Connection Status: MySQLi=' . ($conn ? 'Connected' : 'Failed') . ', PDO=' . ($pdo ? 'Connected' : 'Failed'));
+
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
@@ -241,27 +269,33 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CHO Koronadal — Records Officer Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <!-- Reuse your existing styles -->
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/sidebar.css">
+    <!-- Use absolute paths for all styles -->
+    <link rel="stylesheet" href="<?php echo $root_path; ?>/assets/css/dashboard.css">
+    <link rel="stylesheet" href="<?php echo $root_path; ?>/assets/css/sidebar.css">
     <style>
         :root {
             --primary: #6f42c1;
+            --primary-light: #8e68d9;
             --primary-dark: #5a32a3;
             --secondary: #6c757d;
+            --secondary-light: #adb5bd;
             --success: #28a745;
             --info: #17a2b8;
             --warning: #ffc107;
             --danger: #dc3545;
             --light: #f8f9fa;
+            --light-hover: #e2e6ea;
             --dark: #343a40;
             --white: #ffffff;
             --border: #dee2e6;
-            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            --shadow-lg: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            --border-light: #f1f1f1;
+            --shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
+            --shadow: 0 .5rem 1rem rgba(0,0,0,.08);
+            --shadow-lg: 0 1rem 3rem rgba(0,0,0,.1);
             --border-radius: 0.5rem;
             --border-radius-lg: 1rem;
             --transition: all 0.3s ease;
+            --card-hover-y: -5px;
         }
 
         * {
@@ -269,15 +303,17 @@ try {
         }
 
         body {
-            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            background: linear-gradient(135deg, #f5eeff 0%, #eee2ff 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             margin: 0;
             padding: 0;
+            color: var(--dark);
         }
 
+        /* Content Wrapper */
         .content-wrapper {
-            margin-left: var(--sidebar-width, 260px);
+            margin-left: var(--sidebar-width, 280px);
             padding: 2rem;
             min-height: 100vh;
             transition: var(--transition);
@@ -286,23 +322,105 @@ try {
         @media (max-width: 960px) {
             .content-wrapper {
                 margin-left: 0;
-                padding: 1rem;
+                padding: 1.5rem;
+                margin-top: 70px;
             }
         }
 
-        /* Welcome Header */
-        .welcome-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: var(--border-radius-lg);
+        /* Dashboard Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 2rem;
-            box-shadow: var(--shadow-lg);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .welcome-message h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--primary-dark);
+            line-height: 1.2;
+        }
+
+        .welcome-message p {
+            margin: 0.5rem 0 0;
+            color: var(--secondary);
+            font-size: 1rem;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background: var(--dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Info Card */
+        .info-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            color: white;
+            margin-bottom: 2rem;
             position: relative;
             overflow: hidden;
         }
 
-        .welcome-header::before {
+        .info-card::before {
             content: '';
             position: absolute;
             top: -50%;
@@ -313,65 +431,76 @@ try {
             border-radius: 50%;
         }
 
-        .welcome-header h1 {
-            margin: 0;
-            font-size: 2.5rem;
-            font-weight: 300;
-            line-height: 1.2;
+        .info-card h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
-        .welcome-header .subtitle {
-            margin-top: 0.5rem;
-            font-size: 1.1rem;
+        .info-card p {
+            margin: 0;
+            font-size: 1rem;
             opacity: 0.9;
+            line-height: 1.6;
         }
 
         @media (max-width: 768px) {
-            .welcome-header h1 {
+            .dashboard-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .welcome-message h1 {
                 font-size: 1.8rem;
+            }
+            
+            .dashboard-actions {
+                justify-content: center;
+                flex-wrap: wrap;
             }
         }
 
-        /* Statistics Grid */
+        /* Stats Section */
+        .stats-section {
+            margin-bottom: 2.5rem;
+        }
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 2rem;
         }
 
         .stat-card {
-            background: var(--white);
+            background: white;
             border-radius: var(--border-radius-lg);
             padding: 1.5rem;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            position: relative;
-            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
             transition: var(--transition);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            position: relative;
         }
 
         .stat-card::before {
             content: '';
             position: absolute;
-            top: 0;
             left: 0;
-            width: 4px;
-            height: 100%;
+            top: 0;
+            height: 4px;
+            width: 100%;
             background: var(--card-color, var(--primary));
         }
 
-        .stat-card.pending { --card-color: #ffc107; }
-        .stat-card.processed { --card-color: #28a745; }
-        .stat-card.total { --card-color: #007bff; }
-        .stat-card.requests { --card-color: #fd7e14; }
-        .stat-card.archived { --card-color: #6c757d; }
-        .stat-card.quality { --card-color: #dc3545; }
+        .stat-card:hover {
+            transform: translateY(var(--card-hover-y));
+            box-shadow: var(--shadow);
+        }
 
         .stat-header {
             display: flex;
@@ -381,15 +510,23 @@ try {
         }
 
         .stat-icon {
-            font-size: 2rem;
+            font-size: 1.5rem;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: var(--card-color, var(--primary));
-            opacity: 0.8;
+            background: rgba(var(--card-color-rgb, 111, 66, 193), 0.1);
+            border-radius: 12px;
+            flex-shrink: 0;
         }
 
         .stat-number {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
             color: var(--dark);
+            line-height: 1.1;
             margin-bottom: 0.25rem;
         }
 
@@ -397,88 +534,137 @@ try {
             font-size: 0.9rem;
             color: var(--secondary);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
             font-weight: 500;
+            letter-spacing: 0.5px;
         }
 
-        /* Quick Actions */
+        .stat-card.pending { --card-color: #ffc107; --card-color-rgb: 255, 193, 7; }
+        .stat-card.processed { --card-color: #28a745; --card-color-rgb: 40, 167, 69; }
+        .stat-card.total { --card-color: #007bff; --card-color-rgb: 0, 123, 255; }
+        .stat-card.requests { --card-color: #fd7e14; --card-color-rgb: 253, 126, 20; }
+        .stat-card.archived { --card-color: #6c757d; --card-color-rgb: 108, 117, 125; }
+        .stat-card.quality { --card-color: #dc3545; --card-color-rgb: 220, 53, 69; }
+
+        /* Section Heading */
+        .section-heading {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin: 2.5rem 0 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-heading i {
+            font-size: 1.25rem;
+        }
+        
+        /* Legacy section title (keeping for compatibility) */
         .section-title {
             font-size: 1.5rem;
             font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 1.5rem;
+            color: var(--primary-dark);
+            margin: 2.5rem 0 1.5rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
+        }
+
+        /* Quick Actions */
+        .quick-actions-section {
+            margin-bottom: 2.5rem;
         }
 
         .action-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 2rem;
         }
 
         .action-card {
-            background: var(--white);
+            background: white;
             border-radius: var(--border-radius-lg);
             padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
             text-decoration: none;
-            color: inherit;
+            color: var(--dark);
+            box-shadow: var(--shadow-sm);
             transition: var(--transition);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-light);
             position: relative;
-            overflow: hidden;
         }
 
         .action-card::before {
             content: '';
             position: absolute;
-            top: 0;
             left: 0;
-            width: 4px;
+            top: 0;
             height: 100%;
+            width: 4px;
             background: var(--card-color, var(--primary));
-            transition: var(--transition);
+            transition: width 0.3s ease;
         }
 
         .action-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-            text-decoration: none;
+            transform: translateY(var(--card-hover-y));
+            box-shadow: var(--shadow);
         }
 
         .action-card:hover::before {
             width: 8px;
         }
 
-        .action-card.purple { --card-color: #6f42c1; }
-        .action-card.blue { --card-color: #007bff; }
-        .action-card.green { --card-color: #28a745; }
-        .action-card.orange { --card-color: #fd7e14; }
-        .action-card.teal { --card-color: #17a2b8; }
-        .action-card.red { --card-color: #dc3545; }
-
-        .action-card .icon {
-            font-size: 2.5rem;
+        .action-icon {
+            font-size: 1.5rem;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(var(--card-color-rgb, 111, 66, 193), 0.1);
             color: var(--card-color, var(--primary));
-            margin-bottom: 1rem;
-            display: block;
+            border-radius: 12px;
+            flex-shrink: 0;
         }
 
-        .action-card h3 {
-            margin: 0 0 0.5rem 0;
-            font-size: 1.25rem;
+        .action-content {
+            flex-grow: 1;
+        }
+
+        .action-content h3 {
+            margin: 0 0 0.35rem;
+            font-size: 1.15rem;
             font-weight: 600;
             color: var(--dark);
         }
 
-        .action-card p {
+        .action-content p {
             margin: 0;
             color: var(--secondary);
             font-size: 0.9rem;
         }
+
+        .action-arrow {
+            color: var(--card-color, var(--primary));
+            font-size: 1rem;
+            opacity: 0.7;
+            transition: transform 0.2s;
+        }
+
+        .action-card:hover .action-arrow {
+            transform: translateX(4px);
+            opacity: 1;
+        }
+
+        .action-card.purple { --card-color: #6f42c1; --card-color-rgb: 111, 66, 193; }
+        .action-card.blue { --card-color: #007bff; --card-color-rgb: 0, 123, 255; }
+        .action-card.green { --card-color: #28a745; --card-color-rgb: 40, 167, 69; }
+        .action-card.orange { --card-color: #fd7e14; --card-color-rgb: 253, 126, 20; }
+        .action-card.teal { --card-color: #17a2b8; --card-color-rgb: 23, 162, 184; }
+        .action-card.red { --card-color: #dc3545; --card-color-rgb: 220, 53, 69; }
 
         /* Info Layout */
         .info-layout {
@@ -497,10 +683,15 @@ try {
         .card-section {
             background: var(--white);
             border-radius: var(--border-radius-lg);
-            padding: 1.5rem;
+            padding: 1.75rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            margin-bottom: 1.75rem;
+            transition: var(--transition);
+        }
+        
+        .card-section:hover {
             box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            margin-bottom: 1.5rem;
         }
 
         .section-header {
@@ -509,50 +700,83 @@ try {
             align-items: center;
             margin-bottom: 1.5rem;
             padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border-light);
         }
 
         .section-header h3 {
             margin: 0;
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 600;
-            color: var(--dark);
+            color: var(--primary-dark);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
+        }
+        
+        .section-header h3 i {
+            font-size: 1rem;
+            background: rgba(var(--card-color-rgb, 111, 66, 193), 0.1);
+            color: var(--primary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
         }
 
         .view-more-btn {
             color: var(--primary);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 500;
             transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 20px;
+            background: rgba(var(--card-color-rgb, 111, 66, 193), 0.08);
         }
 
         .view-more-btn:hover {
             color: var(--primary-dark);
+            background: rgba(var(--card-color-rgb, 111, 66, 193), 0.12);
             text-decoration: none;
+        }
+        
+        .view-more-btn i {
+            font-size: 0.7rem;
         }
 
         /* Tables */
         .table-wrapper {
-            max-height: 300px;
+            max-height: 350px;
             overflow-y: auto;
             border-radius: var(--border-radius);
-            border: 1px solid var(--border);
+            scrollbar-width: thin;
+        }
+        
+        .table-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background-color: var(--secondary-light);
+            border-radius: 20px;
         }
 
         .records-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
         .records-table th,
         .records-table td {
-            padding: 0.75rem;
+            padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border-light);
         }
 
         .records-table th {
@@ -562,113 +786,167 @@ try {
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .records-table th:first-child {
+            border-top-left-radius: var(--border-radius);
+        }
+        
+        .records-table th:last-child {
+            border-top-right-radius: var(--border-radius);
         }
 
         .records-table td {
             color: var(--secondary);
         }
+        
+        .records-table tr:hover td {
+            background-color: rgba(111, 66, 193, 0.03);
+        }
 
         /* Status Badges */
         .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
-            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-
-        .priority-urgent {
-            background: #f8d7da;
-            color: #721c24;
+        
+        .status-badge::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
         }
 
-        .priority-high {
-            background: #fff3cd;
-            color: #856404;
+        .priority-urgent, .urgency-urgent {
+            background: rgba(220, 53, 69, 0.15);
+            color: #b82134;
+        }
+        
+        .priority-urgent::before, .urgency-urgent::before {
+            background: #dc3545;
         }
 
-        .priority-normal {
-            background: #d1ecf1;
-            color: #0c5460;
+        .priority-high, .urgency-high {
+            background: rgba(255, 193, 7, 0.15);
+            color: #d6a206;
+        }
+        
+        .priority-high::before, .urgency-high::before {
+            background: #ffc107;
         }
 
-        .urgency-urgent {
-            background: #f8d7da;
-            color: #721c24;
+        .priority-normal, .urgency-normal {
+            background: rgba(23, 162, 184, 0.15);
+            color: #138496;
         }
-
-        .urgency-high {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .urgency-normal {
-            background: #d1ecf1;
-            color: #0c5460;
+        
+        .priority-normal::before, .urgency-normal::before {
+            background: #17a2b8;
         }
 
         .alert-backup {
-            background: #d4edda;
-            color: #155724;
+            background: rgba(40, 167, 69, 0.15);
+            color: #218838;
+        }
+        
+        .alert-backup::before {
+            background: #28a745;
         }
 
         .alert-maintenance {
-            background: #d1ecf1;
-            color: #0c5460;
+            background: rgba(23, 162, 184, 0.15);
+            color: #138496;
+        }
+        
+        .alert-maintenance::before {
+            background: #17a2b8;
         }
 
         .alert-storage {
-            background: #fff3cd;
-            color: #856404;
+            background: rgba(255, 193, 7, 0.15);
+            color: #d6a206;
+        }
+        
+        .alert-storage::before {
+            background: #ffc107;
         }
 
         .alert-error {
-            background: #f8d7da;
-            color: #721c24;
+            background: rgba(220, 53, 69, 0.15);
+            color: #b82134;
+        }
+        
+        .alert-error::before {
+            background: #dc3545;
         }
 
-        /* Record Item */
-        .record-item {
-            padding: 0.75rem;
-            border-left: 3px solid var(--primary);
-            background: var(--light);
-            margin-bottom: 0.5rem;
-            border-radius: 0 var(--border-radius) var(--border-radius) 0;
-            font-size: 0.9rem;
-        }
-
-        .record-name {
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .record-details {
-            color: var(--secondary);
-            font-size: 0.85rem;
-            margin-top: 0.25rem;
-        }
-
-        /* Activity Item */
+        /* Record & Activity Items */
+        .record-item,
         .activity-item {
-            padding: 0.75rem;
-            border-left: 3px solid #28a745;
-            background: var(--light);
-            margin-bottom: 0.5rem;
-            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            padding: 1rem;
+            background: white;
+            margin-bottom: 0.75rem;
+            border-radius: var(--border-radius);
             font-size: 0.9rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .record-item::before,
+        .activity-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+        }
+        
+        .record-item::before {
+            background: var(--primary);
+        }
+        
+        .activity-item::before {
+            background: #28a745;
         }
 
+        .record-item:hover,
+        .activity-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+            cursor: pointer;
+        }
+
+        .record-name,
         .activity-name {
             font-weight: 600;
             color: var(--dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
         }
 
+        .record-details,
         .activity-details {
             color: var(--secondary);
             font-size: 0.85rem;
-            margin-top: 0.25rem;
+            line-height: 1.5;
+            padding-top: 0.25rem;
         }
 
         /* Empty States */
@@ -702,66 +980,85 @@ try {
     <?php
     // Tell the sidebar which menu item to highlight
     $activePage = 'dashboard';
-    include '../../includes/sidebar_records_officer.php';
+    include $root_path . '/includes/sidebar_records_officer.php';
     ?>
 
-    <section class="content-wrapper">
-        <!-- Welcome Header -->
-        <div class="welcome-header">
-            <h1>Good day, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
-            <p class="subtitle">
-                Records Management Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> 
-                • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?>
-            </p>
-        </div>
+    <main class="content-wrapper">
+        <!-- Dashboard Header with Actions -->
+        <section class="dashboard-header">
+            <div class="welcome-message">
+                <h1 class="dashboard-title">Good day, <?php echo htmlspecialchars($defaults['name']); ?>!</h1>
+                <p>Records Management Dashboard • <?php echo htmlspecialchars($defaults['role']); ?> • ID: <?php echo htmlspecialchars($defaults['employee_number']); ?></p>
+            </div>
+            
+            <div class="dashboard-actions">
+                <a href="../records/new_patient_record.php" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> New Record
+                </a>
+                <a href="../records/record_search.php" class="btn btn-secondary">
+                    <i class="fas fa-search"></i> Search Records
+                </a>
+                <a href="../auth/employee_logout.php" class="btn btn-outline">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </section>
+        
+        <!-- System Overview Card -->
+        <section class="info-card">
+            <h2><i class="fas fa-folder-open"></i> Records Management Overview</h2>
+            <p>Welcome to your records management dashboard. Here you can access tools for patient record creation, data entry, archival, and quality control processes.</p>
+        </section>
 
         <!-- Statistics Overview -->
         <h2 class="section-title">
             <i class="fas fa-chart-line"></i>
             Records Overview
         </h2>
-        <div class="stats-grid">
-            <div class="stat-card pending">
-                <div class="stat-header">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+        <div class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card pending">
+                    <div class="stat-header">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($defaults['stats']['pending_records']); ?></div>
+                    <div class="stat-label">Pending Records</div>
                 </div>
-                <div class="stat-number"><?php echo number_format($defaults['stats']['pending_records']); ?></div>
-                <div class="stat-label">Pending Records</div>
-            </div>
-            <div class="stat-card processed">
-                <div class="stat-header">
-                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-card processed">
+                    <div class="stat-header">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($defaults['stats']['records_processed_today']); ?></div>
+                    <div class="stat-label">Processed Today</div>
                 </div>
-                <div class="stat-number"><?php echo number_format($defaults['stats']['records_processed_today']); ?></div>
-                <div class="stat-label">Processed Today</div>
-            </div>
-            <div class="stat-card total">
-                <div class="stat-header">
-                    <div class="stat-icon"><i class="fas fa-folder-open"></i></div>
+                <div class="stat-card total">
+                    <div class="stat-header">
+                        <div class="stat-icon"><i class="fas fa-folder-open"></i></div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($defaults['stats']['total_patient_records']); ?></div>
+                    <div class="stat-label">Total Patient Records</div>
                 </div>
-                <div class="stat-number"><?php echo number_format($defaults['stats']['total_patient_records']); ?></div>
-                <div class="stat-label">Total Patient Records</div>
-            </div>
-            <div class="stat-card requests">
-                <div class="stat-header">
-                    <div class="stat-icon"><i class="fas fa-file-medical"></i></div>
+                <div class="stat-card requests">
+                    <div class="stat-header">
+                        <div class="stat-icon"><i class="fas fa-file-medical"></i></div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($defaults['stats']['pending_requests']); ?></div>
+                    <div class="stat-label">Pending Requests</div>
                 </div>
-                <div class="stat-number"><?php echo number_format($defaults['stats']['pending_requests']); ?></div>
-                <div class="stat-label">Pending Requests</div>
-            </div>
-            <div class="stat-card archived">
-                <div class="stat-header">
-                    <div class="stat-icon"><i class="fas fa-archive"></i></div>
+                <div class="stat-card archived">
+                    <div class="stat-header">
+                        <div class="stat-icon"><i class="fas fa-archive"></i></div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($defaults['stats']['archived_records']); ?></div>
+                    <div class="stat-label">Archived Records</div>
                 </div>
-                <div class="stat-number"><?php echo number_format($defaults['stats']['archived_records']); ?></div>
-                <div class="stat-label">Archived Records</div>
-            </div>
-            <div class="stat-card quality">
-                <div class="stat-header">
-                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-card quality">
+                    <div class="stat-header">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    </div>
+                    <div class="stat-number"><?php echo number_format($defaults['stats']['data_quality_issues']); ?></div>
+                    <div class="stat-label">Data Quality Issues</div>
                 </div>
-                <div class="stat-number"><?php echo number_format($defaults['stats']['data_quality_issues']); ?></div>
-                <div class="stat-label">Data Quality Issues</div>
             </div>
         </div>
 
@@ -770,37 +1067,86 @@ try {
             <i class="fas fa-bolt"></i>
             Quick Actions
         </h2>
+        <div class="quick-actions-section">
         <div class="action-grid">
             <a href="../records/new_patient_record.php" class="action-card purple">
-                <i class="fas fa-user-plus icon"></i>
-                <h3>New Patient Record</h3>
-                <p>Create new patient medical record file</p>
+                <div class="action-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="action-content">
+                    <h3>New Patient Record</h3>
+                    <p>Create new patient medical record file</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
             </a>
+            
             <a href="../records/record_search.php" class="action-card blue">
-                <i class="fas fa-search icon"></i>
-                <h3>Search Records</h3>
-                <p>Find and retrieve patient medical records</p>
+                <div class="action-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Search Records</h3>
+                    <p>Find and retrieve patient medical records</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
             </a>
+            
             <a href="../records/data_entry.php" class="action-card green">
-                <i class="fas fa-keyboard icon"></i>
-                <h3>Data Entry</h3>
-                <p>Input and update patient information</p>
+                <div class="action-icon">
+                    <i class="fas fa-keyboard"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Data Entry</h3>
+                    <p>Input and update patient information</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
             </a>
+            
             <a href="../records/record_archive.php" class="action-card orange">
-                <i class="fas fa-archive icon"></i>
-                <h3>Archive Records</h3>
-                <p>Archive completed and old medical records</p>
+                <div class="action-icon">
+                    <i class="fas fa-archive"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Archive Records</h3>
+                    <p>Archive completed and old medical records</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
             </a>
+            
             <a href="../records/quality_control.php" class="action-card teal">
-                <i class="fas fa-shield-alt icon"></i>
-                <h3>Quality Control</h3>
-                <p>Review and validate record accuracy</p>
+                <div class="action-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Quality Control</h3>
+                    <p>Review and validate record accuracy</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
             </a>
+            
             <a href="../records/reports.php" class="action-card red">
-                <i class="fas fa-chart-bar icon"></i>
-                <h3>Generate Reports</h3>
-                <p>Create statistical and compliance reports</p>
+                <div class="action-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Generate Reports</h3>
+                    <p>Create statistical and compliance reports</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
             </a>
+        </div>
         </div>
 
         <!-- Info Layout -->
@@ -812,7 +1158,7 @@ try {
                     <div class="section-header">
                         <h3><i class="fas fa-clock"></i> Pending Records</h3>
                         <a href="../records/pending_records.php" class="view-more-btn">
-                            <i class="fas fa-chevron-right"></i> View All
+                            View All <i class="fas fa-chevron-right"></i>
                         </a>
                     </div>
                     
@@ -858,7 +1204,7 @@ try {
                     <div class="section-header">
                         <h3><i class="fas fa-history"></i> Recent Activities</h3>
                         <a href="../records/activity_log.php" class="view-more-btn">
-                            <i class="fas fa-chevron-right"></i> View All
+                            View All <i class="fas fa-chevron-right"></i>
                         </a>
                     </div>
                     
@@ -891,7 +1237,7 @@ try {
                     <div class="section-header">
                         <h3><i class="fas fa-file-medical"></i> Record Requests</h3>
                         <a href="../records/record_requests.php" class="view-more-btn">
-                            <i class="fas fa-chevron-right"></i> View All
+                            View All <i class="fas fa-chevron-right"></i>
                         </a>
                     </div>
                     
@@ -924,7 +1270,7 @@ try {
                     <div class="section-header">
                         <h3><i class="fas fa-bell"></i> System Alerts</h3>
                         <a href="../records/system_alerts.php" class="view-more-btn">
-                            <i class="fas fa-chevron-right"></i> View All
+                            View All <i class="fas fa-chevron-right"></i>
                         </a>
                     </div>
                     
@@ -952,7 +1298,7 @@ try {
                 </div>
             </div>
         </div>
-    </section>
+    </main>
 </body>
 
 </html>

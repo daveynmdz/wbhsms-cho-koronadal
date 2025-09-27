@@ -18,18 +18,9 @@ if (session_status() === PHP_SESSION_NONE) {
     // Set unique session name for employees
     session_name('EMPLOYEE_SESSID');
     
-    // Set cookie path for employees - dynamically determine the path
-    $baseDir = dirname($_SERVER['SCRIPT_NAME']);
-    // Remove any trailing slashes
-    $baseDir = rtrim($baseDir, '/');
-    // Find the position of '/pages'
-    $pagesPos = strpos($baseDir, '/pages');
-    if ($pagesPos !== false) {
-        // Get the part before '/pages'
-        $baseDir = substr($baseDir, 0, $pagesPos);
-    }
-    // Use the dynamically determined path or root if can't determine
-    $cookiePath = $baseDir ? $baseDir . '/pages/management' : '/';
+    // Set cookie path for employees - use root path to ensure session works across all pages
+    // The restrictive path was causing redirect loops
+    $cookiePath = '/';
     
     session_set_cookie_params([
         'lifetime' => 0, // 0 = until browser is closed
