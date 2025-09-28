@@ -109,7 +109,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
         <i class="fas fa-times"></i>
     </button>
 
-        <a href="<?= $nav_base ?>management/admin/dashboard.php">
+    <a href="<?= $nav_base ?>management/admin/dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 
@@ -122,9 +122,13 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'patient_records' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-users"></i> Patient Records
         </a>
+        <a href="<?= $nav_base ?>management/admin/referrals_management.php"
+            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-share"></i> Referrals Management
+        </a>
         <a href="<?= $nav_base ?>management/admin/appointments_management.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-calendar-check"></i> Appointments
+            <i class="fas fa-calendar-check"></i> Appointments Management
         </a>
         <a href="<?= $nav_base ?>management/admin/employee_management.php"
             class="<?= $activePage === 'employees' ? 'active' : '' ?>" role="menuitem">
@@ -137,7 +141,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
         </a>
         <a href="#"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-vials"></i> Laboratory
+            <i class="fas fa-vials"></i> Laboratory Results Management
         </a>
         <a href="#"
             class="<?= $activePage === 'billing' ? 'active' : '' ?> disabled" role="menuitem">
@@ -150,10 +154,6 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
         <a href="#"
             class="<?= $activePage === 'queueing' ? 'active' : '' ?> disabled" role="menuitem">
             <i class="fas fa-list-ol"></i> Queue Management
-        </a>
-        <a href="<?= $nav_base ?>management/admin/referrals_management.php"
-            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-share"></i> Referrals
         </a>
         <a href="#"
             class="<?= $activePage === 'notifications' ? 'active' : '' ?> disabled" role="menuitem">

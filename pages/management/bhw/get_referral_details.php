@@ -17,7 +17,7 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 }
 
 // Check if role is authorized
-$authorized_roles = ['doctor', 'nurse', 'bhw', 'dho', 'records_officer', 'admin'];
+$authorized_roles = ['doctor', 'bhw', 'dho', 'records_officer', 'admin'];
 if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
     echo json_encode(['error' => 'Insufficient permissions']);
     exit();

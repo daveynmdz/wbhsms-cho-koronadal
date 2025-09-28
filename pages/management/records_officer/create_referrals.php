@@ -1,5 +1,5 @@
 <?php
-// create_referrals.php - Admin Side Referral Creation with Patient Search
+// create_referrals.php - Records Officer Side Referral Creation with Patient Search
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
@@ -21,10 +21,10 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
     exit();
 }
 
-// Check if role is authorized
-$authorized_roles = ['doctor', 'bhw', 'dho', 'records_officer', 'admin'];
+// Check if role is authorized - Records Officer specific
+$authorized_roles = ['records_officer'];
 if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
-    header('Location: dashboard.php');
+    header('Location: ../auth/employee_login.php');
     exit();
 }
 
@@ -1245,50 +1245,26 @@ try {
                                     <?php 
                                     $current_role = strtolower($_SESSION['role']);
                                     
-                                    // BHW can refer to district, city, and external
-                                    if ($current_role === 'bhw'): ?>
+                                    // Records Officer can refer to all destinations for comprehensive patient management
+                                    if ($current_role === 'records_officer'): ?>
+                                        <option value="barangay_center">Barangay Health Center</option>
                                         <option value="district_office">District Health Office</option>
                                         <option value="city_office">City Health Office (Main District)</option>
                                         <option value="external">External Facility</option>
                                     
-                                    <?php // DHO can refer to city and external
-                                    elseif ($current_role === 'dho'): ?>
-                                        <option value="city_office">City Health Office (Main District)</option>
-                                        <option value="external">External Facility</option>
-                                    
-                    <?php // Admin can refer to all destinations, others can refer to city office and external
-                    elseif ($current_role === 'admin'): ?>
-                        <option value="barangay_center">Barangay Health Center</option>
-                        <option value="district_office">District Health Office</option>
-                        <option value="city_office">City Health Office (Main District)</option>
-                        <option value="external">External Facility</option>
-                    
-                    <?php // Doctor, Nurse, Records Officer can refer to city office and external
-                    elseif (in_array($current_role, ['doctor', 'nurse', 'records_officer'])): ?>
-                        <option value="city_office">City Health Office (Main District)</option>
-                        <option value="external">External Facility</option>                                    <?php else: 
-                                        // Fallback for any other roles - show district, city, and external only ?>
-                                        <option value="district_office">District Health Office</option>
+                                    <?php else: ?>
                                         <option value="city_office">City Health Office (Main District)</option>
                                         <option value="external">External Facility</option>
                                     <?php endif; ?>
                                 </select>
                                 
-                                <?php if ($current_role === 'admin'): ?>
+                                <?php if ($current_role === 'records_officer'): ?>
                                     <small style="color: #666; font-size: 0.85em;">
-                                        <i class="fas fa-info-circle"></i> As Admin, you can create referrals to all facilities (Barangay Centers, District Offices, City Office, or External) for comprehensive patient follow-up care
+                                        <i class="fas fa-info-circle"></i> As Records Officer, you can create referrals to all facilities (Barangay Centers, District Offices, City Office, or External) for comprehensive patient record management and care coordination
                                     </small>
-                                <?php elseif (in_array($current_role, ['doctor', 'nurse', 'records_officer'])): ?>
+                                <?php else: ?>
                                     <small style="color: #666; font-size: 0.85em;">
-                                        <i class="fas fa-info-circle"></i> As <?= htmlspecialchars(ucfirst($_SESSION['role'])) ?> at City Health Office, you can refer within the facility or to external facilities
-                                    </small>
-                                <?php elseif ($current_role === 'dho'): ?>
-                                    <small style="color: #666; font-size: 0.85em;">
-                                        <i class="fas fa-info-circle"></i> As District Health Officer, you can refer to City Health Office or external facilities
-                                    </small>
-                                <?php elseif ($current_role === 'bhw'): ?>
-                                    <small style="color: #666; font-size: 0.85em;">
-                                        <i class="fas fa-info-circle"></i> As Barangay Health Worker, you can refer to District Office, City Health Office, or external facilities
+                                        <i class="fas fa-info-circle"></i> You can refer to City Health Office or external facilities
                                     </small>
                                 <?php endif; ?>
                             </div>

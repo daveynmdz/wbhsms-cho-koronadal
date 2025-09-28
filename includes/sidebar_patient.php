@@ -114,7 +114,11 @@ if (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/profile/') !== false) {
         </a>
         <a href="<?= $nav_base ?>appointment/appointments.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-calendar-check"></i> Appointments & Referrals
+            <i class="fas fa-calendar-check"></i> Appointments
+        </a>
+        <a href="#"
+            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-file-medical-alt"></i> Referrals
         </a>
         <a href="<?= $nav_base ?>prescription/prescriptions.php"
             class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">

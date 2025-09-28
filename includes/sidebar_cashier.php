@@ -126,25 +126,9 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'payments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-credit-card"></i> Payments
         </a>
-        <a href="<?= $nav_base ?>management/cashier/receipts.php"
-            class="<?= $activePage === 'receipts' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-receipt"></i> Receipts
-        </a>
-        <a href="<?= $nav_base ?>management/cashier/cash_register.php"
-            class="<?= $activePage === 'cash_register' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-cash-register"></i> Cash Register
-        </a>
-        <a href="<?= $nav_base ?>management/cashier/daily_collections.php"
-            class="<?= $activePage === 'collections' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-coins"></i> Daily Collections
-        </a>
         <a href="<?= $nav_base ?>management/cashier/financial_reports.php"
             class="<?= $activePage === 'financial_reports' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-chart-line"></i> Financial Reports
-        </a>
-        <a href="<?= $nav_base ?>management/cashier/insurance_claims.php"
-            class="<?= $activePage === 'insurance' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-shield-alt"></i> Insurance Claims
         </a>
     </div>
 

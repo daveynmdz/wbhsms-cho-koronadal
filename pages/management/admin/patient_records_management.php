@@ -1312,7 +1312,6 @@ $barangayResult = $conn->query($barangaySql);
                                                                 title="View Contact">
                                                             <i class="fas fa-address-card"></i>
                                                         </button>
-<!-- Edit button removed as per requirements -->
                                                     </div>
                                                 </td>
                                             </tr>

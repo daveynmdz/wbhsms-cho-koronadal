@@ -122,37 +122,13 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'patients' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-users"></i> Patient Records
         </a>
-        <a href="<?= $nav_base ?>management/bhw/household_management.php"
-            class="<?= $activePage === 'households' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-house-user"></i> Household Management
-        </a>
-        <a href="<?= $nav_base ?>management/bhw/health_education.php"
-            class="<?= $activePage === 'health_education' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-chalkboard-teacher"></i> Health Education
-        </a>
-        <a href="<?= $nav_base ?>management/bhw/immunization_tracking.php"
-            class="<?= $activePage === 'immunization' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-syringe"></i> Immunization Tracking
-        </a>
-        <a href="<?= $nav_base ?>management/bhw/maternal_care.php"
-            class="<?= $activePage === 'maternal_care' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-baby"></i> Maternal Care
-        </a>
-        <a href="<?= $nav_base ?>management/bhw/community_events.php"
-            class="<?= $activePage === 'community_events' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-users"></i> Community Events
-        </a>
-        <a href="<?= $nav_base ?>management/bhw/referrals.php"
+        <a href="<?= $nav_base ?>management/bhw/referrals_management.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-share"></i> Create Referrals
+            <i class="fas fa-share"></i> Referrals Management
         </a>
         <a href="<?= $nav_base ?>management/bhw/reports.php"
             class="<?= $activePage === 'reports' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-chart-pie"></i> Reports
-        </a>
-        <a href="<?= $nav_base ?>management/bhw/health_programs.php"
-            class="<?= $activePage === 'health_programs' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-heartbeat"></i> Health Programs
         </a>
         <a href="#"
             class="<?= $activePage === 'notifications' ? 'active' : '' ?> disabled" role="menuitem">

@@ -85,6 +85,11 @@ $last_name = $_GET['last_name'] ?? '';
 $barangay = $_GET['barangay'] ?? '';
 $status_filter = $_GET['status'] ?? '';
 
+// Pagination parameters
+$page = max(1, intval($_GET['page'] ?? 1));
+$per_page = in_array(intval($_GET['per_page'] ?? 25), [10, 25, 50, 100]) ? intval($_GET['per_page'] ?? 25) : 25;
+$offset = ($page - 1) * $per_page;
+
 $where_conditions = [];
 $params = [];
 $param_types = '';
@@ -138,7 +143,29 @@ try {
     ");
     $expire_stmt->execute();
     $expire_stmt->close();
+
+    // Get total count for pagination
+    $count_sql = "
+        SELECT COUNT(*) as total
+        FROM referrals r
+        LEFT JOIN patients p ON r.patient_id = p.patient_id
+        LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
+        LEFT JOIN employees e ON r.referred_by = e.employee_id
+        LEFT JOIN facilities f ON r.referred_to_facility_id = f.facility_id
+        $where_clause
+    ";
     
+    $count_stmt = $conn->prepare($count_sql);
+    if (!empty($params)) {
+        $count_stmt->bind_param($param_types, ...$params);
+    }
+    $count_stmt->execute();
+    $count_result = $count_stmt->get_result();
+    $total_records = $count_result->fetch_assoc()['total'];
+    $count_stmt->close();
+    
+    $total_pages = ceil($total_records / $per_page);
+
     $sql = "
         SELECT r.referral_id, r.referral_num, r.patient_id, r.referral_reason, r.destination_type, 
                r.referred_to_facility_id, r.external_facility_name, r.referral_date, r.status,
@@ -153,10 +180,15 @@ try {
         LEFT JOIN facilities f ON r.referred_to_facility_id = f.facility_id
         $where_clause
         ORDER BY r.referral_date DESC
-        LIMIT 50
+        LIMIT ? OFFSET ?
     ";
 
     $stmt = $conn->prepare($sql);
+
+    // Add pagination parameters
+    $params[] = $per_page;
+    $params[] = $offset;
+    $param_types .= 'ii';
 
     if (!empty($params)) {
         $stmt->bind_param($param_types, ...$params);
@@ -169,6 +201,8 @@ try {
 } catch (Exception $e) {
     $error = "Failed to fetch referrals: " . $e->getMessage();
     $referrals = [];
+    $total_records = 0;
+    $total_pages = 0;
 }
 
 // Get statistics
@@ -414,7 +448,8 @@ try {
         .table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 800px; /* Ensures table doesn't get too compressed */
+            min-width: 800px;
+            /* Ensures table doesn't get too compressed */
         }
 
         .table th,
@@ -427,13 +462,17 @@ try {
         }
 
         .table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #0077b6;
+            background: linear-gradient(135deg, #0077b6, #03045e);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 500;
             position: sticky;
             top: 0;
             z-index: 10;
-            font-size: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+            align-content: center;
         }
 
         .table tbody tr:hover {
@@ -442,6 +481,7 @@ try {
 
         /* Mobile responsive adjustments */
         @media (max-width: 768px) {
+
             .table th,
             .table td {
                 padding: 0.5rem 0.25rem;
@@ -453,29 +493,35 @@ try {
             }
 
             /* Hide less important columns on mobile */
-            .table th:nth-child(3), /* Barangay */
+            .table th:nth-child(3),
+            /* Barangay */
             .table td:nth-child(3),
-            .table th:nth-child(6), /* Status */
+            .table th:nth-child(6),
+            /* Status */
             .table td:nth-child(6),
-            .table th:nth-child(8), /* Issued By */
+            .table th:nth-child(8),
+            /* Issued By */
             .table td:nth-child(8) {
                 display: none;
             }
 
             /* Adjust remaining columns */
-            .table th:nth-child(2), /* Patient */
+            .table th:nth-child(2),
+            /* Patient */
             .table td:nth-child(2) {
                 min-width: 120px;
             }
 
-            .table th:nth-child(4), /* Chief Complaint */
+            .table th:nth-child(4),
+            /* Chief Complaint */
             .table td:nth-child(4) {
                 min-width: 150px;
                 white-space: normal;
                 word-wrap: break-word;
             }
 
-            .table th:nth-child(7), /* Issued Date */
+            .table th:nth-child(7),
+            /* Issued Date */
             .table td:nth-child(7) {
                 min-width: 100px;
                 font-size: 0.7rem;
@@ -636,6 +682,21 @@ try {
             z-index: 1000;
         }
 
+        /* Higher z-index for cancel modal to appear on top of view modal */
+        #cancelReferralModal {
+            z-index: 11000;
+        }
+
+        /* Higher z-index for reinstate modal to appear on top of view modal */
+        #reinstateReferralModal {
+            z-index: 11000;
+        }
+
+        /* Higher z-index for password verification modal */
+        #passwordVerificationModal {
+            z-index: 12000;
+        }
+
         .modal-content {
             background: white;
             margin: 5% auto;
@@ -668,7 +729,7 @@ try {
             .modal-footer {
                 flex-direction: column;
             }
-            
+
             .modal-footer .btn {
                 justify-content: center;
             }
@@ -768,6 +829,7 @@ try {
         .breadcrumb a:hover {
             text-decoration: underline;
         }
+
         /* Mobile Cards for very small screens */
         .mobile-cards {
             padding: 0;
@@ -778,7 +840,7 @@ try {
             border: 1px solid #e9ecef;
             border-radius: 8px;
             margin-bottom: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
 
@@ -818,12 +880,12 @@ try {
                 font-size: 0.7rem;
                 padding: 0.2rem 0.4rem;
             }
-            
+
             .btn-sm {
                 padding: 0.25rem 0.5rem;
                 font-size: 0.75rem;
             }
-            
+
             .actions-group .btn {
                 margin: 0.125rem;
             }
@@ -831,12 +893,13 @@ try {
 
         /* Additional responsive table improvements */
         @media (max-width: 768px) {
+
             .table th,
             .table td {
                 padding: 0.5rem 0.25rem;
                 font-size: 0.85rem;
             }
-            
+
             /* Hide less important columns on medium screens */
             .table th:nth-child(3),
             .table td:nth-child(3),
@@ -847,6 +910,7 @@ try {
         }
 
         @media (max-width: 480px) {
+
             /* Hide more columns on smaller screens */
             .table th:nth-child(4),
             .table td:nth-child(4),
@@ -854,7 +918,7 @@ try {
             .table td:nth-child(5) {
                 display: none;
             }
-            
+
             .table th,
             .table td {
                 padding: 0.4rem 0.2rem;
@@ -875,14 +939,14 @@ try {
             z-index: 10000;
             animation: fadeIn 0.3s ease;
         }
-        
+
         .referral-confirmation-modal.show {
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
         }
-        
+
         .referral-modal-content {
             background: white;
             border-radius: 20px;
@@ -896,7 +960,7 @@ try {
             flex-direction: column;
             overflow: hidden;
         }
-        
+
         .referral-modal-header {
             background: linear-gradient(135deg, #0077b6, #023e8a);
             color: white;
@@ -906,19 +970,19 @@ try {
             position: relative;
             flex-shrink: 0;
         }
-        
+
         .referral-modal-header h3 {
             margin: 0;
             font-size: 1.5em;
             font-weight: 600;
         }
-        
+
         .referral-modal-header .icon {
             font-size: 3em;
             margin-bottom: 1rem;
             opacity: 0.9;
         }
-        
+
         .referral-modal-close {
             position: absolute;
             top: 1rem;
@@ -933,36 +997,36 @@ try {
             font-size: 1.2em;
             transition: background 0.3s;
         }
-        
+
         .referral-modal-close:hover {
             background: rgba(255, 255, 255, 0.3);
         }
-        
+
         .referral-modal-body {
             padding: 2rem;
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
         }
-        
+
         .referral-modal-body::-webkit-scrollbar {
             width: 6px;
         }
-        
+
         .referral-modal-body::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 3px;
         }
-        
+
         .referral-modal-body::-webkit-scrollbar-thumb {
             background: #c1c1c1;
             border-radius: 3px;
         }
-        
+
         .referral-modal-body::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
-        
+
         .referral-summary-card {
             background: #f8f9fa;
             border: 2px solid #e9ecef;
@@ -970,15 +1034,15 @@ try {
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
-        
+
         .summary-section {
             margin-bottom: 1.5rem;
         }
-        
+
         .summary-section:last-child {
             margin-bottom: 0;
         }
-        
+
         .summary-title {
             font-weight: 700;
             color: #0077b6;
@@ -988,7 +1052,7 @@ try {
             align-items: center;
             gap: 0.5rem;
         }
-        
+
         .summary-title i {
             background: #e3f2fd;
             padding: 0.5rem;
@@ -996,19 +1060,19 @@ try {
             color: #0077b6;
             font-size: 0.9em;
         }
-        
+
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
         }
-        
+
         .summary-item {
             display: flex;
             flex-direction: column;
             gap: 0.3rem;
         }
-        
+
         .summary-label {
             font-size: 0.85em;
             color: #6c757d;
@@ -1016,19 +1080,19 @@ try {
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
+
         .summary-value {
             font-size: 1.05em;
             color: #333;
             font-weight: 500;
             word-wrap: break-word;
         }
-        
+
         .summary-value.highlight {
             color: #0077b6;
             font-weight: 600;
         }
-        
+
         .summary-value.reason {
             background: white;
             padding: 1rem;
@@ -1037,14 +1101,14 @@ try {
             margin-top: 0.5rem;
             line-height: 1.5;
         }
-        
+
         .vitals-summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 0.8rem;
             margin-top: 1rem;
         }
-        
+
         .vital-item {
             background: white;
             padding: 0.8rem;
@@ -1052,19 +1116,19 @@ try {
             text-align: center;
             border: 2px solid #e9ecef;
         }
-        
+
         .vital-value {
             font-size: 1.2em;
             font-weight: 700;
             color: #0077b6;
         }
-        
+
         .vital-label {
             font-size: 0.8em;
             color: #6c757d;
             margin-top: 0.3rem;
         }
-        
+
         .referral-modal-actions {
             display: flex;
             gap: 0.75rem;
@@ -1075,7 +1139,7 @@ try {
             border-top: 1px solid #e9ecef;
             flex-wrap: wrap;
         }
-        
+
         .modal-btn {
             padding: 0.6rem 1.2rem;
             border: none;
@@ -1087,170 +1151,371 @@ try {
             min-width: 90px;
             flex: 1;
             max-width: 120px;
+            gap: 20px;
+            align-items: center;
         }
-        
+
         .modal-btn-secondary {
             background: #f8f9fa;
             color: #6c757d;
             border: 2px solid #dee2e6;
         }
-        
+
         .modal-btn-secondary:hover {
             background: #e9ecef;
             color: #5a6268;
         }
-        
+
         .modal-btn-primary {
             background: linear-gradient(135deg, #0077b6, #023e8a);
             color: white;
             box-shadow: 0 4px 15px rgba(0, 119, 182, 0.3);
         }
-        
+
         .modal-btn-primary:hover {
             background: linear-gradient(135deg, #023e8a, #001d3d);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 119, 182, 0.4);
         }
-        
+
         .modal-btn-success {
             background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
-        
+
         .modal-btn-success:hover {
             background: linear-gradient(135deg, #218838, #1e7e34);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
         }
-        
+
         .modal-btn-danger {
             background: linear-gradient(135deg, #dc3545, #c82333);
             color: white;
             box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
         }
-        
+
         .modal-btn-danger:hover {
             background: linear-gradient(135deg, #c82333, #bd2130);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
         }
-        
+
         .modal-btn-warning {
             background: linear-gradient(135deg, #ffc107, #e0a800);
             color: #212529;
             box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
         }
-        
+
         .modal-btn-warning:hover {
             background: linear-gradient(135deg, #e0a800, #d39e00);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
         }
-        
+
         /* Mobile responsive design for modal */
         @media (max-width: 768px) {
             .referral-modal-actions {
                 gap: 0.5rem;
                 padding: 1rem;
                 justify-content: center;
+                flex-wrap: wrap;
             }
-            
+
             .modal-btn {
                 padding: 0.5rem 0.8rem;
                 font-size: 0.8em;
-                min-width: 70px;
-                max-width: 100px;
-                flex: 1;
+                min-width: 80px;
+                max-width: 120px;
+                flex: 1 1 auto;
             }
-            
+
             .referral-confirmation-modal .modal-content {
                 margin: 0.5rem;
                 max-height: 95vh;
             }
-            
+
             .modal-header h3 {
                 font-size: 1.2em;
             }
-            
+
             .modal-body {
                 font-size: 0.9em;
                 max-height: calc(95vh - 200px);
             }
         }
-        
+
         @media (max-width: 480px) {
             .referral-modal-actions {
                 flex-direction: column;
                 gap: 0.5rem;
+                align-items: stretch;
             }
-            
+
             .modal-btn {
                 max-width: 100%;
                 padding: 0.75rem 1rem;
                 font-size: 0.85em;
+                flex: none;
+                width: 100%;
+                gap: 20px;
+                align-items: center;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .referral-modal-actions {
+                padding: 0.75rem;
+            }
+
+            .modal-btn {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.8em;
             }
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
-        
+
         @keyframes slideInUp {
             from {
                 transform: translateY(50px);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0);
                 opacity: 1;
             }
         }
-        
+
+        /* Snackbar animations */
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
         @media (max-width: 768px) {
             .referral-modal-content {
                 margin: 1rem;
                 border-radius: 15px;
             }
-            
+
             .referral-modal-header {
                 padding: 1.5rem;
                 border-radius: 15px 15px 0 0;
             }
-            
+
             .referral-modal-header h3 {
                 font-size: 1.3em;
             }
-            
+
             .referral-modal-header .icon {
                 font-size: 2.5em;
             }
-            
+
             .referral-modal-body {
                 padding: 1.5rem;
             }
-            
+
             .summary-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .vitals-summary {
                 grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             }
-            
+
             .referral-modal-actions {
                 flex-direction: column;
                 padding: 1rem 1.5rem 1.5rem;
             }
-            
+
             .modal-btn {
                 width: 100%;
                 margin-bottom: 0.5rem;
             }
-            
+
             .modal-btn:last-child {
                 margin-bottom: 0;
+            }
+        }
+
+        /* Pagination Styles */
+        .pagination-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .pagination-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .records-info {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .records-info strong {
+            color: #0077b6;
+        }
+
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .page-size-selector label {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .page-size-selector select {
+            padding: 0.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .page-size-selector select:focus {
+            outline: none;
+            border-color: #0077b6;
+            box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            min-width: 40px;
+            justify-content: center;
+        }
+
+        .pagination-btn:hover:not(.disabled):not(.active) {
+            border-color: #0077b6;
+            color: #0077b6;
+            background: #f8f9fa;
+        }
+
+        .pagination-btn.active {
+            background: linear-gradient(135deg, #0077b6, #023e8a);
+            color: white;
+            border-color: #0077b6;
+        }
+
+        .pagination-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            color: #ccc;
+        }
+
+        .pagination-btn.prev,
+        .pagination-btn.next {
+            padding: 0.5rem 1rem;
+        }
+
+        .pagination-ellipsis {
+            padding: 0.5rem;
+            color: #666;
+        }
+
+        /* Mobile responsive pagination */
+        @media (max-width: 768px) {
+            .pagination-info {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+
+            .pagination-controls {
+                gap: 0.25rem;
+            }
+
+            .pagination-btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+                min-width: 35px;
+            }
+
+            .pagination-btn.prev,
+            .pagination-btn.next {
+                padding: 0.4rem 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .pagination-container {
+                padding: 1rem;
+            }
+
+            .pagination-controls {
+                justify-content: center;
+            }
+
+            .pagination-btn {
+                padding: 0.35rem 0.5rem;
+                font-size: 0.75rem;
+                min-width: 32px;
+            }
+
+            /* Hide some page numbers on very small screens */
+            .pagination-btn.page-num:not(.active):nth-child(n+6) {
+                display: none;
             }
         }
     </style>
@@ -1311,6 +1576,11 @@ try {
 
         <!-- Filters -->
         <div class="filters-container">
+            <div class="section-header" style="padding: 0 0 15px 0;margin-bottom: 15px;border-bottom: 1px solid rgba(0, 119, 182, 0.2);">
+                <h4 style="margin: 0;color: var(--primary-dark);font-size: 18px;font-weight: 600;">
+                    <i class="fas fa-filter"></i> Search & Filter Options
+                </h4>
+            </div>
             <form method="GET" class="filters-grid">
                 <div class="form-group">
                     <label for="patient_id">Patient ID</label>
@@ -1332,7 +1602,7 @@ try {
                     <select id="barangay" name="barangay">
                         <option value="">All Barangays</option>
                         <?php foreach ($barangays as $brgy): ?>
-                            <option value="<?php echo htmlspecialchars($brgy['barangay_name']); ?>" 
+                            <option value="<?php echo htmlspecialchars($brgy['barangay_name']); ?>"
                                 <?php echo $barangay === $brgy['barangay_name'] ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($brgy['barangay_name']); ?>
                             </option>
@@ -1344,8 +1614,9 @@ try {
                     <select id="status" name="status">
                         <option value="">All Statuses</option>
                         <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
-                        <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                        <option value="voided" <?php echo $status_filter === 'voided' ? 'selected' : ''; ?>>Voided</option>
+                        <option value="accepted" <?php echo $status_filter === 'accepted' ? 'selected' : ''; ?>>Accepted</option>
+                        <option value="cancelled" <?php echo $status_filter === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                        <option value="issued" <?php echo $status_filter === 'issued' ? 'selected' : ''; ?>>Issued</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1362,189 +1633,292 @@ try {
         </div>
 
         <!-- Referrals Table -->
-        <div class="table-container">
-            <?php if (empty($referrals)): ?>
-                <div class="empty-state">
-                    <i class="fas fa-share"></i>
-                    <h3>No Referrals Found</h3>
-                    <p>No referrals match your current search criteria.</p>
-                    <a href="create_referrals.php" class="btn btn-primary">Create First Referral</a>
-                </div>
-            <?php else: ?>
-                <!-- Desktop/Tablet Table View -->
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Referral #</th>
-                                <th>Patient</th>
-                                <th>Barangay</th>
-                                <th>Reason for Referral</th>
-                                <th>Referred Facility</th>
-                                <th>Status</th>
-                                <th>Issued Date</th>
-                                <th>Issued By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($referrals as $referral):
-                                $patient_name = trim($referral['first_name'] . ' ' . ($referral['middle_name'] ? $referral['middle_name'] . ' ' : '') . $referral['last_name']);
-                                $issuer_name = trim($referral['issuer_first_name'] . ' ' . $referral['issuer_last_name']);
-                                
-                                // Determine destination based on destination_type
-                                if ($referral['destination_type'] === 'external') {
-                                    $destination = $referral['external_facility_name'] ?: 'External Facility';
-                                } else {
-                                    $destination = $referral['referred_facility_name'] ?: 'Internal Facility';
-                                }
-
-                                // Determine badge class based on status
-                                $badge_class = 'badge-secondary';
-                                switch ($referral['status']) {
-                                    case 'active':
-                                        $badge_class = 'badge-success';
-                                        break;
-                                    case 'accepted':
-                                        $badge_class = 'badge-info';
-                                        break;
-                                    case 'completed':
-                                        $badge_class = 'badge-primary';
-                                        break;
-                                    case 'cancelled':
-                                        $badge_class = 'badge-danger';
-                                        break;
-                                    default:
-                                        $badge_class = 'badge-secondary';
-                                        break;
-                                }
-                            ?>
+        <div class="card-container">
+            <div class="section-header" style="padding: 0 0 15px 0;margin-bottom: 15px;border-bottom: 1px solid rgba(0, 119, 182, 0.2);">
+                <h4 style="margin: 0;color: var(--primary-dark);font-size: 18px;font-weight: 600;">
+                    <i class="fas fa-table"></i> Referrals Issued
+                </h4>
+            </div>
+            <div class="table-container">
+                <?php if (empty($referrals)): ?>
+                    <div class="empty-state">
+                        <i class="fas fa-share"></i>
+                        <h3>No Referrals Found</h3>
+                        <p>No referrals match your current search criteria.</p>
+                        <a href="create_referrals.php" class="btn btn-primary">Create First Referral</a>
+                    </div>
+                <?php else: ?>
+                    <!-- Desktop/Tablet Table View -->
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
                                 <tr>
-                                    <td><strong><?php echo htmlspecialchars($referral['referral_num']); ?></strong></td>
-                                    <td>
-                                        <div style="max-width: 150px;">
-                                            <div style="font-weight: 600;"><?php echo htmlspecialchars($patient_name); ?></div>
-                                            <small style="color: #6c757d;"><?php echo htmlspecialchars($referral['patient_number']); ?></small>
-                                        </div>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($referral['barangay'] ?? 'N/A'); ?></td>
-                                    <td>
-                                        <div style="max-width: 200px; white-space: normal; word-wrap: break-word;">
-                                            <?php echo htmlspecialchars($referral['referral_reason']); ?>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style="max-width: 150px; white-space: normal; word-wrap: break-word;">
-                                            <?php echo htmlspecialchars($destination); ?>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge <?php echo $badge_class; ?>">
-                                            <?php echo ucfirst($referral['status']); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div style="font-size: 0.85rem;">
-                                            <?php echo date('M j, Y', strtotime($referral['referral_date'])); ?>
-                                            <br><small><?php echo date('g:i A', strtotime($referral['referral_date'])); ?></small>
-                                        </div>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($issuer_name); ?></td>
-                                    <td>
-                                        <div class="actions-group">
-                                            <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['referral_id']; ?>)" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <?php if ($referral['status'] === 'voided'): ?>
-                                                <form method="POST" style="display: inline;">
-                                                    <input type="hidden" name="action" value="reactivate">
-                                                    <input type="hidden" name="referral_id" value="<?php echo $referral['id']; ?>">
-                                                    <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reactivate this referral?')" title="Reactivate">
-                                                        <i class="fas fa-redo"></i>
-                                                    </button>
-                                                </form>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
+                                    <th>Referral #</th>
+                                    <th>Patient</th>
+                                    <th>Barangay</th>
+                                    <th>Reason for Referral</th>
+                                    <th>Referred Facility</th>
+                                    <th>Status</th>
+                                    <th>Issued Date</th>
+                                    <th>Issued By</th>
+                                    <th>Actions</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($referrals as $referral):
+                                    $patient_name = trim($referral['first_name'] . ' ' . ($referral['middle_name'] ? $referral['middle_name'] . ' ' : '') . $referral['last_name']);
+                                    $issuer_name = trim($referral['issuer_first_name'] . ' ' . $referral['issuer_last_name']);
 
-                <!-- Mobile Card View (for very small screens) -->
-                <div class="mobile-cards" style="display: none;">
-                    <?php foreach ($referrals as $referral):
-                        $patient_name = trim($referral['first_name'] . ' ' . ($referral['middle_name'] ? $referral['middle_name'] . ' ' : '') . $referral['last_name']);
-                        $issuer_name = trim($referral['issuer_first_name'] . ' ' . $referral['issuer_last_name']);
-                        
-                        // Determine destination based on destination_type
-                        if ($referral['destination_type'] === 'external') {
-                            $destination = $referral['external_facility_name'] ?: 'External Facility';
-                        } else {
-                            $destination = $referral['referred_facility_name'] ?: 'Internal Facility';
-                        }
+                                    // Determine destination based on destination_type
+                                    if ($referral['destination_type'] === 'external') {
+                                        $destination = $referral['external_facility_name'] ?: 'External Facility';
+                                    } else {
+                                        $destination = $referral['referred_facility_name'] ?: 'Internal Facility';
+                                    }
 
-                        // Determine badge class based on status
-                        $badge_class = 'badge-secondary';
-                        switch ($referral['status']) {
-                            case 'active': $badge_class = 'badge-success'; break;
-                            case 'accepted': $badge_class = 'badge-info'; break;
-                            case 'completed': $badge_class = 'badge-primary'; break;
-                            case 'cancelled': $badge_class = 'badge-danger'; break;
-                            default: $badge_class = 'badge-secondary'; break;
-                        }
-                    ?>
-                        <div class="mobile-card">
-                            <div class="mobile-card-header">
-                                <strong><?php echo htmlspecialchars($referral['referral_num']); ?></strong>
-                                <span class="badge <?php echo $badge_class; ?>"><?php echo ucfirst($referral['status']); ?></span>
+                                    // Determine badge class based on status
+                                    $badge_class = 'badge-secondary';
+                                    switch ($referral['status']) {
+                                        case 'active':
+                                            $badge_class = 'badge-success';
+                                            break;
+                                        case 'accepted':
+                                            $badge_class = 'badge-info';
+                                            break;
+                                        case 'completed':
+                                            $badge_class = 'badge-primary';
+                                            break;
+                                        case 'cancelled':
+                                            $badge_class = 'badge-danger';
+                                            break;
+                                        default:
+                                            $badge_class = 'badge-secondary';
+                                            break;
+                                    }
+                                ?>
+                                    <tr>
+                                        <td><strong><?php echo htmlspecialchars($referral['referral_num']); ?></strong></td>
+                                        <td>
+                                            <div style="max-width: 150px;">
+                                                <div style="font-weight: 600;"><?php echo htmlspecialchars($patient_name); ?></div>
+                                                <small style="color: #6c757d;"><?php echo htmlspecialchars($referral['patient_number']); ?></small>
+                                            </div>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($referral['barangay'] ?? 'N/A'); ?></td>
+                                        <td>
+                                            <div style="max-width: 200px; white-space: normal; word-wrap: break-word;">
+                                                <?php echo htmlspecialchars($referral['referral_reason']); ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style="max-width: 150px; white-space: normal; word-wrap: break-word;">
+                                                <?php echo htmlspecialchars($destination); ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge <?php echo $badge_class; ?>">
+                                                <?php echo ucfirst($referral['status']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style="font-size: 0.85rem;">
+                                                <?php echo date('M j, Y', strtotime($referral['referral_date'])); ?>
+                                                <br><small><?php echo date('g:i A', strtotime($referral['referral_date'])); ?></small>
+                                            </div>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($issuer_name); ?></td>
+                                        <td>
+                                            <div class="actions-group">
+                                                <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['referral_id']; ?>)" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <?php if ($referral['status'] === 'voided'): ?>
+                                                    <form method="POST" style="display: inline;">
+                                                        <input type="hidden" name="action" value="reactivate">
+                                                        <input type="hidden" name="referral_id" value="<?php echo $referral['id']; ?>">
+                                                        <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reactivate this referral?')" title="Reactivate">
+                                                            <i class="fas fa-redo"></i>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Card View (for very small screens) -->
+                    <div class="mobile-cards" style="display: none;">
+                        <?php foreach ($referrals as $referral):
+                            $patient_name = trim($referral['first_name'] . ' ' . ($referral['middle_name'] ? $referral['middle_name'] . ' ' : '') . $referral['last_name']);
+                            $issuer_name = trim($referral['issuer_first_name'] . ' ' . $referral['issuer_last_name']);
+
+                            // Determine destination based on destination_type
+                            if ($referral['destination_type'] === 'external') {
+                                $destination = $referral['external_facility_name'] ?: 'External Facility';
+                            } else {
+                                $destination = $referral['referred_facility_name'] ?: 'Internal Facility';
+                            }
+
+                            // Determine badge class based on status
+                            $badge_class = 'badge-secondary';
+                            switch ($referral['status']) {
+                                case 'active':
+                                    $badge_class = 'badge-success';
+                                    break;
+                                case 'accepted':
+                                    $badge_class = 'badge-info';
+                                    break;
+                                case 'completed':
+                                    $badge_class = 'badge-primary';
+                                    break;
+                                case 'cancelled':
+                                    $badge_class = 'badge-danger';
+                                    break;
+                                default:
+                                    $badge_class = 'badge-secondary';
+                                    break;
+                            }
+                        ?>
+                            <div class="mobile-card">
+                                <div class="mobile-card-header">
+                                    <strong><?php echo htmlspecialchars($referral['referral_num']); ?></strong>
+                                    <span class="badge <?php echo $badge_class; ?>"><?php echo ucfirst($referral['status']); ?></span>
+                                </div>
+                                <div class="mobile-card-body">
+                                    <div class="mobile-card-field">
+                                        <span class="mobile-card-label">Patient:</span>
+                                        <?php echo htmlspecialchars($patient_name); ?> (<?php echo htmlspecialchars($referral['patient_number']); ?>)
+                                    </div>
+                                    <div class="mobile-card-field">
+                                        <span class="mobile-card-label">Barangay:</span>
+                                        <?php echo htmlspecialchars($referral['barangay'] ?? 'N/A'); ?>
+                                    </div>
+                                    <div class="mobile-card-field">
+                                        <span class="mobile-card-label">Referral Reason:</span>
+                                        <?php echo htmlspecialchars($referral['referral_reason']); ?>
+                                    </div>
+                                    <div class="mobile-card-field">
+                                        <span class="mobile-card-label">Destination:</span>
+                                        <?php echo htmlspecialchars($destination); ?>
+                                    </div>
+                                    <div class="mobile-card-field">
+                                        <span class="mobile-card-label">Date:</span>
+                                        <?php echo date('M j, Y g:i A', strtotime($referral['referral_date'])); ?>
+                                    </div>
+                                    <div class="mobile-card-field">
+                                        <span class="mobile-card-label">Issued By:</span>
+                                        <?php echo htmlspecialchars($issuer_name); ?>
+                                    </div>
+                                    <div class="actions-group" style="margin-top: 0.75rem;">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['referral_id']; ?>)">
+                                            <i class="fas fa-eye"></i> View Details
+                                        </button>
+                                        <?php if ($referral['status'] === 'cancelled'): ?>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="action" value="reactivate">
+                                                <input type="hidden" name="referral_id" value="<?php echo $referral['id']; ?>">
+                                                <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reactivate this referral?')">
+                                                    <i class="fas fa-redo"></i> Reactivate
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mobile-card-body">
-                                <div class="mobile-card-field">
-                                    <span class="mobile-card-label">Patient:</span>
-                                    <?php echo htmlspecialchars($patient_name); ?> (<?php echo htmlspecialchars($referral['patient_number']); ?>)
-                                </div>
-                                <div class="mobile-card-field">
-                                    <span class="mobile-card-label">Barangay:</span>
-                                    <?php echo htmlspecialchars($referral['barangay'] ?? 'N/A'); ?>
-                                </div>
-                                <div class="mobile-card-field">
-                                    <span class="mobile-card-label">Referral Reason:</span>
-                                    <?php echo htmlspecialchars($referral['referral_reason']); ?>
-                                </div>
-                                <div class="mobile-card-field">
-                                    <span class="mobile-card-label">Destination:</span>
-                                    <?php echo htmlspecialchars($destination); ?>
-                                </div>
-                                <div class="mobile-card-field">
-                                    <span class="mobile-card-label">Date:</span>
-                                    <?php echo date('M j, Y g:i A', strtotime($referral['referral_date'])); ?>
-                                </div>
-                                <div class="mobile-card-field">
-                                    <span class="mobile-card-label">Issued By:</span>
-                                    <?php echo htmlspecialchars($issuer_name); ?>
-                                </div>
-                                <div class="actions-group" style="margin-top: 0.75rem;">
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="viewReferral(<?php echo $referral['referral_id']; ?>)">
-                                        <i class="fas fa-eye"></i> View Details
-                                    </button>
-                                    <?php if ($referral['status'] === 'cancelled'): ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="reactivate">
-                                            <input type="hidden" name="referral_id" value="<?php echo $referral['id']; ?>">
-                                            <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reactivate this referral?')">
-                                                <i class="fas fa-redo"></i> Reactivate
-                                            </button>
-                                        </form>
-                                    <?php endif; ?>
-                                </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Pagination Container -->
+                <?php if ($total_records > 0): ?>
+                    <div class="pagination-container">
+                        <div class="pagination-info">
+                            <div class="records-info">
+                                Showing <strong><?php echo (($page - 1) * $per_page) + 1; ?></strong> to 
+                                <strong><?php echo min($page * $per_page, $total_records); ?></strong> of 
+                                <strong><?php echo $total_records; ?></strong> referrals
+                            </div>
+                            
+                            <div class="page-size-selector">
+                                <label for="perPageSelect">Show:</label>
+                                <select id="perPageSelect" onchange="changePageSize(this.value)">
+                                    <option value="10" <?php echo $per_page == 10 ? 'selected' : ''; ?>>10</option>
+                                    <option value="25" <?php echo $per_page == 25 ? 'selected' : ''; ?>>25</option>
+                                    <option value="50" <?php echo $per_page == 50 ? 'selected' : ''; ?>>50</option>
+                                    <option value="100" <?php echo $per_page == 100 ? 'selected' : ''; ?>>100</option>
+                                </select>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+
+                        <?php if ($total_pages > 1): ?>
+                            <div class="pagination-controls">
+                                <!-- Previous button -->
+                                <?php if ($page > 1): ?>
+                                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>" 
+                                       class="pagination-btn prev">
+                                        <i class="fas fa-chevron-left"></i> Previous
+                                    </a>
+                                <?php else: ?>
+                                    <span class="pagination-btn prev disabled">
+                                        <i class="fas fa-chevron-left"></i> Previous
+                                    </span>
+                                <?php endif; ?>
+
+                                <?php
+                                // Calculate page numbers to show
+                                $start_page = max(1, $page - 2);
+                                $end_page = min($total_pages, $page + 2);
+                                
+                                // Show first page if not in range
+                                if ($start_page > 1): ?>
+                                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>" 
+                                       class="pagination-btn page-num">1</a>
+                                    <?php if ($start_page > 2): ?>
+                                        <span class="pagination-ellipsis">...</span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+
+                                <!-- Page numbers -->
+                                <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
+                                    <?php if ($i == $page): ?>
+                                        <span class="pagination-btn active page-num"><?php echo $i; ?></span>
+                                    <?php else: ?>
+                                        <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>" 
+                                           class="pagination-btn page-num"><?php echo $i; ?></a>
+                                    <?php endif; ?>
+                                <?php endfor; ?>
+
+                                <!-- Show last page if not in range -->
+                                <?php if ($end_page < $total_pages): ?>
+                                    <?php if ($end_page < $total_pages - 1): ?>
+                                        <span class="pagination-ellipsis">...</span>
+                                    <?php endif; ?>
+                                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>" 
+                                       class="pagination-btn page-num"><?php echo $total_pages; ?></a>
+                                <?php endif; ?>
+
+                                <!-- Next button -->
+                                <?php if ($page < $total_pages): ?>
+                                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>" 
+                                       class="pagination-btn next">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                <?php else: ?>
+                                    <span class="pagination-btn next disabled">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
+
+
     </section>
 
     <!-- Void Referral Modal -->
@@ -1584,7 +1958,7 @@ try {
                 <h3>Referral Details</h3>
                 <p style="margin: 0.5rem 0 0; opacity: 0.9;">Complete information about this referral</p>
             </div>
-            
+
             <div class="referral-modal-body">
                 <div id="referralDetailsContent">
                     <!-- Content will be loaded via JavaScript -->
@@ -1594,21 +1968,69 @@ try {
                     </div>
                 </div>
             </div>
-            
+
             <div class="referral-modal-actions">
-                <button type="button" class="modal-btn modal-btn-warning" onclick="editReferral()" id="editReferralBtn">
+                <!-- Edit Button - Show for Active status -->
+                <button type="button" class="modal-btn modal-btn-warning" onclick="editReferral()" id="editReferralBtn" style="display: none;">
                     <i class="fas fa-edit"></i> Edit
                 </button>
-                <button type="button" class="modal-btn modal-btn-danger" onclick="cancelReferral()" id="cancelReferralBtn">
-                    <i class="fas fa-ban"></i> Void
+
+                <!-- Cancel Button - Show for Active status -->
+                <button type="button" class="modal-btn modal-btn-danger" onclick="cancelReferral()" id="cancelReferralBtn" style="display: none;">
+                    <i class="fas fa-times-circle"></i> Cancel Referral
                 </button>
-                <button type="button" class="modal-btn modal-btn-success" onclick="markComplete()" id="markCompleteBtn">
-                    <i class="fas fa-check"></i> Complete
+
+                <!-- Reinstate Button - Show for Cancelled/Expired status -->
+                <button type="button" class="modal-btn modal-btn-success" onclick="reinstateReferral()" id="reinstateReferralBtn" style="display: none;">
+                    <i class="fas fa-redo"></i> Reinstate
                 </button>
-                <button type="button" class="modal-btn modal-btn-primary" onclick="printReferral()">
+
+                <!-- Print Button - Always available -->
+                <button type="button" class="modal-btn modal-btn-primary" onclick="printReferral()" id="printReferralBtn">
                     <i class="fas fa-print"></i> Print
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Cancel Referral Modal -->
+    <div id="cancelReferralModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-times-circle text-danger"></i> Cancel Referral</h3>
+                <button type="button" class="close" onclick="closeModal('cancelReferralModal')">&times;</button>
+            </div>
+            <form id="cancelReferralForm">
+                <div class="alert" style="color: #856404; background-color: #fff3cd; border: 1px solid #ffeaa7; margin-bottom: 1rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action will cancel the referral and notify all involved parties. This action can be undone later using the "Reinstate" option.
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="cancel_reason"><strong>Reason for Cancellation *</strong></label>
+                    <textarea id="cancel_reason" name="cancel_reason" rows="4" required
+                        placeholder="Please provide a detailed reason for cancelling this referral (minimum 10 characters)..."
+                        style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; resize: vertical; min-height: 100px;"></textarea>
+                    <small style="color: #666; font-size: 0.85em;">This reason will be logged and visible in the referral history.</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="cancel_employee_password"><strong>Your Password *</strong></label>
+                    <input type="password" id="cancel_employee_password" name="employee_password" required
+                        placeholder="Enter your employee password to confirm cancellation"
+                        style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <small style="color: #666; font-size: 0.85em;">Password verification is required for security purposes.</small>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('cancelReferralModal')" style="min-width: 100px;">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger" style="min-width: 140px;">
+                        <i class="fas fa-times-circle"></i> Cancel Referral
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1634,6 +2056,51 @@ try {
         </div>
     </div>
 
+    <!-- Reinstate Referral Confirmation Modal -->
+    <div id="reinstateReferralModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;text-align: left;">
+            <div class="modal-header">
+                <h3><i class="fas fa-undo-alt" style="color: #28a745;"></i> Reinstate Referral</h3>
+                <button type="button" class="close" onclick="closeModal('reinstateReferralModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #e8f5e8; border: 1px solid #c3e6c3; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <h4 style="color: #155724; margin: 0 0 0.5rem 0; font-size: 1rem;">
+                        <i class="fas fa-info-circle"></i> Confirmation Required
+                    </h4>
+                    <p style="margin: 0; color: #155724; line-height: 1.5;">Are you sure you want to reinstate this referral?</p>
+                </div>
+                
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <h5 style="color: #0077b6; margin: 0 0 0.75rem 0; font-size: 0.95rem;">
+                        <i class="fas fa-list-ul"></i> This action will:
+                    </h5>
+                    <ul style="margin: 0; padding-left: 1.2rem; color: #555;">
+                        <li style="margin-bottom: 0.5rem;">Reactivate the referral status to <strong>"Active"</strong></li>
+                        <li style="margin-bottom: 0.5rem;">Make it available for processing again</li>
+                        <li style="margin-bottom: 0.5rem;">Log the reinstatement action for audit purposes</li>
+                        <li style="margin: 0;">Send notification to relevant healthcare providers</li>
+                    </ul>
+                </div>
+
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 1rem;">
+                    <p style="margin: 0; color: #856404; font-size: 0.9rem;">
+                        <i class="fas fa-exclamation-triangle" style="color: #f39c12;"></i>
+                        <strong>Note:</strong> Once reinstated, this referral will become active and ready for patient processing.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('reinstateReferralModal')">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-success" onclick="confirmReinstatement()" id="confirmReinstateBtn">
+                    <i class="fas fa-undo-alt"></i> Yes, Reinstate Referral
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentReferralId = null;
         let pendingAction = null;
@@ -1645,12 +2112,12 @@ try {
 
         function viewReferral(referralId) {
             currentReferralId = referralId;
-            
+
             // Show modal with new styling
             const modal = document.getElementById('viewReferralModal');
             modal.classList.add('show');
             document.body.style.overflow = 'hidden';
-            
+
             // Load referral details via AJAX
             fetch(`get_referral_details.php?id=${referralId}`)
                 .then(response => response.json())
@@ -1683,7 +2150,7 @@ try {
 
             const patient_name = `${referral.first_name} ${referral.middle_name ? referral.middle_name + ' ' : ''}${referral.last_name}`;
             const issuer_name = `${referral.issuer_first_name} ${referral.issuer_last_name}`;
-            
+
             // Determine destination based on destination_type
             let destination = '';
             if (referral.destination_type === 'external') {
@@ -1695,11 +2162,11 @@ try {
             // Format vitals for display
             let vitalsContent = '';
             let hasVitals = false;
-            
+
             if (vitals && vitals.length > 0) {
                 const latestVital = vitals[0]; // Assuming vitals are sorted by date DESC
                 vitalsContent = '<div class="vitals-summary">';
-                
+
                 if (latestVital.blood_pressure) {
                     vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.blood_pressure}</div><div class="vital-label">Blood Pressure</div></div>`;
                     hasVitals = true;
@@ -1724,9 +2191,9 @@ try {
                     vitalsContent += `<div class="vital-item"><div class="vital-value">${latestVital.height}</div><div class="vital-label">Height (cm)</div></div>`;
                     hasVitals = true;
                 }
-                
+
                 vitalsContent += '</div>';
-                
+
                 if (latestVital.remarks) {
                     vitalsContent += `
                         <div class="summary-item" style="margin-top: 1rem;">
@@ -1844,28 +2311,140 @@ try {
         function updateModalButtons(status) {
             const editBtn = document.getElementById('editReferralBtn');
             const cancelBtn = document.getElementById('cancelReferralBtn');
-            const completeBtn = document.getElementById('markCompleteBtn');
+            const reinstateBtn = document.getElementById('reinstateReferralBtn');
+            const printBtn = document.getElementById('printReferralBtn');
 
-            // Hide/show buttons based on status
-            if (status === 'voided' || status === 'completed') {
-                editBtn.style.display = 'none';
-                cancelBtn.style.display = 'none';
-                completeBtn.style.display = 'none';
-            } else {
-                editBtn.style.display = 'inline-flex';
-                cancelBtn.style.display = 'inline-flex';
-                completeBtn.style.display = 'inline-flex';
+            // Hide all buttons initially
+            editBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+            reinstateBtn.style.display = 'none';
+
+            // Show buttons based on status
+            switch (status.toLowerCase()) {
+                case 'active':
+                    // Active: Show Edit, Cancel Referral, Print
+                    editBtn.style.display = 'inline-flex';
+                    cancelBtn.style.display = 'inline-flex';
+                    break;
+
+                case 'cancelled':
+                case 'expired':
+                    // Cancelled/Expired: Show Reinstate, Print (only for these specific statuses)
+                    reinstateBtn.style.display = 'inline-flex';
+                    break;
+
+                case 'voided':
+                    // Voided: Show Print only (voided referrals cannot be reinstated)
+                    break;
+
+                case 'accepted':
+                case 'issued':
+                case 'completed':
+                    // Accepted/Issued/Completed: Show Print only (status updated automatically)
+                    // Print button is always visible, so no additional action needed
+                    break;
+
+                default:
+                    // For any other status, show only Print
+                    break;
             }
+
+            // Print button is always visible
+            printBtn.style.display = 'inline-flex';
         }
 
         function editReferral() {
+            if (!currentReferralId) {
+                console.warn('No referral ID available for editing');
+                alert('Unable to edit referral: Referral ID not found. Please try again.');
+                return;
+            }
             pendingAction = 'edit';
             document.getElementById('passwordVerificationModal').style.display = 'block';
         }
 
         function cancelReferral() {
-            pendingAction = 'cancel';
-            document.getElementById('passwordVerificationModal').style.display = 'block';
+            if (!currentReferralId) {
+                showErrorMessage('Unable to cancel referral: Referral ID not found. Please try again.');
+                return;
+            }
+            
+            // Clear previous form data and show modal
+            document.getElementById('cancel_reason').value = '';
+            document.getElementById('cancel_employee_password').value = '';
+            document.getElementById('cancelReferralModal').style.display = 'block';
+        }
+
+
+
+        function reinstateReferral() {
+            if (!currentReferralId) {
+                console.warn('No referral ID available for reinstatement');
+                showErrorMessage('Unable to reinstate referral: Referral ID not found. Please try again.');
+                return;
+            }
+
+            // Show custom confirmation modal
+            document.getElementById('reinstateReferralModal').style.display = 'block';
+        }
+
+        function confirmReinstatement() {
+            if (!currentReferralId) {
+                showErrorMessage('Unable to reinstate referral: Referral ID not found.');
+                return;
+            }
+
+            // Close the confirmation modal
+            closeModal('reinstateReferralModal');
+            
+            // Disable the reinstate button to prevent double-clicks
+            const reinstateBtn = document.getElementById('reinstateReferralBtn');
+            const confirmBtn = document.getElementById('confirmReinstateBtn');
+            const originalText = reinstateBtn ? reinstateBtn.innerHTML : 'Reinstate';
+            
+            if (reinstateBtn) {
+                reinstateBtn.disabled = true;
+                reinstateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reinstating...';
+            }
+
+            // Send AJAX request to reinstate referral
+            fetch('reinstate_referral.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `referral_id=${encodeURIComponent(currentReferralId)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI to reflect active status
+                    updateReferralStatusInUI('active');
+                    
+                    // Show success message with snackbar
+                    showSuccessMessage('Referral has been successfully reinstated and is now active.');
+                    
+                    // Optionally refresh the page to show updated data in the table
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                    
+                } else {
+                    // Show error message with snackbar
+                    showErrorMessage(data.message || 'Failed to reinstate referral. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error reinstating referral:', error);
+                showErrorMessage('Error reinstating referral. Please check your connection and try again.');
+            })
+            .finally(() => {
+                // Re-enable reinstate button
+                if (reinstateBtn) {
+                    reinstateBtn.disabled = false;
+                    reinstateBtn.innerHTML = originalText;
+                }
+            });
         }
 
         function markComplete() {
@@ -1883,14 +2462,311 @@ try {
         }
 
         function printReferral() {
-            if (currentReferralId) {
-                window.open(`print_referral.php?id=${currentReferralId}`, '_blank');
+            if (!currentReferralId) {
+                console.warn('No referral ID available for printing');
+                alert('Unable to print referral: Referral ID not found. Please try again.');
+                return;
             }
+
+            // Get current referral details from the modal
+            const referralDetailsContent = document.getElementById('referralDetailsContent');
+            if (!referralDetailsContent) {
+                alert('Referral details not loaded. Please try again.');
+                return;
+            }
+
+            // Create print window with professional styling
+            const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+            
+            if (!printWindow) {
+                alert('Pop-up blocked. Please allow pop-ups for this site to print referrals.');
+                return;
+            }
+
+            // Get current date and time for print timestamp
+            const printTimestamp = new Date().toLocaleString();
+
+            // Generate print content with professional medical document styling
+            const printContent = generatePrintContent(referralDetailsContent.innerHTML, printTimestamp);
+            
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+
+            // Focus the print window and trigger print dialog
+            printWindow.focus();
+            
+            // Small delay to ensure content is rendered before printing
+            setTimeout(() => {
+                printWindow.print();
+                // Note: Don't auto-close the window to allow user to review or reprint
+                // printWindow.close(); // Uncomment if auto-close is desired
+            }, 500);
+        }
+
+        // Function to generate professional print content
+        function generatePrintContent(modalContent, timestamp) {
+            return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referral Details - CHO Koronadal</title>
+    <style>
+        /* Print-specific styles for professional medical document */
+        @media print {
+            @page {
+                margin: 1in;
+                size: A4;
+            }
+            
+            body {
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.6;
+            color: #000;
+            background: white;
+            font-size: 12pt;
+        }
+
+        .print-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0077b6;
+        }
+
+        .print-header h1 {
+            color: #0077b6;
+            font-size: 24pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .print-header h2 {
+            color: #023e8a;
+            font-size: 18pt;
+            font-weight: normal;
+            margin-bottom: 10px;
+        }
+
+        .print-header .header-info {
+            font-size: 10pt;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .referral-summary-card {
+            background: transparent !important;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .summary-title {
+            font-weight: bold;
+            color: #0077b6;
+            font-size: 14pt;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 8px;
+        }
+
+        .summary-title i {
+            background: #e3f2fd;
+            padding: 6px;
+            border-radius: 4px;
+            color: #0077b6;
+            font-size: 12pt;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .summary-label {
+            font-size: 9pt;
+            color: #666;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-value {
+            font-size: 11pt;
+            color: #000;
+            font-weight: normal;
+            word-wrap: break-word;
+            min-height: 16px;
+        }
+
+        .summary-value.highlight {
+            color: #0077b6;
+            font-weight: bold;
+        }
+
+        .summary-value.reason {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 3px solid #0077b6;
+            margin-top: 8px;
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .vitals-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .vital-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .vital-value {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #0077b6;
+            display: block;
+        }
+
+        .vital-label {
+            font-size: 8pt;
+            color: #666;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .print-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 9pt;
+            color: #666;
+            text-align: center;
+        }
+
+        .print-timestamp {
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        /* Hide modal-specific elements */
+        .modal-btn,
+        .referral-modal-actions,
+        button {
+            display: none !important;
+        }
+
+        /* Ensure proper spacing for sections */
+        .summary-section {
+            margin-bottom: 20px;
+        }
+
+        .summary-section:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Professional table styling for any tabular data */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        table th,
+        table td {
+            padding: 8px 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 10pt;
+        }
+
+        table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #0077b6;
+        }
+
+        /* Page break controls */
+        .page-break-before {
+            page-break-before: always;
+        }
+
+        .page-break-after {
+            page-break-after: always;
+        }
+
+        .no-page-break {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+    <!-- Document Header -->
+    <div class="print-header">
+        <h1>City Health Office</h1>
+        <h2>Koronadal City, South Cotabato</h2>
+        <div class="header-info">
+            <strong>MEDICAL REFERRAL DOCUMENT</strong><br>
+            This is an official medical referral issued by CHO Koronadal
+        </div>
+    </div>
+
+    <!-- Referral Content -->
+    <div class="referral-content">
+        ${modalContent}
+    </div>
+
+    <!-- Document Footer -->
+    <div class="print-footer">
+        <div>
+            <strong>CHO Koronadal - Health Management System</strong><br>
+            For inquiries, contact the City Health Office at [Contact Information]
+        </div>
+        <div class="print-timestamp">
+            Document printed on: ${timestamp}
+        </div>
+    </div>
+</body>
+</html>`;
         }
 
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
-            
+
             // Clear modal contents and reset variables
             if (modalId === 'viewReferralModal') {
                 currentReferralId = null;
@@ -1901,14 +2777,23 @@ try {
                     </div>
                 `;
             }
-            
+
             if (modalId === 'voidModal') {
                 document.getElementById('void_reason').value = '';
             }
-            
+
             if (modalId === 'passwordVerificationModal') {
                 document.getElementById('employee_password').value = '';
                 pendingAction = null;
+            }
+            
+            if (modalId === 'cancelReferralModal') {
+                document.getElementById('cancel_reason').value = '';
+                document.getElementById('cancel_employee_password').value = '';
+            }
+            
+            if (modalId === 'reinstateReferralModal') {
+                // Reset any state if needed
             }
         }
 
@@ -1917,7 +2802,7 @@ try {
             const modal = document.getElementById('viewReferralModal');
             modal.classList.remove('show');
             document.body.style.overflow = '';
-            
+
             // Clear modal contents and reset variables
             document.getElementById('referralDetailsContent').innerHTML = `
                 <div style="text-align: center; padding: 2rem;">
@@ -1928,47 +2813,260 @@ try {
             currentReferralId = null;
         }
 
-        // Password verification form handler
-        document.getElementById('passwordVerificationForm').addEventListener('submit', function(e) {
+        // Function to update UI after referral status change
+        function updateReferralStatusInUI(newStatus, reason = '') {
+            // Update modal buttons based on new status
+            updateModalButtons(newStatus);
+            
+            // Update status in the referral details if they're currently displayed
+            const statusElements = document.querySelectorAll('[data-referral-id="' + currentReferralId + '"] .badge');
+            statusElements.forEach(element => {
+                // Remove old badge classes
+                element.classList.remove('badge-primary', 'badge-success', 'badge-warning', 'badge-danger', 'badge-secondary');
+                
+                // Add new badge class and text based on status
+                switch(newStatus.toLowerCase()) {
+                    case 'cancelled':
+                        element.classList.add('badge-danger');
+                        element.textContent = 'Cancelled';
+                        break;
+                    case 'active':
+                        element.classList.add('badge-success');
+                        element.textContent = 'Active';
+                        break;
+                    case 'completed':
+                        element.classList.add('badge-primary');
+                        element.textContent = 'Completed';
+                        break;
+                    case 'expired':
+                        element.classList.add('badge-warning');
+                        element.textContent = 'Expired';
+                        break;
+                    case 'voided':
+                        element.classList.add('badge-secondary');
+                        element.textContent = 'Voided';
+                        break;
+                    default:
+                        element.classList.add('badge-secondary');
+                        element.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                }
+            });
+            
+            // If we're viewing details, update the status in the modal content
+            const modalStatusElements = document.querySelectorAll('#referralDetailsContent .summary-value');
+            modalStatusElements.forEach(element => {
+                if (element.textContent.toLowerCase().includes('status') || 
+                    element.closest('.summary-item')?.querySelector('.summary-label')?.textContent?.toLowerCase().includes('status')) {
+                    element.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                    if (newStatus.toLowerCase() === 'cancelled') {
+                        element.style.color = '#dc3545';
+                        element.style.fontWeight = '600';
+                    }
+                }
+            });
+        }
+
+        // Helper function to show success snackbar (upper right corner)
+        function showSuccessMessage(message) {
+            const snackbar = document.createElement('div');
+            snackbar.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #28a745, #20c997);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+                z-index: 15000;
+                font-weight: 500;
+                min-width: 300px;
+                max-width: 500px;
+                animation: slideInRight 0.3s ease;
+            `;
+            
+            snackbar.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-check-circle" style="font-size: 1.2em;"></i>
+                    <span style="flex: 1;">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="background: none; border: none; color: white; font-size: 1.2em; cursor: pointer; opacity: 0.8;">
+                        &times;
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(snackbar);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (snackbar.parentElement) {
+                    snackbar.style.animation = 'slideOutRight 0.3s ease';
+                    setTimeout(() => snackbar.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // Helper function to show error snackbar (upper right corner)
+        function showErrorMessage(message) {
+            const snackbar = document.createElement('div');
+            snackbar.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #dc3545, #c82333);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+                z-index: 15000;
+                font-weight: 500;
+                min-width: 300px;
+                max-width: 500px;
+                animation: slideInRight 0.3s ease;
+            `;
+            
+            snackbar.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 1.2em;"></i>
+                    <span style="flex: 1;">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="background: none; border: none; color: white; font-size: 1.2em; cursor: pointer; opacity: 0.8;">
+                        &times;
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(snackbar);
+            
+            // Auto-remove after 8 seconds (longer for errors)
+            setTimeout(() => {
+                if (snackbar.parentElement) {
+                    snackbar.style.animation = 'slideOutRight 0.3s ease';
+                    setTimeout(() => snackbar.remove(), 300);
+                }
+            }, 8000);
+        }
+
+        // Cancel referral form handler
+        document.getElementById('cancelReferralForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const password = document.getElementById('employee_password').value;
-            
-            // Verify password via AJAX
-            fetch('verify_employee_password.php', {
+
+            const reason = document.getElementById('cancel_reason').value.trim();
+            const password = document.getElementById('cancel_employee_password').value;
+
+            // Validate fields
+            if (!reason) {
+                alert('Please provide a reason for cancellation.');
+                document.getElementById('cancel_reason').focus();
+                return;
+            }
+
+            if (reason.length < 10) {
+                alert('Cancellation reason must be at least 10 characters long.');
+                document.getElementById('cancel_reason').focus();
+                return;
+            }
+
+            if (!password) {
+                alert('Please enter your password to confirm cancellation.');
+                document.getElementById('cancel_employee_password').focus();
+                return;
+            }
+
+            if (!currentReferralId) {
+                alert('Unable to cancel referral: Referral ID not found.');
+                return;
+            }
+
+            // Disable submit button and show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cancelling...';
+
+            // Send AJAX request to cancel referral
+            fetch('cancel_referral.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `password=${encodeURIComponent(password)}`
+                body: `referral_id=${encodeURIComponent(currentReferralId)}&reason=${encodeURIComponent(reason)}&password=${encodeURIComponent(password)}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    closeModal('passwordVerificationModal');
+                    // Close modal
+                    closeModal('cancelReferralModal');
                     
-                    if (pendingAction === 'edit') {
-                        window.location.href = `create_referral.php?edit=${currentReferralId}`;
-                    } else if (pendingAction === 'cancel') {
-                        if (confirm('Are you sure you want to cancel this referral? This action cannot be undone.')) {
-                            const form = document.createElement('form');
-                            form.method = 'POST';
-                            form.innerHTML = `
+                    // Update UI to reflect cancelled status
+                    updateReferralStatusInUI('cancelled', reason);
+                    
+                    // Show success snackbar
+                    showSuccessMessage('Referral has been successfully cancelled.');
+                    
+                    // Reload page after 2 seconds to refresh the table
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                    
+                } else {
+                    // Show specific error message from server
+                    showErrorMessage(data.message || 'Failed to cancel referral. Please try again.');
+                }
+            })
+            .catch(error => {
+                // Show simple error message
+                showErrorMessage('Unable to cancel referral. Please check your connection and try again.');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        });
+
+        // Password verification form handler
+        document.getElementById('passwordVerificationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const password = document.getElementById('employee_password').value;
+
+            // Verify password via AJAX
+            fetch('verify_employee_password.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `password=${encodeURIComponent(password)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closeModal('passwordVerificationModal');
+
+                        if (pendingAction === 'edit') {
+                            window.location.href = `update_referrals.php?id=${currentReferralId}`;
+                        } else if (pendingAction === 'cancel') {
+                            if (confirm('Are you sure you want to cancel this referral? This action cannot be undone.')) {
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.innerHTML = `
                                 <input type="hidden" name="action" value="void">
                                 <input type="hidden" name="referral_id" value="${currentReferralId}">
                                 <input type="hidden" name="void_reason" value="Cancelled by ${data.employee_name}">
                             `;
-                            document.body.appendChild(form);
-                            form.submit();
+                                document.body.appendChild(form);
+                                form.submit();
+                            }
                         }
+                    } else {
+                        alert('Invalid password. Please try again.');
                     }
-                } else {
-                    alert('Invalid password. Please try again.');
-                }
-            })
-            .catch(error => {
-                alert('Error verifying password. Please try again.');
-            });
+                })
+                .catch(error => {
+                    alert('Error verifying password. Please try again.');
+                });
         });
 
         // Close modal when clicking outside
@@ -1980,7 +3078,7 @@ try {
                     modal.style.display = 'none';
                 }
             });
-            
+
             // Handle new-style referral modal
             const referralModal = document.getElementById('viewReferralModal');
             if (event.target === referralModal) {
@@ -2018,7 +3116,7 @@ try {
         // Initialize responsive view on load
         document.addEventListener('DOMContentLoaded', function() {
             handleResponsiveView();
-            
+
             // Search form optimization
             const searchForm = document.getElementById('search-form');
             if (searchForm) {
@@ -2033,9 +3131,17 @@ try {
                 });
             }
         });
-        
+
         // Handle resize
         window.addEventListener('resize', handleResponsiveView);
+
+        // Pagination function
+        function changePageSize(perPage) {
+            const url = new URL(window.location);
+            url.searchParams.set('per_page', perPage);
+            url.searchParams.set('page', '1'); // Reset to first page when changing page size
+            window.location.href = url.toString();
+        }
     </script>
 </body>
 

@@ -17,7 +17,7 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 }
 
 // Check if role is authorized
-$authorized_roles = ['doctor', 'nurse', 'bhw', 'dho', 'records_officer', 'admin'];
+$authorized_roles = ['doctor', 'bhw', 'dho', 'records_officer', 'admin'];
 if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
     echo json_encode(['error' => 'Insufficient permissions']);
     exit();
@@ -32,9 +32,39 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 
 $referral_id = intval($_GET['id']);
+$employee_id = $_SESSION['employee_id'];
+$employee_role = strtolower($_SESSION['role']);
+
+// Get DHO's district_id from their facility assignment - only for DHO role
+$dho_district = null;
+if ($employee_role === 'dho') {
+    try {
+        $dho_district_sql = "SELECT f.district_id 
+                             FROM employees e 
+                             JOIN facilities f ON e.facility_id = f.facility_id 
+                             WHERE e.employee_id = ? AND e.role_id = 5";
+        $dho_district_stmt = $conn->prepare($dho_district_sql);
+        $dho_district_stmt->bind_param("i", $employee_id);
+        $dho_district_stmt->execute();
+        $dho_district_result = $dho_district_stmt->get_result();
+
+        if ($dho_district_result->num_rows === 0) {
+            echo json_encode(['error' => 'Access denied: No district assignment found']);
+            exit();
+        }
+
+        $row = $dho_district_result->fetch_assoc();
+        $dho_district = $row['district_id'];
+        $dho_district_stmt->close();
+    } catch (Exception $e) {
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        exit();
+    }
+}
 
 try {
     // Fetch complete referral details with patient and issuer information
+    // For DHO users, include district-based access control
     $sql = "
         SELECT r.*, 
                p.first_name, p.middle_name, p.last_name, p.username as patient_number, 
@@ -53,13 +83,29 @@ try {
         WHERE r.referral_id = ?
     ";
 
+    // Add district-based filtering for DHO users
+    if ($employee_role === 'dho' && $dho_district !== null) {
+        $sql .= " AND b.district_id = ?";
+    }
+
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $referral_id);
+    
+    // Bind parameters based on role
+    if ($employee_role === 'dho' && $dho_district !== null) {
+        $stmt->bind_param("ii", $referral_id, $dho_district);
+    } else {
+        $stmt->bind_param("i", $referral_id);
+    }
+    
     $stmt->execute();
     $result = $stmt->get_result();
     
     if ($result->num_rows === 0) {
-        echo json_encode(['error' => 'Referral not found']);
+        if ($employee_role === 'dho') {
+            echo json_encode(['error' => 'Referral not found or not within your assigned district']);
+        } else {
+            echo json_encode(['error' => 'Referral not found']);
+        }
         exit();
     }
     

@@ -11,7 +11,7 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 }
 
 // Check if role is authorized
-$authorized_roles = ['Doctor', 'Nurse', 'BHW', 'DHO', 'Records Officer', 'Admin'];
+$authorized_roles = ['Doctor', 'BHW', 'DHO', 'Records Officer', 'Admin'];
 if (!in_array($_SESSION['role'], $authorized_roles)) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Unauthorized role']);

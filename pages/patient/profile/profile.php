@@ -1187,7 +1187,7 @@ if (isset($_GET['logout'])) {
                         alt="User photo"
                         onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';">
 
-                    <div class="profile-info" style="z-index: 2; position: relative; width: 100%;">
+                    <div class="profile-info" style="z-index: 2; position: relative; width: 100%;align-items: anchor-center;">
                         <div class="profile-name-number">
                             <h2 style="
                                 margin: 0 0 0.5rem 0; 

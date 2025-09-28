@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 26, 2025 at 01:31 PM
+-- Generation Time: Sep 28, 2025 at 11:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -794,15 +794,37 @@ CREATE TABLE `referrals` (
   `referral_reason` text DEFAULT NULL,
   `referred_by` int(10) UNSIGNED DEFAULT NULL,
   `referral_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `status` enum('active','accepted','completed','cancelled') DEFAULT 'active'
+  `status` enum('active','accepted','cancelled','issued') DEFAULT 'active',
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `referrals`
 --
 
-INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring_facility_id`, `referred_to_facility_id`, `external_facility_name`, `vitals_id`, `service_id`, `destination_type`, `referral_reason`, `referred_by`, `referral_date`, `status`) VALUES
-(1, 'REF-20250925-0001', 7, 1, NULL, 'sassasa', 1, NULL, 'external', 'Needs lambing; kulang sa aruga\n\nRequested Service: sadaffasdf', 1, '2025-09-25 15:32:52', 'active');
+INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring_facility_id`, `referred_to_facility_id`, `external_facility_name`, `vitals_id`, `service_id`, `destination_type`, `referral_reason`, `referred_by`, `referral_date`, `status`, `updated_at`) VALUES
+(1, 'REF-20250925-0001', 7, 1, NULL, 'sassasa', 1, NULL, 'external', 'Needs lambing; kulang sa aruga\n\nRequested Service: sadaffasdf', 1, '2025-09-25 15:32:52', 'issued', '2025-09-28 08:59:52'),
+(2, 'REF-20250927-0001', 7, 4, 1, '', 2, 1, 'city_office', 'Need doctor\'s consultation.', 10, '2025-09-27 18:10:43', 'active', '2025-09-28 08:59:52'),
+(3, 'REF-20250927-0002', 33, 5, 1, '', 3, 1, 'city_office', 'Needs doctor check-up', 46, '2025-09-27 18:33:23', 'active', '2025-09-28 08:59:52'),
+(4, 'REF-20250927-0003', 35, 2, 1, '', 4, 1, 'city_office', 'Need doctor\'s consultation', 8, '2025-09-27 19:06:16', 'active', '2025-09-28 08:59:52'),
+(5, 'REF-20250927-0004', 15, 22, 3, '', 5, 1, 'district_office', 'Need proper check-up', 63, '2025-09-27 19:08:26', 'active', '2025-09-28 08:59:52');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `referral_logs`
+--
+
+CREATE TABLE `referral_logs` (
+  `log_id` int(10) UNSIGNED NOT NULL,
+  `referral_id` int(10) UNSIGNED NOT NULL,
+  `employee_id` int(10) UNSIGNED NOT NULL,
+  `action` varchar(50) NOT NULL,
+  `reason` text DEFAULT NULL,
+  `previous_status` varchar(50) DEFAULT NULL,
+  `new_status` varchar(50) DEFAULT NULL,
+  `timestamp` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -975,7 +997,11 @@ CREATE TABLE `vitals` (
 --
 
 INSERT INTO `vitals` (`vitals_id`, `patient_id`, `systolic_bp`, `diastolic_bp`, `heart_rate`, `respiratory_rate`, `temperature`, `weight`, `height`, `bmi`, `recorded_by`, `recorded_at`, `remarks`) VALUES
-(1, 7, 120, 80, 72, 18, 36.00, 75.00, 173.00, 25.00, 1, '2025-09-25 15:32:52', 'Miss na hatdog niya');
+(1, 7, 120, 80, 72, 18, 36.00, 75.00, 173.00, 25.00, 1, '2025-09-25 15:32:52', 'Miss na hatdog niya'),
+(2, 7, 120, 80, 72, 18, 36.00, 75.00, 173.00, 25.00, 10, '2025-09-27 18:10:43', 'Mainit ang ulo'),
+(3, 33, 120, 80, 72, 18, 36.00, 65.00, 155.00, 27.00, 46, '2025-09-27 18:33:23', ''),
+(4, 35, 120, 80, 72, 18, 36.00, 50.00, 155.00, 20.00, 8, '2025-09-27 19:06:16', 'Medyo okay'),
+(5, 15, 80, 70, 72, 18, 36.00, 60.00, 160.00, 23.00, 63, '2025-09-27 19:08:26', 'Kabado bente');
 
 --
 -- Indexes for dumped tables
@@ -1213,6 +1239,15 @@ ALTER TABLE `referrals`
   ADD KEY `idx_referral_num` (`referral_num`);
 
 --
+-- Indexes for table `referral_logs`
+--
+ALTER TABLE `referral_logs`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `idx_referral_id` (`referral_id`),
+  ADD KEY `idx_employee_id` (`employee_id`),
+  ADD KEY `idx_timestamp` (`timestamp`);
+
+--
 -- Indexes for table `roles`
 --
 ALTER TABLE `roles`
@@ -1423,7 +1458,13 @@ ALTER TABLE `receipts`
 -- AUTO_INCREMENT for table `referrals`
 --
 ALTER TABLE `referrals`
-  MODIFY `referral_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `referral_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `referral_logs`
+--
+ALTER TABLE `referral_logs`
+  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1459,7 +1500,7 @@ ALTER TABLE `visits`
 -- AUTO_INCREMENT for table `vitals`
 --
 ALTER TABLE `vitals`
-  MODIFY `vitals_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `vitals_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Constraints for dumped tables
@@ -1653,6 +1694,13 @@ ALTER TABLE `referrals`
   ADD CONSTRAINT `fk_referrals_referring_facility` FOREIGN KEY (`referring_facility_id`) REFERENCES `facilities` (`facility_id`),
   ADD CONSTRAINT `fk_referrals_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`),
   ADD CONSTRAINT `fk_referrals_vitals` FOREIGN KEY (`vitals_id`) REFERENCES `vitals` (`vitals_id`);
+
+--
+-- Constraints for table `referral_logs`
+--
+ALTER TABLE `referral_logs`
+  ADD CONSTRAINT `fk_referral_logs_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_referral_logs_referral` FOREIGN KEY (`referral_id`) REFERENCES `referrals` (`referral_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `service_items`

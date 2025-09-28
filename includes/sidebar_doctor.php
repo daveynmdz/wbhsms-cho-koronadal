@@ -118,25 +118,21 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= $nav_base ?>management/doctor/appointments.php"
-            class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-calendar-check"></i> Appointments
+        <a href="<?= $nav_base ?>management/doctor/patient_records_management.php"
+            class="<?= $activePage === 'medical_records' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-file-medical"></i> Patient Medical Records
+        </a>
+        <a href="<?= $nav_base ?>management/doctor/referrals.php"
+            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-share"></i> Referrals Management
         </a>
         <a href="<?= $nav_base ?>management/doctor/patient_consultations.php"
             class="<?= $activePage === 'consultations' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-stethoscope"></i> Consultations
         </a>
-        <a href="<?= $nav_base ?>management/doctor/patient_records_management.php"
-            class="<?= $activePage === 'medical_records' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-file-medical"></i> Medical Records
-        </a>
         <a href="<?= $nav_base ?>management/doctor/prescriptions.php"
             class="<?= $activePage === 'prescriptions' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-prescription"></i> Prescriptions
-        </a>
-        <a href="<?= $nav_base ?>management/doctor/referrals.php"
-            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-share"></i> Referrals
         </a>
         <a href="<?= $nav_base ?>management/doctor/laboratory_results.php"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">

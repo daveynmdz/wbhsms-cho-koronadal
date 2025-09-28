@@ -118,41 +118,17 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= $nav_base ?>management/dho/facility_management.php"
-            class="<?= $activePage === 'facilities' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-hospital"></i> Facility Management
-        </a>
-        <a href="<?= $nav_base ?>management/dho/program_oversight.php"
-            class="<?= $activePage === 'programs' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-project-diagram"></i> Program Oversight
-        </a>
-        <a href="<?= $nav_base ?>management/dho/compliance_monitoring.php"
-            class="<?= $activePage === 'compliance' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-shield-alt"></i> Compliance Monitoring
-        </a>
-        <a href="<?= $nav_base ?>management/dho/budget_management.php"
-            class="<?= $activePage === 'budget' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-coins"></i> Budget Management
-        </a>
-        <a href="<?= $nav_base ?>management/dho/staff_supervision.php"
-            class="<?= $activePage === 'staff' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-users"></i> Staff Supervision
-        </a>
-        <a href="<?= $nav_base ?>management/dho/patient_records_management.php"
+                <a href="<?= $nav_base ?>management/dho/patient_records_management.php"
             class="<?= $activePage === 'patient_records' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-users"></i> Patient Records
+        </a>
+        <a href="<?= $nav_base ?>management/dho/referrals_management.php"
+            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-share"></i> Referral Management
         </a>
         <a href="<?= $nav_base ?>management/dho/reports.php"
             class="<?= $activePage === 'reports' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-chart-bar"></i> Reports & Analytics
-        </a>
-        <a href="<?= $nav_base ?>management/dho/referrals.php"
-            class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-share"></i> Referral Management
-        </a>
-        <a href="<?= $nav_base ?>management/dho/health_data.php"
-            class="<?= $activePage === 'health_data' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-database"></i> Health Data Management
         </a>
         <a href="#"
             class="<?= $activePage === 'notifications' ? 'active' : '' ?> disabled" role="menuitem">

@@ -32,12 +32,14 @@ $employee_id = $_SESSION['employee_id'];
 // Include reusable topbar component
 require_once $root_path . '/includes/topbar.php';
 
-// Get employee's facility information
+// Get employee's facility information and barangay_id for BHW filtering
 $employee_facility_id = null;
 $employee_facility_name = '';
+$employee_barangay_id = null;
+$employee_role = strtolower($_SESSION['role']);
 try {
     $stmt = $conn->prepare("
-        SELECT e.facility_id, f.name as facility_name 
+        SELECT e.facility_id, f.name as facility_name, f.barangay_id 
         FROM employees e 
         JOIN facilities f ON e.facility_id = f.facility_id 
         WHERE e.employee_id = ?
@@ -48,6 +50,7 @@ try {
     if ($row = $result->fetch_assoc()) {
         $employee_facility_id = $row['facility_id'];
         $employee_facility_name = $row['facility_name'];
+        $employee_barangay_id = $row['barangay_id'];
     }
 } catch (Exception $e) {
     $error_message = "Unable to retrieve employee facility information.";
@@ -66,6 +69,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Get form data
             $patient_id = (int)($_POST['patient_id'] ?? 0);
+            
+            // Validate patient access for BHW users
+            if ($employee_role === 'bhw' && $employee_barangay_id && $patient_id) {
+                $stmt = $conn->prepare("SELECT barangay_id FROM patients WHERE patient_id = ? AND status = 'active'");
+                $stmt->bind_param('i', $patient_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $patient_barangay = $result->fetch_assoc();
+                
+                if (!$patient_barangay || $patient_barangay['barangay_id'] != $employee_barangay_id) {
+                    throw new Exception('Access denied: You can only create referrals for patients from your barangay.');
+                }
+            }
+            
             $referral_reason = trim($_POST['referral_reason'] ?? '');
             $destination_type = trim($_POST['destination_type'] ?? ''); // barangay_center, district_office, city_office, external
             $referred_to_facility_id = !empty($_POST['referred_to_facility_id']) ? (int)$_POST['referred_to_facility_id'] : null;
@@ -222,10 +239,21 @@ $last_name = $_GET['last_name'] ?? '';
 $barangay_filter = $_GET['barangay'] ?? '';
 
 $patients = [];
-if ($search_query || $first_name || $last_name || $barangay_filter) {
+// For BHW users, automatically load patients from their barangay if no specific search is made
+$should_auto_load = ($employee_role === 'bhw' && $employee_barangay_id && 
+                    empty($search_query) && empty($first_name) && empty($last_name) && empty($barangay_filter));
+
+if ($search_query || $first_name || $last_name || $barangay_filter || $should_auto_load) {
     $where_conditions = [];
     $params = [];
     $param_types = '';
+    
+    // Add BHW barangay restriction
+    if ($employee_role === 'bhw' && $employee_barangay_id) {
+        $where_conditions[] = "p.barangay_id = ?";
+        $params[] = $employee_barangay_id;
+        $param_types .= 'i';
+    }
     
     if (!empty($search_query)) {
         $where_conditions[] = "(p.username LIKE ? OR p.first_name LIKE ? OR p.last_name LIKE ? OR CONCAT(p.first_name, ' ', p.last_name) LIKE ?)";
@@ -247,12 +275,18 @@ if ($search_query || $first_name || $last_name || $barangay_filter) {
     }
     
     if (!empty($barangay_filter)) {
-        $where_conditions[] = "b.barangay_name LIKE ?";
-        $params[] = "%$barangay_filter%";
-        $param_types .= 's';
+        // For BHW users, ignore barangay filter since they're already restricted to their barangay
+        if ($employee_role !== 'bhw') {
+            $where_conditions[] = "b.barangay_name LIKE ?";
+            $params[] = "%$barangay_filter%";
+            $param_types .= 's';
+        }
     }
     
     $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+    
+    // For BHW auto-load, show more patients (up to 10), for searches limit to 5
+    $limit = $should_auto_load ? 10 : 5;
     
     $sql = "
         SELECT p.patient_id, p.username, p.first_name, p.middle_name, p.last_name, 
@@ -263,7 +297,7 @@ if ($search_query || $first_name || $last_name || $barangay_filter) {
         $where_clause
         AND p.status = 'active'
         ORDER BY p.last_name, p.first_name
-        LIMIT 5
+        LIMIT $limit
     ";
     
     if (!empty($params)) {
@@ -275,13 +309,31 @@ if ($search_query || $first_name || $last_name || $barangay_filter) {
     }
 }
 
-// Get barangays for filter dropdown
+// Get barangays for filter dropdown (BHW users see only their barangay)
 $barangays = [];
+$bhw_barangay_name = '';
 try {
-    $stmt = $conn->prepare("SELECT barangay_name FROM barangay WHERE status = 'active' ORDER BY barangay_name ASC");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $barangays = $result->fetch_all(MYSQLI_ASSOC);
+    if ($employee_role === 'bhw' && $employee_barangay_id) {
+        // BHW users only see their own barangay
+        $stmt = $conn->prepare("
+            SELECT barangay_name FROM barangay 
+            WHERE status = 'active' AND barangay_id = ? 
+            ORDER BY barangay_name ASC
+        ");
+        $stmt->bind_param('i', $employee_barangay_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $barangays = $result->fetch_all(MYSQLI_ASSOC);
+        if (!empty($barangays)) {
+            $bhw_barangay_name = $barangays[0]['barangay_name'];
+        }
+    } else {
+        // Other roles see all barangays
+        $stmt = $conn->prepare("SELECT barangay_name FROM barangay WHERE status = 'active' ORDER BY barangay_name ASC");
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $barangays = $result->fetch_all(MYSQLI_ASSOC);
+    }
 } catch (Exception $e) {
     // Ignore errors for barangays
 }
@@ -304,16 +356,9 @@ try {
     // Ignore errors for facilities
 }
 
-// Get all services for dropdown
-$all_services = [];
-try {
-    $stmt = $conn->prepare("SELECT service_id, name, description FROM services ORDER BY name");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $all_services = $result->fetch_all(MYSQLI_ASSOC);
-} catch (Exception $e) {
-    // Ignore errors for services
-}
+// Services will be loaded dynamically based on selected facility
+// No need to load all services upfront - they should be filtered by facility_services table
+$all_services = []; // Initialize empty array for compatibility
 ?>
 
 <!DOCTYPE html>
@@ -1018,6 +1063,9 @@ try {
                 <strong>Reminders:</strong>
                 <ul>
                     <li>Search and select a patient from the list below before creating a referral.</li>
+                    <?php if ($employee_role === 'bhw'): ?>
+                        <li><strong>BHW Note:</strong> You can only access patients from your barangay (<?= htmlspecialchars($employee_facility_name) ?>).</li>
+                    <?php endif; ?>
                     <li>You can search by patient ID, name, or barangay.</li>
                     <li>Patient vitals are optional but recommended for medical referrals.</li>
                     <li>All referral information should be accurate and complete.</li>
@@ -1041,6 +1089,12 @@ try {
             <div class="form-section">
                 <div class="search-container">
                     <h3><i class="fas fa-search"></i> Search Patient</h3>
+                    <?php if ($employee_role === 'bhw' && $employee_barangay_id): ?>
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                            <i class="fas fa-info-circle" style="color: #856404;"></i>
+                            <strong>BHW Access:</strong> Showing patients from your barangay: <strong><?= htmlspecialchars($bhw_barangay_name) ?></strong>
+                        </div>
+                    <?php endif; ?>
                     <form method="GET" class="search-grid">
                         <div class="form-group">
                             <label for="search">General Search</label>
@@ -1059,14 +1113,24 @@ try {
                         </div>
                         <div class="form-group">
                             <label for="barangay">Barangay</label>
-                            <select id="barangay" name="barangay">
-                                <option value="">All Barangays</option>
-                                <?php foreach ($barangays as $brgy): ?>
-                                    <option value="<?= htmlspecialchars($brgy['barangay_name']) ?>" 
-                                        <?= $barangay_filter === $brgy['barangay_name'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($brgy['barangay_name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
+                            <select id="barangay" name="barangay" <?= ($employee_role === 'bhw') ? 'disabled' : '' ?>>
+                                <?php if ($employee_role === 'bhw'): ?>
+                                    <!-- For BHW, show only their barangay as selected -->
+                                    <?php foreach ($barangays as $brgy): ?>
+                                        <option value="<?= htmlspecialchars($brgy['barangay_name']) ?>" selected>
+                                            <?= htmlspecialchars($brgy['barangay_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <!-- For other roles, show all barangays with filter option -->
+                                    <option value="">All Barangays</option>
+                                    <?php foreach ($barangays as $brgy): ?>
+                                        <option value="<?= htmlspecialchars($brgy['barangay_name']) ?>" 
+                                            <?= $barangay_filter === $brgy['barangay_name'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($brgy['barangay_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1086,10 +1150,19 @@ try {
                         <div class="empty-search">
                             <i class="fas fa-user-times fa-2x"></i>
                             <p>No patients found matching your search criteria.</p>
+                            <?php if ($employee_role === 'bhw'): ?>
+                                <p>Remember: You can only access patients from your barangay.</p>
+                            <?php endif; ?>
                             <p>Try adjusting your search terms or check the spelling.</p>
                         </div>
                     <?php elseif (!empty($patients)): ?>
-                        <p>Found <?= count($patients) ?> patient(s). Select one to create a referral:</p>
+                        <p>
+                            <?php if ($should_auto_load): ?>
+                                Showing patients from your barangay (<?= count($patients) ?> found). Select one to create a referral:
+                            <?php else: ?>
+                                Found <?= count($patients) ?> patient(s). Select one to create a referral:
+                            <?php endif; ?>
+                        </p>
                         
                         <!-- Desktop Table View -->
                         <div class="patient-table-container">
@@ -1157,6 +1230,12 @@ try {
                                 </div>
                             </div>
                         <?php endforeach; ?>
+                    <?php elseif ($employee_role === 'bhw'): ?>
+                        <div class="empty-search">
+                            <i class="fas fa-users fa-2x"></i>
+                            <p>No patients found in your barangay: <strong><?= htmlspecialchars($bhw_barangay_name) ?></strong></p>
+                            <p>Use the search form above to find specific patients from your barangay.</p>
+                        </div>
                     <?php else: ?>
                         <div class="empty-search">
                             <i class="fas fa-search fa-2x"></i>
@@ -1256,17 +1335,11 @@ try {
                                         <option value="city_office">City Health Office (Main District)</option>
                                         <option value="external">External Facility</option>
                                     
-                    <?php // Admin can refer to all destinations, others can refer to city office and external
-                    elseif ($current_role === 'admin'): ?>
-                        <option value="barangay_center">Barangay Health Center</option>
-                        <option value="district_office">District Health Office</option>
-                        <option value="city_office">City Health Office (Main District)</option>
-                        <option value="external">External Facility</option>
-                    
-                    <?php // Doctor, Nurse, Records Officer can refer to city office and external
-                    elseif (in_array($current_role, ['doctor', 'nurse', 'records_officer'])): ?>
-                        <option value="city_office">City Health Office (Main District)</option>
-                        <option value="external">External Facility</option>                                    <?php else: 
+                                    <?php // Admin, Doctor, Nurse, Records Officer can only refer to external
+                                    elseif (in_array($current_role, ['admin', 'doctor', 'nurse', 'records_officer'])): ?>
+                                        <option value="external">External Facility</option>
+                                        
+                                    <?php else: 
                                         // Fallback for any other roles - show district, city, and external only ?>
                                         <option value="district_office">District Health Office</option>
                                         <option value="city_office">City Health Office (Main District)</option>
@@ -1274,13 +1347,9 @@ try {
                                     <?php endif; ?>
                                 </select>
                                 
-                                <?php if ($current_role === 'admin'): ?>
+                                <?php if (in_array($current_role, ['admin', 'doctor', 'nurse', 'records_officer'])): ?>
                                     <small style="color: #666; font-size: 0.85em;">
-                                        <i class="fas fa-info-circle"></i> As Admin, you can create referrals to all facilities (Barangay Centers, District Offices, City Office, or External) for comprehensive patient follow-up care
-                                    </small>
-                                <?php elseif (in_array($current_role, ['doctor', 'nurse', 'records_officer'])): ?>
-                                    <small style="color: #666; font-size: 0.85em;">
-                                        <i class="fas fa-info-circle"></i> As <?= htmlspecialchars(ucfirst($_SESSION['role'])) ?> at City Health Office, you can refer within the facility or to external facilities
+                                        <i class="fas fa-info-circle"></i> As <?= htmlspecialchars(formatRoleForDisplay($_SESSION['role'])) ?> at City Health Office, you can only refer to external facilities
                                     </small>
                                 <?php elseif ($current_role === 'dho'): ?>
                                     <small style="color: #666; font-size: 0.85em;">
@@ -1376,20 +1445,10 @@ try {
                             <div class="form-group">
                                 <label for="service_id">Service Type (Optional)</label>
                                 <select id="service_id" name="service_id">
-                                    <option value="">Select service (optional)...</option>
-                                    <?php foreach ($all_services as $service): ?>
-                                        <option value="<?= $service['service_id'] ?>">
-                                            <?= htmlspecialchars($service['name']) ?>
-                                            <?php if ($service['description']): ?>
-                                                - <?= htmlspecialchars(substr($service['description'], 0, 50)) ?>...
-                                            <?php endif; ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                    <!-- Others option - will be shown/hidden based on destination type -->
-                                    <option value="others" id="othersServiceOption" style="display: none;">Others (Specify below)</option>
+                                    <option value="">Select destination first to see available services...</option>
                                 </select>
                                 <small style="color: #666; font-size: 0.85em;">
-                                    <span id="serviceAvailabilityNote">Note: Service availability may vary by destination facility</span>
+                                    <span id="serviceAvailabilityNote">Services will be loaded based on the selected destination facility</span>
                                 </small>
                             </div>
                         </div>
@@ -1424,7 +1483,25 @@ try {
             // Initialize service filtering on page load
             const destinationTypeSelect = document.getElementById('destination_type');
             if (destinationTypeSelect && destinationTypeSelect.value) {
-                filterServicesByDestination(destinationTypeSelect.value);
+                handleDestinationChange();
+            }
+            
+            // Handle destination type changes
+            if (destinationTypeSelect) {
+                destinationTypeSelect.addEventListener('change', handleDestinationChange);
+            }
+            
+            // Handle facility selection changes
+            const facilitySelect = document.getElementById('referred_to_facility_id');
+            if (facilitySelect) {
+                facilitySelect.addEventListener('change', function() {
+                    const facilityId = this.value;
+                    if (facilityId) {
+                        loadServicesForFacility(facilityId);
+                    } else {
+                        clearServiceOptions();
+                    }
+                });
             }
             
             // Mobile patient card selection function
@@ -1818,6 +1895,7 @@ try {
             // Function to show referral confirmation modal
             function showReferralConfirmation() {
                 return new Promise((resolve) => {
+                   
                     populateReferralModal();
                     showReferralModal();
                     
@@ -2158,12 +2236,72 @@ try {
                 });
             }
             
-            // Note: Service filtering is handled through destination type selection
-            // No additional facility-based service filtering needed here
-            
             // Setup modal handlers
             setupModalHandlers();
         });
+        
+        // Function to handle destination type changes
+        function handleDestinationChange() {
+            const destinationType = document.getElementById('destination_type').value;
+            const facilitySelect = document.getElementById('referred_to_facility_id');
+            
+            // Clear services when destination type changes
+            clearServiceOptions();
+            
+            // If a facility is already selected, load its services
+            if (facilitySelect && facilitySelect.value) {
+                loadServicesForFacility(facilitySelect.value);
+            }
+        }
+        
+        // Function to load services for a specific facility
+        function loadServicesForFacility(facilityId) {
+            const serviceSelect = document.getElementById('service_id');
+            if (!serviceSelect || !facilityId) return;
+            
+            // Show loading state
+            serviceSelect.innerHTML = '<option value="">Loading services...</option>';
+            serviceSelect.disabled = true;
+            
+            // Fetch services for the facility
+            fetch('../dho/get_facility_services.php?facility_id=' + facilityId)
+                .then(response => response.json())
+                .then(data => {
+                    serviceSelect.innerHTML = '<option value="">Select service (optional)...</option>';
+                    
+                    if (data.success && data.services && data.services.length > 0) {
+                        data.services.forEach(service => {
+                            const option = document.createElement('option');
+                            option.value = service.service_id;
+                            option.textContent = service.name;
+                            serviceSelect.appendChild(option);
+                        });
+                        
+                        // Add "Others" option
+                        const othersOption = document.createElement('option');
+                        othersOption.value = 'others';
+                        othersOption.textContent = 'Others (specify below)';
+                        serviceSelect.appendChild(othersOption);
+                    } else {
+                        serviceSelect.innerHTML = '<option value="">No services available for this facility</option>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading services:', error);
+                    serviceSelect.innerHTML = '<option value="">Error loading services</option>';
+                })
+                .finally(() => {
+                    serviceSelect.disabled = false;
+                });
+        }
+        
+        // Function to clear service options
+        function clearServiceOptions() {
+            const serviceSelect = document.getElementById('service_id');
+            if (serviceSelect) {
+                serviceSelect.innerHTML = '<option value="">Select destination first to see available services...</option>';
+            }
+        }
     </script>
 
     <!-- Referral Confirmation Modal -->
