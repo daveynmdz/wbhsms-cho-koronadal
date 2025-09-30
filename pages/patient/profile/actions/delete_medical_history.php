@@ -2,16 +2,37 @@
 // Set content type for JSON response FIRST
 header('Content-Type: application/json');
 
+// Prevent any output before JSON response
+ob_start();
+
 // Disable HTML error display to avoid corrupting JSON
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-require_once __DIR__ . '/../../../../config/session/patient_session.php';
-require_once __DIR__ . '/../../../../config/db.php';
+// Determine the correct path to config files - use absolute paths
+$base_path = realpath(dirname(__FILE__) . '/../../../../');
+$session_path = $base_path . '/config/session/patient_session.php';
+$db_path = $base_path . '/config/db.php';
+
+// Debug logging
+error_log("Base path: " . $base_path);
+error_log("Session path: " . $session_path);
+error_log("Session file exists: " . (file_exists($session_path) ? 'YES' : 'NO'));
+
+try {
+    require_once $session_path;
+    require_once $db_path;
+} catch (Exception | Error $e) {
+    ob_end_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Configuration error: ' . $e->getMessage()]);
+    exit();
+}
 
 // Only allow logged-in patients
 $patient_id = isset($_SESSION['patient_id']) ? $_SESSION['patient_id'] : null;
 if (!$patient_id) {
+    ob_end_clean();
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Not authorized.']);
     exit();
@@ -63,10 +84,12 @@ if ($na_removal && in_array($table, $allowed_tables)) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$patient_id]);
         
+        ob_end_clean();
         echo json_encode(['success' => true, 'message' => 'N/A status removed successfully.']);
         exit();
         
     } catch (Exception $e) {
+        ob_end_clean();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
         exit();
@@ -74,6 +97,7 @@ if ($na_removal && in_array($table, $allowed_tables)) {
 }
 
 if (!in_array($table, $allowed_tables) || !$id || !$password) {
+    ob_end_clean();
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid request. All fields are required.']);
     exit();
@@ -86,6 +110,7 @@ try {
     $patient = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$patient) {
+        ob_end_clean();
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Patient not found.']);
         exit();
@@ -93,6 +118,7 @@ try {
     
     // Verify password
     if (!password_verify($password, $patient['password_hash'])) {
+        ob_end_clean();
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Incorrect password.']);
         exit();
@@ -104,14 +130,17 @@ try {
     $stmt->execute([$id, $patient_id]);
     
     if ($stmt->rowCount() === 0) {
+        ob_end_clean();
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Record not found or already deleted.']);
         exit();
     }
     
+    ob_end_clean();
     echo json_encode(['success' => true, 'message' => 'Record deleted successfully.']);
     
 } catch (Exception $e) {
+    ob_end_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
 }

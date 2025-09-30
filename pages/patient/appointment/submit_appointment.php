@@ -1,5 +1,8 @@
 <?php
 // submit_appointment.php - API endpoint for submitting appointment bookings
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
@@ -37,7 +40,8 @@ if (!isset($conn) || $conn->connect_error) {
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!$input) {
-    echo json_encode(['success' => false, 'message' => 'Invalid input']);
+    error_log("submit_appointment.php: Invalid input data received");
+    echo json_encode(['success' => false, 'message' => 'Invalid input data received']);
     exit();
 }
 
@@ -50,7 +54,14 @@ $appointment_time = $input['appointment_time'] ?? '';
 
 // Validate required fields
 if (empty($facility_type) || empty($service) || empty($appointment_date) || empty($appointment_time)) {
-    echo json_encode(['success' => false, 'message' => 'Missing required fields']);
+    $missing_fields = [];
+    if (empty($facility_type)) $missing_fields[] = 'facility_type';
+    if (empty($service)) $missing_fields[] = 'service';
+    if (empty($appointment_date)) $missing_fields[] = 'appointment_date';
+    if (empty($appointment_time)) $missing_fields[] = 'appointment_time';
+    
+    error_log("submit_appointment.php: Missing required fields: " . implode(', ', $missing_fields));
+    echo json_encode(['success' => false, 'message' => 'Missing required fields: ' . implode(', ', $missing_fields)]);
     exit();
 }
 
@@ -77,16 +88,32 @@ if (!preg_match('/^\d{2}:\d{2}$/', $appointment_time)) {
     exit();
 }
 
-// Check if date is not in the past
+// Check if date is not in the past (allow same-day booking)
 $today = date('Y-m-d');
-if ($appointment_date <= $today) {
-    echo json_encode(['success' => false, 'message' => 'Cannot book appointments for today or past dates']);
+if ($appointment_date < $today) {
+    echo json_encode(['success' => false, 'message' => 'Cannot book appointments for past dates']);
     exit();
+}
+
+// For same-day appointments, check if it's past 4 PM
+if ($appointment_date === $today) {
+    $current_hour = (int)date('H');
+    if ($current_hour >= 16) {
+        echo json_encode(['success' => false, 'message' => 'Same-day appointments are only available until 4:00 PM']);
+        exit();
+    }
+    
+    // Also check if the selected time slot has already passed
+    $current_time = date('H:i');
+    if ($appointment_time <= $current_time) {
+        echo json_encode(['success' => false, 'message' => 'Selected time slot has already passed. Please choose a later time.']);
+        exit();
+    }
 }
 
 // Validate time slot (8 AM to 4 PM)
 $hour = (int)explode(':', $appointment_time)[0];
-if ($hour < 8 || $hour >= 16) {
+if ($hour < 8 || $hour > 16) {
     echo json_encode(['success' => false, 'message' => 'Invalid appointment time. Please select between 8 AM and 4 PM']);
     exit();
 }
@@ -94,21 +121,33 @@ if ($hour < 8 || $hour >= 16) {
 $conn->begin_transaction();
 
 try {
+    // Map frontend facility types to database facility types
+    $facility_type_map = [
+        'bhc' => 'Barangay Health Center',
+        'dho' => 'District Health Office', 
+        'cho' => 'City Health Office'
+    ];
+    
+    $db_facility_type = $facility_type_map[$facility_type] ?? '';
+    if (empty($db_facility_type)) {
+        throw new Exception('Invalid facility type selected');
+    }
+    
     // Check slot availability (double-check to prevent overbooking)
     $stmt = $conn->prepare("
         SELECT COUNT(*) as booking_count
         FROM appointments a
         LEFT JOIN services s ON a.service_id = s.service_id
         LEFT JOIN facilities f ON a.facility_id = f.facility_id
-        WHERE scheduled_date = ? 
-        AND scheduled_time = ? 
+        WHERE a.scheduled_date = ? 
+        AND a.scheduled_time = ? 
         AND s.name = ? 
-        AND f.type LIKE CONCAT('%', ?, '%')
-        AND status IN ('confirmed', 'pending')
+        AND f.type = ?
+        AND a.status = 'confirmed'
         FOR UPDATE
     ");
     
-    $stmt->bind_param("ssss", $appointment_date, $appointment_time, $service, $facility_type);
+    $stmt->bind_param("ssss", $appointment_date, $appointment_time, $service, $db_facility_type);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
@@ -125,7 +164,7 @@ try {
         FROM appointments 
         WHERE patient_id = ? 
         AND scheduled_date = ? 
-        AND status IN ('confirmed', 'pending')
+        AND status = 'confirmed'
     ");
     
     $stmt->bind_param("is", $patient_id, $appointment_date);
@@ -290,9 +329,15 @@ try {
     
 } catch (Exception $e) {
     $conn->rollback();
+    error_log("submit_appointment.php: Exception caught: " . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => $e->getMessage(),
+        'debug' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]
     ]);
 }
 

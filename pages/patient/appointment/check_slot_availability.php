@@ -47,29 +47,41 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
     exit();
 }
 
-// Check if date is not in the past
+// Check if date is not in the past (allow same-day booking)
 $today = date('Y-m-d');
-if ($date <= $today) {
-    echo json_encode(['success' => false, 'message' => 'Cannot book appointments for today or past dates']);
+if ($date < $today) {
+    echo json_encode(['success' => false, 'message' => 'Cannot book appointments for past dates']);
     exit();
 }
 
 try {
+    // Map frontend facility types to database facility types
+    $facility_type_map = [
+        'bhc' => 'Barangay Health Center',
+        'dho' => 'District Health Office', 
+        'cho' => 'City Health Office'
+    ];
+    
+    $db_facility_type = $facility_type_map[$facility_type] ?? '';
+    if (empty($db_facility_type)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid facility type']);
+        exit();
+    }
+    
     // Get the count of appointments for each time slot on the given date and service
-    // Note: We'll need to join with services table to get service name, and facilities table for facility type
     $stmt = $conn->prepare("
-        SELECT scheduled_time, COUNT(*) as booking_count
+        SELECT a.scheduled_time, COUNT(*) as booking_count
         FROM appointments a
         LEFT JOIN services s ON a.service_id = s.service_id
         LEFT JOIN facilities f ON a.facility_id = f.facility_id
-        WHERE scheduled_date = ? 
+        WHERE a.scheduled_date = ? 
         AND s.name = ? 
-        AND f.type LIKE CONCAT('%', ?, '%')
-        AND status IN ('confirmed', 'pending')
-        GROUP BY scheduled_time
+        AND f.type = ?
+        AND a.status = 'confirmed'
+        GROUP BY a.scheduled_time
     ");
     
-    $stmt->bind_param("sss", $date, $service, $facility_type);
+    $stmt->bind_param("sss", $date, $service, $db_facility_type);
     $stmt->execute();
     $result = $stmt->get_result();
     

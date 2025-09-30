@@ -4,15 +4,36 @@
 // Set content type for JSON response FIRST
 header('Content-Type: application/json');
 
+// Prevent any output before JSON response
+ob_start();
+
 // Enable error reporting but disable HTML display to avoid corrupting JSON
 error_reporting(E_ALL);
 ini_set('display_errors', 0);  // Don't display errors in HTML
 ini_set('log_errors', 1);      // Log errors instead
 
-require_once __DIR__ . '/../../../../config/session/patient_session.php';
-require_once __DIR__ . '/../../../../config/db.php';
+// Determine the correct path to config files - use absolute paths
+$base_path = realpath(dirname(__FILE__) . '/../../../../');
+$session_path = $base_path . '/config/session/patient_session.php';
+$db_path = $base_path . '/config/db.php';
+
+// Debug logging
+error_log("Base path: " . $base_path);
+error_log("Session path: " . $session_path);
+error_log("Session file exists: " . (file_exists($session_path) ? 'YES' : 'NO'));
+
+try {
+    require_once $session_path;
+    require_once $db_path;
+} catch (Exception | Error $e) {
+    ob_end_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Configuration error: ' . $e->getMessage()]);
+    exit();
+}
 
 if (!isset($_SESSION['patient_id'])) {
+    ob_end_clean();
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Unauthorized - No patient session']);
     exit();
@@ -32,6 +53,7 @@ $table = get_post('table');
 $id = get_post('id');
 
 if (!$id) {
+    ob_end_clean();
     error_log("Update failed: Missing ID");
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Missing record ID']);
@@ -50,6 +72,7 @@ $allowed_tables = [
 ];
 
 if (!in_array($table, $allowed_tables)) {
+    ob_end_clean();
     error_log("Update failed: Invalid table - " . $table);
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid table: ' . $table]);
@@ -58,6 +81,7 @@ if (!in_array($table, $allowed_tables)) {
 
 // Check if PDO connection exists
 if (!isset($pdo)) {
+    ob_end_clean();
     error_log("Database connection not found");
     echo json_encode(['success' => false, 'error' => 'Database connection failed']);
     exit();
@@ -145,9 +169,11 @@ try {
         throw new Exception('Record not found or no changes made');
     }
     
+    ob_end_clean();
     echo json_encode(['success' => true, 'message' => 'Record updated successfully']);
     exit();
 } catch (Exception $e) {
+    ob_end_clean();
     error_log("Exception in update_medical_history.php: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
     

@@ -4,15 +4,55 @@
 // Set content type for JSON response FIRST
 header('Content-Type: application/json');
 
+// Prevent any output before JSON response
+ob_start();
+
 // Enable error reporting but disable HTML display to avoid corrupting JSON
 error_reporting(E_ALL);
 ini_set('display_errors', 0);  // Don't display errors in HTML
 ini_set('log_errors', 1);      // Log errors instead
 
-require_once __DIR__ . '/../../../../config/session/patient_session.php';
-require_once __DIR__ . '/../../../../config/db.php';
+// Determine the correct path to config files - use absolute paths
+$base_path = realpath(dirname(__FILE__) . '/../../../../');
+$session_path = $base_path . '/config/session/patient_session.php';
+$db_path = $base_path . '/config/db.php';
+
+// Debug logging
+error_log("Base path: " . $base_path);
+error_log("Session path: " . $session_path);
+error_log("Session file exists: " . (file_exists($session_path) ? 'YES' : 'NO'));
+
+// Check if files exist before requiring them
+if (!file_exists($session_path)) {
+    // Clear any output buffer
+    ob_end_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Session configuration file not found']);
+    exit();
+}
+
+if (!file_exists($db_path)) {
+    // Clear any output buffer
+    ob_end_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database configuration file not found']);
+    exit();
+}
+
+try {
+    require_once $session_path;
+    require_once $db_path;
+} catch (Exception | Error $e) {
+    // Clear any output buffer that might contain HTML error messages
+    ob_end_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Configuration error: ' . $e->getMessage()]);
+    exit();
+}
 
 if (!isset($_SESSION['patient_id'])) {
+    // Clear any output buffer
+    ob_end_clean();
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Unauthorized - No patient session']);
     exit();
@@ -40,6 +80,7 @@ $allowed_tables = [
 ];
 
 if (!in_array($table, $allowed_tables)) {
+    ob_end_clean();
     error_log("Invalid table attempted: " . $table);
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid table: ' . $table]);
@@ -48,6 +89,8 @@ if (!in_array($table, $allowed_tables)) {
 
 // Check if PDO connection exists
 if (!isset($pdo)) {
+    // Clear any output buffer
+    ob_end_clean();
     error_log("Database connection not found");
     echo json_encode(['success' => false, 'error' => 'Database connection failed']);
     exit();
@@ -56,10 +99,26 @@ if (!isset($pdo)) {
 try {
     switch ($table) {
         case 'allergies':
-            $allergen = get_post('allergen_dropdown') === 'Others' ? get_post('allergen_other') : get_post('allergen_dropdown');
-            $reaction = get_post('reaction_dropdown') === 'Others' ? get_post('reaction_other') : get_post('reaction_dropdown');
+            // Handle both dropdown format and direct field format
+            $allergen = '';
+            if (get_post('allergen_dropdown')) {
+                $allergen = get_post('allergen_dropdown') === 'Others' ? get_post('allergen_other') : get_post('allergen_dropdown');
+            } else {
+                $allergen = get_post('allergen'); // Direct field format
+            }
+            
+            $reaction = '';
+            if (get_post('reaction_dropdown')) {
+                $reaction = get_post('reaction_dropdown') === 'Others' ? get_post('reaction_other') : get_post('reaction_dropdown');
+            } else {
+                $reaction = get_post('reaction'); // Direct field format
+            }
+            
             $severity = get_post('severity');
-            if (!$allergen || !$reaction || !$severity) throw new Exception('Missing fields');
+            if (!$allergen || !$reaction || !$severity) {
+                error_log("Allergies missing fields - Allergen: '$allergen', Reaction: '$reaction', Severity: '$severity'");
+                throw new Exception('Missing fields - Allergen: ' . ($allergen ? 'OK' : 'MISSING') . ', Reaction: ' . ($reaction ? 'OK' : 'MISSING') . ', Severity: ' . ($severity ? 'OK' : 'MISSING'));
+            }
             $sql = "INSERT INTO allergies (patient_id, allergen, reaction, severity) VALUES (?, ?, ?, ?)";
             $params = [$patient_id, $allergen, $reaction, $severity];
             break;
@@ -89,19 +148,59 @@ try {
             $params = [$patient_id, $family_member, $condition, $age_diagnosed, $current_status];
             break;
         case 'surgical_history':
-            $surgery = get_post('surgery_dropdown') === 'Others' ? get_post('surgery_other') : get_post('surgery_dropdown');
+            // Handle both dropdown format and direct field format
+            $surgery = '';
+            if (get_post('surgery_dropdown')) {
+                $surgery = get_post('surgery_dropdown') === 'Others' ? get_post('surgery_other') : get_post('surgery_dropdown');
+            } else {
+                $surgery = get_post('surgery'); // Direct field format
+            }
+            
             $year = get_post('year');
-            $hospital = get_post('hospital_dropdown') === 'Others' ? get_post('hospital_other') : get_post('hospital_dropdown');
-            if (!$surgery || !$year || !$hospital) throw new Exception('Missing fields');
+            
+            $hospital = '';
+            if (get_post('hospital_dropdown')) {
+                $hospital = get_post('hospital_dropdown') === 'Others' ? get_post('hospital_other') : get_post('hospital_dropdown');
+            } else {
+                $hospital = get_post('hospital'); // Direct field format
+            }
+            
+            if (!$surgery || !$year || !$hospital) {
+                error_log("Surgical history missing fields - Surgery: '$surgery', Year: '$year', Hospital: '$hospital'");
+                throw new Exception('Missing fields - Surgery: ' . ($surgery ? 'OK' : 'MISSING') . ', Year: ' . ($year ? 'OK' : 'MISSING') . ', Hospital: ' . ($hospital ? 'OK' : 'MISSING'));
+            }
             $sql = "INSERT INTO surgical_history (patient_id, surgery, year, hospital) VALUES (?, ?, ?, ?)";
             $params = [$patient_id, $surgery, $year, $hospital];
             break;
         case 'current_medications':
-            $medication = get_post('medication_dropdown') === 'Others' ? get_post('medication_other') : get_post('medication_dropdown');
+            // Handle both dropdown format and direct field format
+            $medication = '';
+            if (get_post('medication_dropdown')) {
+                $medication = get_post('medication_dropdown') === 'Others' ? get_post('medication_other') : get_post('medication_dropdown');
+            } else {
+                $medication = get_post('medication'); // Direct field format
+            }
+            
             $dosage = get_post('dosage');
-            $frequency = get_post('frequency_dropdown') === 'Others' ? get_post('frequency_other') : get_post('frequency_dropdown');
-            $prescribed_by = get_post('prescribed_by_dropdown') === 'Others' ? get_post('prescribed_by_other') : get_post('prescribed_by_dropdown');
-            if (!$medication || !$dosage || !$frequency) throw new Exception('Missing fields');
+            
+            $frequency = '';
+            if (get_post('frequency_dropdown')) {
+                $frequency = get_post('frequency_dropdown') === 'Others' ? get_post('frequency_other') : get_post('frequency_dropdown');
+            } else {
+                $frequency = get_post('frequency'); // Direct field format
+            }
+            
+            $prescribed_by = '';
+            if (get_post('prescribed_by_dropdown')) {
+                $prescribed_by = get_post('prescribed_by_dropdown') === 'Others' ? get_post('prescribed_by_other') : get_post('prescribed_by_dropdown');
+            } else {
+                $prescribed_by = get_post('prescribed_by'); // Direct field format
+            }
+            
+            if (!$medication || !$dosage || !$frequency) {
+                error_log("Medications missing fields - Medication: '$medication', Dosage: '$dosage', Frequency: '$frequency'");
+                throw new Exception('Missing fields - Medication: ' . ($medication ? 'OK' : 'MISSING') . ', Dosage: ' . ($dosage ? 'OK' : 'MISSING') . ', Frequency: ' . ($frequency ? 'OK' : 'MISSING'));
+            }
             $sql = "INSERT INTO current_medications (patient_id, medication, dosage, frequency, prescribed_by) VALUES (?, ?, ?, ?, ?)";
             $params = [$patient_id, $medication, $dosage, $frequency, $prescribed_by ?: null];
             break;
@@ -130,9 +229,14 @@ try {
         throw new Exception('Database execution failed');
     }
     
+    // Clear any output buffer before sending JSON response
+    ob_end_clean();
     echo json_encode(['success' => true, 'message' => 'Record added successfully']);
     exit();
 } catch (Exception $e) {
+    // Clear any output buffer that might contain HTML error messages
+    ob_end_clean();
+    
     error_log("Exception in add_medical_history.php: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
     
@@ -145,3 +249,4 @@ try {
     ]);
     exit();
 }
+?>

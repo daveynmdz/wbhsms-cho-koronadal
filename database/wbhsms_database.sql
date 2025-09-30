@@ -56,7 +56,7 @@ CREATE TABLE `appointments` (
   `service_id` int(10) UNSIGNED DEFAULT NULL,
   `scheduled_date` date NOT NULL,
   `scheduled_time` time NOT NULL,
-  `status` enum('pending','confirmed','completed','cancelled') DEFAULT 'pending',
+  `status` enum('confirmed','completed','cancelled') DEFAULT 'confirmed',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
