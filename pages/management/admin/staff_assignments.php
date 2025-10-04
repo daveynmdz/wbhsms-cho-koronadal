@@ -2,24 +2,24 @@
 // pages/management/admin/staff_assignments.php
 // Admin interface for assigning/unassigning staff to stations for a given date
 
-require_once '../../../config/db.php';
-require_once '../../../utils/staff_assignment.php';
+// Include employee session configuration - Use absolute path resolution
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
 
-session_start();
-echo '<pre>';
-var_dump([
-    'employee_id' => $_SESSION['employee_id'] ?? null,
-    'role_id' => $_SESSION['role_id'] ?? null,
-    'role' => $_SESSION['role'] ?? null,
-    'session' => $_SESSION
-]);
-echo '</pre>';
-
-if (!isset($_SESSION['role_id']) || $_SESSION['role_id'] != 1) {
-    http_response_code(403);
-    echo 'Access denied.';
+// If user is not logged in, bounce to login
+if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
+    header('Location: ../auth/employee_login.php');
     exit();
 }
+
+// Check if role is authorized for admin functions
+if (strtolower($_SESSION['role']) !== 'admin') {
+    header('Location: dashboard.php');
+    exit();
+}
+
+require_once $root_path . '/config/db.php';
+require_once $root_path . '/utils/staff_assignment.php';
 
 $date = $_GET['date'] ?? date('Y-m-d');
 $assignments = getAllAssignmentsForDate($conn, $date);
