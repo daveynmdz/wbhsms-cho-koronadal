@@ -34,11 +34,13 @@ if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'doctor') {
     exit();
 }
 
+
 // Log session data for debugging
 error_log('Doctor Dashboard - Session Data: ' . print_r($_SESSION, true));
 
 // DB - Use the absolute path like admin dashboard
 require_once $root_path . '/config/db.php';
+require_once $root_path . '/utils/staff_assignment.php';
 
 // Debug connection status - should log both connections
 error_log('DB Connection Status: MySQLi=' . ($conn ? 'Connected' : 'Failed') . ', PDO=' . ($pdo ? 'Connected' : 'Failed'));
@@ -46,6 +48,16 @@ error_log('DB Connection Status: MySQLi=' . ($conn ? 'Connected' : 'Failed') . '
 // Set variables
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
+
+// Enforce staff assignment for today
+$assignment = getStaffAssignment($conn, $employee_id);
+if (!$assignment) {
+    // Not assigned today, block access
+    error_log('Doctor Dashboard: No active staff assignment for today.');
+    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'You are not assigned to any station today. Please contact the administrator.');
+    header('Location: ../auth/employee_login.php?not_assigned=1');
+    exit();
+}
 
 // -------------------- Data bootstrap (Doctor Dashboard) --------------------
 $defaults = [

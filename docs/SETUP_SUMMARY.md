@@ -33,14 +33,24 @@ This document summarizes the changes made to create a clean, XAMPP-ready healthc
 2. **Place project in htdocs folder**
 3. **Create database 'wbhsms_cho' in phpMyAdmin**  
 4. **Import database/wbhsms_cho.sql**
-5. **Visit: http://localhost/wbhsms-cho-koronadal/setup_check.php**
+5. **Visit: http://localhost/wbhsms-cho-koronadal/scripts/setup/setup_check.php**
 
-## 📁 New Files Created
+## 📁 File Organization
 
-### Root Directory
-- `testdb.php` - Simple database connection test
-- `setup_check.php` - Complete system validation  
-- `.env.example` - Template with XAMPP defaults
+### Scripts Directory (`scripts/`)
+- `setup/testdb.php` - Simple database connection test
+- `setup/setup_check.php` - Complete system validation  
+- `setup/setup_debug.php` - Session and debugging tools
+- `maintenance/` - Database maintenance and update scripts
+- `cron/` - Scheduled task scripts
+
+### Documentation (`docs/`)
+- All setup guides and documentation files
+- Template documentation and API guides
+
+### Tests (`tests/`)
+- All testing and diagnostic files
+- Development debugging tools
 
 ### Updated Files
 - `README.md` - XAMPP-focused setup guide
@@ -72,10 +82,10 @@ DB_NAME=wbhsms_cho
 - **Multi-role Support**: Admin, doctor, nurse, patient roles
 
 ### Development Tools Available
-- `/testdb.php` - Quick database test
-- `/setup_check.php` - System validation
-- `/pages/patient/registration/tools/` - Registration diagnostics
-- `/tests/testdb.php` - Advanced database testing
+- `/scripts/setup/testdb.php` - Quick database test
+- `/scripts/setup/setup_check.php` - System validation
+- `/scripts/setup/setup_debug.php` - Session debugging
+- `/tests/` - All testing and diagnostic tools
 
 ## 🛡️ Security Considerations
 
@@ -109,7 +119,7 @@ If you encounter "ERR_TOO_MANY_REDIRECTS" errors when accessing role dashboards:
 
 ### Quick Solutions:
 1. **Clear your browser cookies and session data**
-2. **Visit `/setup_debug.php` and click "Clear Session"**
+2. **Visit `/scripts/setup/setup_debug.php` and click "Clear Session"**
 3. **Verify database role mappings in the `roles` table**
 
 ### Common Causes & Fixes:
@@ -126,7 +136,7 @@ If you encounter "ERR_TOO_MANY_REDIRECTS" errors when accessing role dashboards:
 - **Problem**: Role ID in database doesn't match expected role name
 - **Solution**: Check role_id and role_name mappings in the roles table
 
-For complete debugging, use the `setup_debug.php` tool which provides:
+For complete debugging, use the `scripts/setup/setup_debug.php` tool which provides:
 - Session status and data inspection
 - Database connection testing
 - Tools to clear stuck sessions

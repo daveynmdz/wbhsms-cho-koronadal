@@ -227,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['last_login_attempt'],
                 $_SESSION['redirect_attempt'] // Reset any redirect loop detection
             );
-            
+
             // Prevent session fixation
             session_regenerate_id(true);
 

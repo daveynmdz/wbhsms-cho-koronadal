@@ -60,22 +60,68 @@ try {
 // Fetch active referrals for this patient
 $active_referrals = [];
 try {
-    $stmt = $conn->prepare("
+    // DEBUG: Show which patient we're querying for
+    error_log("DEBUG - Booking page querying referrals for patient_id: " . $patient_id);
+    
+    // Check if database connection is working
+    if (!$conn) {
+        throw new Exception("Database connection is null");
+    }
+    
+    if ($conn->connect_error) {
+        throw new Exception("Database connection error: " . $conn->connect_error);
+    }
+    
+    // First, let's get ALL referrals to debug what's in the database
+    $query = "
         SELECT r.referral_id, r.referral_num, r.referral_reason, r.destination_type,
-               r.referred_to_facility_id, r.external_facility_name,
-               f.name as facility_name, f.facility_type
+               r.referred_to_facility_id, r.external_facility_name, r.status, r.service_id,
+               f.name as facility_name, f.type as facility_type,
+               s.name as service_name, s.description as service_description
         FROM referrals r
         LEFT JOIN facilities f ON r.referred_to_facility_id = f.facility_id
-        WHERE r.patient_id = ? AND r.status = 'active'
+        LEFT JOIN services s ON r.service_id = s.service_id
+        WHERE r.patient_id = ?
         ORDER BY r.referral_date DESC
-    ");
+    ";
+    
+    error_log("DEBUG - SQL Query: " . $query);
+    error_log("DEBUG - Patient ID parameter: " . $patient_id);
+    
+    $stmt = $conn->prepare($query);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+    
     $stmt->bind_param("i", $patient_id);
-    $stmt->execute();
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+    
     $result = $stmt->get_result();
-    $active_referrals = $result->fetch_all(MYSQLI_ASSOC);
+    if (!$result) {
+        throw new Exception("Get result failed: " . $stmt->error);
+    }
+    
+    $all_referrals = $result->fetch_all(MYSQLI_ASSOC);
+    
+    // DEBUG: Log what we found
+    error_log("DEBUG - Found " . count($all_referrals) . " total referrals for patient " . $patient_id);
+    foreach ($all_referrals as $ref) {
+        error_log("DEBUG - Referral: " . $ref['referral_num'] . " Status: " . ($ref['status'] ?? 'NULL'));
+    }
+    
+    // Filter for active ones (case-insensitive)
+    $active_referrals = array_filter($all_referrals, function($ref) {
+        return !isset($ref['status']) || 
+               $ref['status'] === null || 
+               strtolower(trim($ref['status'])) === 'active';
+    });
+    
     $stmt->close();
 } catch (Exception $e) {
-    // Ignore errors for referrals
+    error_log("Error fetching referrals: " . $e->getMessage());
 }
 
 // Fetch available services for the frontend
@@ -950,6 +996,7 @@ try {
                 <p>Schedule your healthcare appointment with ease</p>
             </div>
 
+
             <?php if ($patient_info && $patient_info['priority_level'] == 1): ?>
             <!-- Priority Patient Status Banner -->
             <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 1rem 1.5rem; border-radius: 15px; margin-bottom: 2rem; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);">
@@ -1075,6 +1122,14 @@ try {
                             <i class="fas fa-exclamation-triangle"></i>
                             You don't have any active referrals for this facility type. Please obtain a referral first.
                         </div>
+                        <div class="alert alert-info" style="margin-top: 1rem;">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Need help?</strong> 
+                            <a href="debug_referrals.php" target="_blank" style="color: #0077b6; text-decoration: underline;">
+                                Click here to check your referral status
+                            </a>
+                            or contact your healthcare provider for a new referral.
+                        </div>
                     </div>
                 </div>
 
@@ -1152,8 +1207,33 @@ try {
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" onclick="window.location.href='../dashboard.php'">
-                    <i class="fas fa-home"></i> Go to Dashboard
+                <button type="button" class="btn btn-primary" onclick="window.location.href='appointments.php'">
+                    <i class="fas fa-calendar-check"></i> Go to Appointments & Referrals
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warning/Error Modal -->
+    <div id="warningModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white;">
+                <h3><i class="fas fa-exclamation-triangle"></i> <span id="warning-title">Booking Error</span></h3>
+                <button type="button" class="close" onclick="closeWarningModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="warning-details">
+                    <!-- Warning details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeWarningModal()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" id="warning-action-btn" onclick="closeWarningModal()" style="display: none;">
+                    <i class="fas fa-arrow-right"></i> <span id="warning-action-text">Continue</span>
                 </button>
             </div>
         </div>
@@ -1170,10 +1250,49 @@ try {
         let activeReferrals = <?php echo json_encode($active_referrals); ?>;
         let patientInfo = <?php echo json_encode($patient_info); ?>;
         let availableServices = <?php echo json_encode($services); ?>;
+        
+        // Debug output
+        console.log('Active Referrals:', activeReferrals);
+        console.log('Total active referrals found:', activeReferrals.length);
+        console.log('Patient Info:', patientInfo);
+        
+        // Additional debugging for empty referrals
+        if (activeReferrals.length === 0) {
+            console.warn('⚠️ No active referrals found for patient');
+            console.log('Patient ID from session:', patientInfo.patient_id || 'not available');
+            console.log('Consider checking:');
+            console.log('1. Patient has referrals in database');
+            console.log('2. Referrals have status = "active" or NULL');
+            console.log('3. Database connection is working');
+            console.log('4. Use debug_referrals.php to diagnose');
+        }
 
         // Initialize the form
         document.addEventListener('DOMContentLoaded', function() {
             updateStepVisibility();
+            
+            // Handle any media elements that might cause play() errors
+            const mediaElements = document.querySelectorAll('audio, video');
+            mediaElements.forEach(element => {
+                // Prevent auto-play issues
+                element.muted = true;
+                element.autoplay = false;
+                
+                // Handle play() promise rejections
+                if (element.play && typeof element.play === 'function') {
+                    const originalPlay = element.play.bind(element);
+                    element.play = function() {
+                        const playPromise = originalPlay();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                // Silently handle auto-play failures
+                                console.debug('Media play prevented by browser policy:', error);
+                            });
+                        }
+                        return playPromise;
+                    };
+                }
+            });
         });
 
         function selectFacility(facilityType) {
@@ -1308,9 +1427,11 @@ try {
             // Filter referrals based on facility type
             let relevantReferrals = activeReferrals.filter(referral => {
                 if (selectedFacility === 'dho') {
-                    return referral.facility_type === 'DHO' || referral.destination_type === 'external';
+                    return referral.facility_type === 'District Health Office' || referral.destination_type === 'external';
                 } else if (selectedFacility === 'cho') {
-                    return referral.facility_type === 'CHO' || referral.destination_type === 'external';
+                    return referral.facility_type === 'City Health Office' || referral.destination_type === 'external';
+                } else if (selectedFacility === 'bhc') {
+                    return referral.facility_type === 'Barangay Health Center' || referral.destination_type === 'external';
                 }
                 return false;
             });
@@ -1324,8 +1445,13 @@ try {
                 let html = '';
                 relevantReferrals.forEach(referral => {
                     const facilityName = referral.facility_name || referral.external_facility_name || 'External Facility';
+                    // Use service name if available, otherwise fall back to referral reason
+                    const serviceName = referral.service_name || referral.referral_reason;
+                    const serviceId = referral.service_id || null;
+                    // Properly escape the service name for JavaScript
+                    const escapedServiceName = serviceName.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
                     html += `
-                        <div class="referral-card" onclick="selectReferral(${referral.referral_id}, '${referral.referral_reason}')">
+                        <div class="referral-card" onclick="selectReferral(${referral.referral_id}, '${escapedServiceName}', ${serviceId})">
                             <div class="referral-number">Referral #${referral.referral_num}</div>
                             <div class="referral-reason">${referral.referral_reason}</div>
                             <div class="referral-facility">Referred to: ${facilityName}</div>
@@ -1337,7 +1463,7 @@ try {
             }
         }
 
-        function selectReferral(referralId, reason) {
+        function selectReferral(referralId, serviceName, serviceId) {
             // Remove previous selection
             document.querySelectorAll('.referral-card').forEach(card => {
                 card.classList.remove('selected');
@@ -1346,11 +1472,11 @@ try {
             // Select current referral
             event.target.closest('.referral-card').classList.add('selected');
             selectedReferral = referralId;
-            selectedService = reason;
+            selectedService = serviceName; // Send service name to backend (what it expects)
 
             // Show selected service
             document.getElementById('selected-service-info').classList.remove('hidden');
-            document.getElementById('service-display').value = reason;
+            document.getElementById('service-display').value = serviceName; // Display service name to user
 
             // Auto-fill date with today's date for same-day booking
             autoFillAppointmentDate();
@@ -1430,7 +1556,12 @@ try {
             dateInput.addEventListener('input', function() {
                 const selectedDateObj = new Date(this.value);
                 if (isWeekend(selectedDateObj)) {
-                    alert('Weekend appointments are not available. Please select a weekday.');
+                    // Use professional warning modal instead of alert
+                    showWarningModal(
+                        'Weekend Not Available', 
+                        'Weekend appointments are not available. Please select a weekday (Monday - Friday).',
+                        'warning'
+                    );
                     this.value = '';
                     selectedDate = null;
                     
@@ -1890,7 +2021,8 @@ try {
                 if (data.success) {
                     showSuccessModal(data);
                 } else {
-                    alert('Error: ' + data.message);
+                    // Show professional warning modal instead of alert
+                    showWarningModal('Appointment Booking Error', data.message, 'error');
                     confirmBtn.disabled = false;
                     confirmBtn.innerHTML = '<i class="fas fa-check"></i> Book Appointment';
                 }
@@ -1898,14 +2030,18 @@ try {
             .catch(error => {
                 console.error('Appointment booking error:', error);
                 let errorMessage = 'An error occurred while booking your appointment. Please try again.';
+                let errorType = 'error';
                 
                 if (error.message.includes('Server returned invalid response')) {
-                    errorMessage = 'Server error occurred. Please contact support if the problem persists.';
+                    errorMessage = 'Server error occurred. Please check server logs or contact support if the problem persists.';
+                    errorType = 'server-error';
                 } else if (error.message.includes('HTTP error')) {
                     errorMessage = 'Connection error. Please check your internet connection and try again.';
+                    errorType = 'connection-error';
                 }
                 
-                alert(errorMessage);
+                // Show professional warning modal instead of alert
+                showWarningModal('Connection Error', errorMessage, errorType);
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="fas fa-check"></i> Book Appointment';
             });
@@ -1914,6 +2050,72 @@ try {
         function showSuccessModal(data) {
             const modal = document.getElementById('successModal');
             const detailsContainer = document.getElementById('success-details');
+
+            // Determine email status message
+            let emailStatusHtml = '';
+            if (data.email_sent) {
+                emailStatusHtml = `
+                    <div class="summary-item">
+                        <div class="summary-label">Email Confirmation</div>
+                        <div class="summary-value" style="color: #28a745;">
+                            <i class="fas fa-check-circle"></i> Sent to ${data.patient_email || patientInfo.email}
+                        </div>
+                    </div>
+                `;
+            } else {
+                emailStatusHtml = `
+                    <div class="summary-item">
+                        <div class="summary-label">Email Notification</div>
+                        <div class="summary-value" style="color: #dc3545;">
+                            <i class="fas fa-exclamation-triangle"></i> ${data.email_message || 'Could not send email'}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Prepare queue information display
+            let queueInfoHtml = '';
+            if (data.has_queue && data.queue_number) {
+                queueInfoHtml = `
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-list-ol"></i>
+                            Queue Information
+                        </div>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-label">Queue Number</div>
+                                <div class="summary-value highlight" style="font-size: 1.3rem; color: #0077b6; font-weight: bold;">#${data.queue_number}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Queue Type</div>
+                                <div class="summary-value">${data.queue_type ? data.queue_type.charAt(0).toUpperCase() + data.queue_type.slice(1) : 'Consultation'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Priority Level</div>
+                                <div class="summary-value">${data.priority_level === 'priority' ? '⭐ Priority' : '👤 Regular'}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-label">Status</div>
+                                <div class="summary-value">Waiting</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (data.has_queue === false) {
+                queueInfoHtml = `
+                    <div class="summary-section">
+                        <div class="summary-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Queue Status
+                        </div>
+                        <div class="alert alert-warning" style="margin: 0;">
+                            <i class="fas fa-info-circle"></i>
+                            ${data.queue_message || 'Queue number could not be assigned'}
+                        </div>
+                    </div>
+                `;
+            }
 
             detailsContainer.innerHTML = `
                 <div style="text-align: center; margin-bottom: 1.5rem;">
@@ -1933,22 +2135,182 @@ try {
                                 <div class="summary-label">Appointment ID</div>
                                 <div class="summary-value highlight">${data.appointment_id}</div>
                             </div>
-                            <div class="summary-item">
-                                <div class="summary-label">Email Notification</div>
-                                <div class="summary-value">Sent to ${patientInfo.email}</div>
-                            </div>
+                            ${emailStatusHtml}
                         </div>
                     </div>
+                    ${queueInfoHtml}
                 </div>
+
+                ${!data.email_sent ? `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Email Notice:</strong> Your appointment confirmation email could not be sent automatically. 
+                        Please save your appointment ID <strong>${data.appointment_id}</strong> for your records. 
+                        You can also contact the facility to confirm your appointment.
+                    </div>
+                ` : `
+                    <div class="alert alert-success">
+                        <i class="fas fa-envelope-check"></i>
+                        <strong>Email Sent:</strong> A detailed appointment confirmation has been sent to your email address. 
+                        Please check your inbox and spam folder.
+                    </div>
+                `}
 
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
                     <strong>Important:</strong> Please bring a valid ID and your appointment reference when you visit the facility. 
+                    ${data.has_queue && data.queue_number ? `Present your queue number <strong>#${data.queue_number}</strong> for faster check-in. ` : ''}
                     If you have a referral, please also bring your referral document.
                 </div>
             `;
 
             modal.style.display = 'block';
+        }
+
+        function showWarningModal(title, message, type = 'warning') {
+            const modal = document.getElementById('warningModal');
+            const titleElement = document.getElementById('warning-title');
+            const detailsContainer = document.getElementById('warning-details');
+            const actionBtn = document.getElementById('warning-action-btn');
+            const actionText = document.getElementById('warning-action-text');
+
+            // Set modal title
+            titleElement.textContent = title;
+
+            // Determine icon and styling based on type
+            let iconClass = 'fas fa-exclamation-triangle';
+            let iconColor = '#ffc107';
+            let suggestions = '';
+
+            switch(type) {
+                case 'error':
+                    iconClass = 'fas fa-exclamation-circle';
+                    iconColor = '#dc3545';
+                    suggestions = getErrorSuggestions(message);
+                    break;
+                case 'server-error':
+                    iconClass = 'fas fa-server';
+                    iconColor = '#dc3545';
+                    suggestions = `
+                        <div class="alert alert-info" style="margin-top: 1rem;">
+                            <h6><i class="fas fa-lightbulb"></i> Troubleshooting Steps:</h6>
+                            <ul style="margin: 0.5rem 0 0 1rem;">
+                                <li>Check if the server is running properly</li>
+                                <li>Verify database connection</li>
+                                <li>Check server error logs</li>
+                                <li>Contact system administrator if issue persists</li>
+                            </ul>
+                        </div>
+                    `;
+                    break;
+                case 'connection-error':
+                    iconClass = 'fas fa-wifi';
+                    iconColor = '#dc3545';
+                    suggestions = `
+                        <div class="alert alert-info" style="margin-top: 1rem;">
+                            <h6><i class="fas fa-lightbulb"></i> What you can do:</h6>
+                            <ul style="margin: 0.5rem 0 0 1rem;">
+                                <li>Check your internet connection</li>
+                                <li>Refresh the page and try again</li>
+                                <li>Try using a different browser</li>
+                                <li>Contact support if the problem continues</li>
+                            </ul>
+                        </div>
+                    `;
+                    break;
+                default:
+                    suggestions = getErrorSuggestions(message);
+            }
+
+            detailsContainer.innerHTML = `
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <i class="${iconClass}" style="font-size: 3rem; color: ${iconColor}; margin-bottom: 1rem;"></i>
+                    <p style="font-size: 1.1rem; color: #333; margin: 0;">${message}</p>
+                </div>
+                ${suggestions}
+            `;
+
+            // Show action button for certain error types
+            if (type === 'duplicate-appointment') {
+                actionBtn.style.display = 'inline-flex';
+                actionText.textContent = 'Select Different Date';
+                actionBtn.onclick = function() {
+                    closeWarningModal();
+                    // Navigate back to date selection
+                    currentStep = 3;
+                    updateStepVisibility();
+                };
+            } else {
+                actionBtn.style.display = 'none';
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function getErrorSuggestions(message) {
+            if (message.includes('already have an appointment')) {
+                return `
+                    <div class="alert alert-info" style="margin-top: 1rem;">
+                        <h6><i class="fas fa-lightbulb"></i> What you can do:</h6>
+                        <ul style="margin: 0.5rem 0 0 1rem;">
+                            <li>Select a different date for your appointment</li>
+                            <li>Check your existing appointments in the dashboard</li>
+                            <li>Cancel existing appointment if you need to reschedule</li>
+                            <li>Contact the facility for assistance</li>
+                        </ul>
+                        <div style="margin-top: 1rem;">
+                            <button class="btn btn-primary btn-sm" onclick="goToStep3()">
+                                <i class="fas fa-calendar-alt"></i> Choose Different Date
+                            </button>
+                            <a href="../dashboard.php" class="btn btn-secondary btn-sm" style="margin-left: 0.5rem;">
+                                <i class="fas fa-list"></i> View My Appointments
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else if (message.includes('referral')) {
+                return `
+                    <div class="alert alert-info" style="margin-top: 1rem;">
+                        <h6><i class="fas fa-lightbulb"></i> Referral Help:</h6>
+                        <ul style="margin: 0.5rem 0 0 1rem;">
+                            <li>Contact your healthcare provider for a new referral</li>
+                            <li>Ensure your referral is active and valid</li>
+                            <li>Try booking for Barangay Health Center (no referral needed)</li>
+                        </ul>
+                        <div style="margin-top: 1rem;">
+                            <a href="debug_referrals.php" target="_blank" class="btn btn-primary btn-sm">
+                                <i class="fas fa-search"></i> Check Referral Status
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="alert alert-info" style="margin-top: 1rem;">
+                        <h6><i class="fas fa-info-circle"></i> Need Help?</h6>
+                        <p style="margin: 0.5rem 0;">If this error continues, please contact support or try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function closeWarningModal() {
+            document.getElementById('warningModal').style.display = 'none';
+        }
+
+        function goToStep3() {
+            closeWarningModal();
+            currentStep = 3;
+            updateStepVisibility();
+            // Clear the selected date to force user to pick a new one
+            document.getElementById('appointment-date').value = '';
+            selectedDate = null;
+            selectedTime = null;
+            // Clear time slots
+            document.getElementById('time-slots').innerHTML = '';
+            // Show instruction again
+            const instructionDiv = document.getElementById('time-slot-instruction');
+            if (instructionDiv) instructionDiv.style.display = 'block';
         }
 
         // Close modal when clicking outside
@@ -1960,6 +2322,20 @@ try {
                 }
             });
         }
+
+        // Additional modal close handlers
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+
+        // Keyboard support for modals
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeAllModals();
+            }
+        });
     </script>
 
     <style>
@@ -2032,6 +2408,44 @@ try {
 
         .close:hover {
             background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Button sizes */
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+        }
+
+        /* Warning modal specific styles */
+        #warningModal .modal-header {
+            background: linear-gradient(135deg, #dc3545, #c82333) !important;
+        }
+
+        #warningModal .alert {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #warningModal .alert-info {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1565c0;
+        }
+
+        #warningModal .alert h6 {
+            color: #1565c0;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        #warningModal ul {
+            color: #424242;
+        }
+
+        #warningModal .btn {
+            margin: 0.25rem;
         }
 
         /* Summary Card Styles */

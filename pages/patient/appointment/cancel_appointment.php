@@ -18,6 +18,9 @@ if (!isset($_SESSION['patient_id'])) {
 // Database connection
 require_once $root_path . '/config/db.php';
 
+// Include queue management service
+require_once $root_path . '/utils/queue_management_service.php';
+
 // Check database connection
 if (!isset($conn) || $conn->connect_error) {
     echo json_encode(['success' => false, 'message' => 'Database connection failed']);
@@ -61,8 +64,12 @@ try {
         throw new Exception('Appointment not found or access denied');
     }
     
-    if ($appointment['status'] !== 'confirmed') {
-        throw new Exception('Only confirmed appointments can be cancelled');
+    // Normalize status for comparison (handle null, empty, and case issues)
+    $current_status = strtolower(trim($appointment['status'] ?? 'confirmed'));
+    $non_cancellable_statuses = ['cancelled', 'completed'];
+    
+    if (in_array($current_status, $non_cancellable_statuses)) {
+        throw new Exception('This appointment cannot be cancelled (Status: ' . $appointment['status'] . ')');
     }
     
     // Check if appointment is in the future
@@ -84,6 +91,44 @@ try {
     }
     
     $stmt->close();
+    
+    // Log the cancellation in appointment_logs
+    $stmt = $conn->prepare("
+        INSERT INTO appointment_logs (
+            appointment_id, patient_id, action, old_status, new_status, 
+            reason, created_by_type, created_by_id, ip_address, user_agent
+        ) VALUES (?, ?, 'cancelled', ?, 'cancelled', ?, 'patient', ?, ?, ?)
+    ");
+    
+    $old_status = $appointment['status'] ?? 'confirmed';
+    $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+    
+    $stmt->bind_param("iissiiss", 
+        $appointment_id, $patient_id, $old_status, $cancellation_reason, 
+        $patient_id, $ip_address, $user_agent
+    );
+    
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to log appointment cancellation');
+    }
+    
+    $stmt->close();
+    
+    // Try to cancel the associated queue entry (if it exists)
+    $queue_service = new QueueManagementService($conn);
+    $queue_result = $queue_service->cancelQueueEntry(
+        $appointment_id, 
+        $cancellation_reason, 
+        null // Patient-initiated cancellation
+    );
+    
+    // Don't fail the appointment cancellation if queue entry doesn't exist
+    // Queue entries might not exist for all appointments
+    if (!$queue_result['success'] && strpos($queue_result['error'], 'No active queue entry') === false) {
+        // Only throw error if it's not a "no queue entry" error
+        throw new Exception('Failed to cancel queue entry: ' . $queue_result['error']);
+    }
     
     // Commit transaction
     $conn->commit();

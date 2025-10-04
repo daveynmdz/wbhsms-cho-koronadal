@@ -35,7 +35,19 @@ if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'bhw') {
 // Log session data for debugging
 error_log('BHW Dashboard - Session Data: ' . print_r($_SESSION, true));
 
+require_once $root_path . '/utils/staff_assignment.php';
 $employee_id = $_SESSION['employee_id'];
+
+// Enforce staff assignment for today
+$assignment = getStaffAssignment($conn, $employee_id);
+if (!$assignment) {
+    // Not assigned today, block access
+    error_log('BHW Dashboard: No active staff assignment for today.');
+    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'You are not assigned to any station today. Please contact the administrator.');
+    header('Location: ../auth/employee_login.php?not_assigned=1');
+    exit();
+}
+
 $employee_name = $_SESSION['employee_name'] ?? ($_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name']);
 $employee_number = $_SESSION['employee_number'] ?? 'N/A';
 $role = $_SESSION['role'] ?? 'BHW';

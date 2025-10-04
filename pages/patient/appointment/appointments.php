@@ -12,9 +12,29 @@ if (!isset($_SESSION['patient_id'])) {
 // Database connection
 require_once $root_path . '/config/db.php';
 
+// Include automatic status updater
+require_once $root_path . '/utils/automatic_status_updater.php';
+
+// Include queue management service
+require_once $root_path . '/utils/queue_management_service.php';
+
 $patient_id = $_SESSION['patient_id'];
 $message = '';
 $error = '';
+
+// Run automatic status updates when page loads
+try {
+    $status_updater = new AutomaticStatusUpdater($conn);
+    $update_result = $status_updater->runAllUpdates();
+    
+    // Optional: Show update message to user (you can remove this if you don't want to show it)
+    if ($update_result['success'] && $update_result['total_updates'] > 0) {
+        $message = "Status updates applied: " . $update_result['total_updates'] . " records updated automatically.";
+    }
+} catch (Exception $e) {
+    // Log error but don't show to user to avoid confusion
+    error_log("Failed to run automatic status updates: " . $e->getMessage());
+}
 
 // Fetch patient information
 $patient_info = null;
@@ -41,20 +61,25 @@ try {
     $error = "Failed to fetch patient information: " . $e->getMessage();
 }
 
-// Fetch appointments
+// Fetch appointments with queue information (limit to recent 20 for performance)
 $appointments = [];
 try {
     $stmt = $conn->prepare("
         SELECT a.*, 
+               COALESCE(a.status, 'confirmed') as status,
                f.name as facility_name, f.type as facility_type,
                s.name as service_name,
-               r.referral_num, r.referral_reason
+               r.referral_num, r.referral_reason,
+               qe.queue_number, qe.queue_type, qe.priority_level as queue_priority, qe.status as queue_status,
+               qe.time_in, qe.time_started, qe.time_completed
         FROM appointments a
         LEFT JOIN facilities f ON a.facility_id = f.facility_id
         LEFT JOIN services s ON a.service_id = s.service_id
         LEFT JOIN referrals r ON a.referral_id = r.referral_id
+        LEFT JOIN queue_entries qe ON a.appointment_id = qe.appointment_id
         WHERE a.patient_id = ?
         ORDER BY a.scheduled_date DESC, a.scheduled_time DESC
+        LIMIT 20
     ");
     $stmt->bind_param("i", $patient_id);
     $stmt->execute();
@@ -65,7 +90,7 @@ try {
     $error = "Failed to fetch appointments: " . $e->getMessage();
 }
 
-// Fetch referrals
+// Fetch referrals (limit to recent 15 for performance)
 $referrals = [];
 try {
     $stmt = $conn->prepare("
@@ -77,6 +102,7 @@ try {
         LEFT JOIN employees e ON r.referred_by = e.employee_id
         WHERE r.patient_id = ?
         ORDER BY r.referral_date DESC
+        LIMIT 15
     ");
     $stmt->bind_param("i", $patient_id);
     $stmt->execute();
@@ -457,6 +483,48 @@ try {
             color: #721c24;
         }
 
+        .status-waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-in_progress {
+            background: #cce7ff;
+            color: #004085;
+        }
+
+        /* Default status style for any undefined status */
+        .status-badge:not([class*="status-confirmed"]):not([class*="status-pending"]):not([class*="status-cancelled"]):not([class*="status-completed"]):not([class*="status-active"]):not([class*="status-expired"]):not([class*="status-waiting"]):not([class*="status-in_progress"]) {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        /* Fallback for common statuses */
+        .status-scheduled {
+            background: #cce7ff;
+            color: #004085;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-skipped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-no_show {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
         .card-info {
             flex-grow: 1;
             margin-bottom: 1.2rem;
@@ -623,222 +691,445 @@ try {
             }
         }
 
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 90%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-        }
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
 
-        .modal-content {
-            background-color: #fff;
-            margin: 3% auto;
-            padding: 0;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 700px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            display: flex;
-            flex-direction: column;
-        }
+.modal-content {
+    background-color: #fff;
+    margin: 3% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
 
-        /* Header */
-        .modal-header {
-            background: linear-gradient(135deg, #0077b6, #023e8a);
-            color: white;
-            padding: 1rem 1.25rem;
-            border-radius: 12px 12px 0 0;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            gap: 0.5rem;
-        }
+/* Header */
+.modal-header {
+    background: linear-gradient(135deg, #0077b6, #023e8a);
+    color: white;
+    padding: 1rem 1.25rem;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-        .modal-header h3 {
-            margin: 0;
-            font-size: 1.25rem;
-            flex: 1;
-            text-align: left;
-        }
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 
-        .close {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.25rem;
-            cursor: pointer;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background 0.3s;
-        }
+.header-actions .btn-icon {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.3s;
+}
 
-        .close:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
+.header-actions .btn-icon:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
 
-        /* Body */
-        .modal-body {
-            padding: 1.25rem;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
+.close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s;
+}
+.close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
 
-        /* Footer */
-        .modal-footer {
-            padding: 1rem;
-            border-top: 1px solid #e9ecef;
-            display: flex;
-            justify-content: center;
-            gap: 0.75rem;
-            border-radius: 0 0 12px 12px;
-            flex-wrap: wrap;
-        }
+/* Body */
+.modal-body {
+    padding: 1.25rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
 
-        .modal-footer button {
-            flex: 1;
-            max-width: 150px;
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            border-radius: 6px;
-        }
+/* Cancel Modal Specific Styles */
+.cancellation-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
 
-        /* Status Badge */
-        .status-badge {
-            padding: 0.35rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            display: inline-block;
-        }
+.warning-icon {
+    color: #856404;
+    font-size: 1.2rem;
+    margin-top: 0.1rem;
+}
 
-        .status-confirmed {
-            background: #d4edda;
-            color: #155724;
-        }
+.warning-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #856404;
+    font-size: 1rem;
+    font-weight: 600;
+}
 
-        .status-completed {
-            background: #cce7ff;
-            color: #004085;
-        }
+.warning-content p {
+    margin: 0;
+    color: #856404;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
 
-        .status-cancelled {
-            background: #f8d7da;
-            color: #721c24;
-        }
+.cancel-form-group {
+    margin-bottom: 1.25rem;
+}
 
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
+.cancel-form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
 
-        /* Info Sections */
-        .info-section {
-            margin-bottom: 1rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 1rem;
-            border-left: 4px solid #0077b6;
-        }
+.cancel-form-label .required {
+    color: #dc3545;
+    margin-left: 0.2rem;
+}
 
-        .info-section h3 {
-            color: #0077b6;
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 0.5rem;
-        }
+.cancel-form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
 
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 0.75rem;
-        }
+.cancel-form-control:focus {
+    outline: none;
+    border-color: #0077b6;
+    box-shadow: 0 0 0 2px rgba(0, 119, 182, 0.2);
+}
 
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
+/* Appointment info in cancel modal */
+.appointment-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
 
-        .info-item label {
-            font-weight: 600;
-            color: #495057;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-        }
+.appointment-info h4 {
+    margin: 0 0 0.75rem 0;
+    color: #0077b6;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 
-        .info-item span {
-            color: #333;
-            font-size: 0.9rem;
-        }
+.appointment-info .info-text {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+}
 
-        /* Priority Info */
-        .info-item.priority-info {
-            grid-column: 1 / -1;
-            background: #e8f5e8;
-            padding: 0.75rem;
-            border-radius: 6px;
-            border: 1px solid #28a745;
-        }
+.appointment-info .info-text:last-child {
+    margin-bottom: 0;
+}
 
-        .priority-badge {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            padding: 0.4rem 0.75rem;
-            border-radius: 16px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
+.appointment-info .info-text strong {
+    color: #333;
+    font-weight: 600;
+}
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .modal-content {
-                width: 95%;
-                margin: 5% auto;
-            }
+/* Footer */
+.modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    border-radius: 0 0 12px 12px;
+    flex-wrap: wrap;
+}
 
-            .modal-header {
-                flex-direction: column;
-                text-align: center;
-            }
+.modal-footer button {
+    flex: 1;
+    max-width: 160px;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
 
-            .modal-header h3 {
-                text-align: center;
-            }
+.modal-footer .btn-secondary {
+    background: #6c757d;
+    border: 1px solid #6c757d;
+    color: white;
+}
 
-            .appointment-id-section {
-                text-align: center;
-            }
+.modal-footer .btn-secondary:hover {
+    background: #5a6268;
+    border-color: #5a6268;
+    transform: translateY(-1px);
+}
 
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
+.modal-footer .btn-danger {
+    background: #dc3545;
+    border: 1px solid #dc3545;
+    color: white;
+}
 
-            .modal-footer {
-                flex-direction: column;
-            }
-        }
+.modal-footer .btn-danger:hover {
+    background: #c82333;
+    border-color: #c82333;
+    transform: translateY(-1px);
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+}
+.status-confirmed {
+    background: #d4edda;
+    color: #155724;
+}
+.status-completed {
+    background: #cce7ff;
+    color: #004085;
+}
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* Info Sections */
+.info-section {
+    margin-bottom: 1.2rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 4px solid #0077b6;
+}
+.info-section h3 {
+    color: #0077b6;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    align-items: start;
+}
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+.info-item label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.info-item span {
+    color: #333;
+    font-size: 0.9rem;
+    line-height: 1.3;
+}
+
+/* Appointment Details Header */
+.details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #0077b6;
+}
+
+.clinic-info h2 {
+    color: #0077b6;
+    margin: 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.clinic-info p {
+    margin: 0.3rem 0 0 0;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.appointment-id-section {
+    text-align: right;
+}
+
+.appointment-id {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #0077b6;
+    margin-bottom: 0.3rem;
+}
+
+/* Notes Section */
+.notes-section {
+    background: #e8f4f8;
+    border-left-color: #17a2b8;
+}
+
+.notes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.notes-list li {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #495057;
+    line-height: 1.3;
+}
+
+.notes-list i {
+    color: #0077b6;
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Footer */
+.details-footer {
+    border-top: 1px solid #e9ecef;
+    padding-top: 0.8rem;
+    margin-top: 1.2rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* Priority Info */
+.info-item.priority-info {
+    grid-column: 1 / -1;
+    background: #e8f5e8;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #28a745;
+}
+.priority-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Cancellation Section */
+.cancellation-section {
+    background: #fff5f5;
+    border-left-color: #dc3545;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 5% auto;
+        max-width: none;
+    }
+    .modal-header {
+        padding: 0.8rem 1rem;
+    }
+    .modal-header h3 {
+        font-size: 1rem;
+    }
+    .details-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.8rem;
+    }
+    .appointment-id-section {
+        text-align: center;
+    }
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
     </style>
 </head>
 
@@ -887,7 +1178,7 @@ try {
                 </div>
                 <div>
                     <h2 class="section-title">My Appointments</h2>
-                    <p style="margin: 0; color: #6c757d;">Manage your healthcare appointments</p>
+                    <p style="margin: 0; color: #6c757d;">Manage your healthcare appointments (showing latest 20)</p>
                 </div>
             </div>
 
@@ -961,7 +1252,7 @@ try {
                         $is_priority = $patient_info['priority_level'] == 1;
                         $appointment_id = 'APT-' . str_pad($appointment['appointment_id'], 8, '0', STR_PAD_LEFT);
                         ?>
-                        <div class="appointment-card" data-status="<?php echo $appointment['status']; ?>" data-appointment-date="<?php echo $appointment['scheduled_date']; ?>">
+                        <div class="appointment-card" data-status="<?php echo $appointment['status'] ?? 'pending'; ?>" data-appointment-date="<?php echo $appointment['scheduled_date']; ?>">
                             <?php if ($is_priority): ?>
                                 <div class="priority-indicator" title="Priority Patient">
                                     <i class="fas fa-star"></i>
@@ -970,8 +1261,15 @@ try {
 
                             <div class="card-header">
                                 <h3 class="card-title"><?php echo $appointment_id; ?></h3>
-                                <span class="status-badge status-<?php echo $appointment['status']; ?>">
-                                    <?php echo ucfirst($appointment['status']); ?>
+                                <?php 
+                                // Ensure status always has a value for display
+                                $display_status = $appointment['status'] ?? 'confirmed';
+                                if (empty($display_status) || is_null($display_status)) {
+                                    $display_status = 'confirmed';
+                                }
+                                ?>
+                                <span class="status-badge status-<?php echo strtolower($display_status); ?>">
+                                    <?php echo ucfirst($display_status); ?>
                                 </span>
                             </div>
 
@@ -1003,6 +1301,22 @@ try {
                                         <span class="value">#<?php echo htmlspecialchars($appointment['referral_num']); ?></span>
                                     </div>
                                 <?php endif; ?>
+                                <?php if ($appointment['queue_number']): ?>
+                                    <div class="info-row">
+                                        <i class="fas fa-list-ol"></i>
+                                        <strong>Queue #:</strong>
+                                        <span class="value"><?php echo $appointment['queue_number']; ?> 
+                                            <small>(<?php echo ucfirst($appointment['queue_type']); ?>)</small>
+                                        </span>
+                                    </div>
+                                    <div class="info-row">
+                                        <i class="fas fa-hourglass-half"></i>
+                                        <strong>Queue Status:</strong>
+                                        <span class="value status-badge status-<?php echo $appointment['queue_status']; ?>">
+                                            <?php echo ucfirst(str_replace('_', ' ', $appointment['queue_status'])); ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
                                 <div class="info-row">
                                     <i class="fas fa-calendar-plus"></i>
                                     <strong>Booked:</strong>
@@ -1011,22 +1325,19 @@ try {
                             </div>
 
                             <div class="card-actions">
-                                <?php if ($appointment['status'] == 'confirmed'): ?>
-                                    <button class="btn btn-sm btn-outline btn-outline-primary" onclick="viewAppointmentDetails(<?php echo $appointment['appointment_id']; ?>)">
-                                        <i class="fas fa-eye"></i> View Details
-                                    </button>
-                                    <?php
-                                    // Combine date and time for proper comparison
-                                    $appointment_datetime = $appointment['scheduled_date'] . ' ' . $appointment['scheduled_time'];
-                                    if (strtotime($appointment_datetime) > time()):
-                                    ?>
-                                        <button class="btn btn-sm btn-outline btn-outline-danger" onclick="showCancelModal(<?php echo $appointment['appointment_id']; ?>, '<?php echo $appointment_id; ?>')">
-                                            <i class="fas fa-times"></i> Cancel
-                                        </button>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    <button class="btn btn-sm btn-outline btn-outline-primary" onclick="viewAppointmentDetails(<?php echo $appointment['appointment_id']; ?>)">
-                                        <i class="fas fa-eye"></i> View Details
+                                <button class="btn btn-sm btn-outline btn-outline-primary" onclick="viewAppointmentDetails(<?php echo $appointment['appointment_id']; ?>)">
+                                    <i class="fas fa-eye"></i> View Details
+                                </button>
+                                <?php
+                                // Show cancel button for appointments that can still be cancelled
+                                // If status is null/empty, treat as cancellable
+                                $current_status = $appointment['status'];
+                                $is_cancelled = ($current_status && in_array(strtolower(trim($current_status)), ['cancelled', 'completed', 'no-show']));
+                                
+                                if (!$is_cancelled):
+                                ?>
+                                    <button class="btn btn-sm btn-outline btn-outline-danger" onclick="showCancelModal(<?php echo $appointment['appointment_id']; ?>, '<?php echo $appointment_id; ?>')">
+                                        <i class="fas fa-times"></i> Cancel
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -1044,7 +1355,7 @@ try {
                 </div>
                 <div>
                     <h2 class="section-title">My Referrals</h2>
-                    <p style="margin: 0; color: #6c757d;">Track your medical referrals</p>
+                    <p style="margin: 0; color: #6c757d;">Track your medical referrals (showing latest 15)</p>
                 </div>
             </div>
 
@@ -1177,15 +1488,19 @@ try {
                 <button type="button" class="close" onclick="closeCancelModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="fas fa-info-circle"></i>
-                    <strong>Are you sure you want to cancel this appointment?</strong>
-                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">This action cannot be undone. Please provide a reason for cancellation.</p>
+                <div class="cancellation-warning">
+                    <div class="warning-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="warning-content">
+                        <h4>Are you sure you want to cancel this appointment?</h4>
+                        <p>This action cannot be undone. Please provide a reason for cancellation.</p>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="cancellation-reason">Reason for Cancellation <span style="color: red;">*</span></label>
-                    <select id="cancellation-reason" class="form-control" required>
+                <div class="cancel-form-group">
+                    <label for="cancellation-reason" class="cancel-form-label">Reason for Cancellation <span class="required">*</span></label>
+                    <select id="cancellation-reason" class="cancel-form-control" required>
                         <option value="">Select a reason...</option>
                         <option value="Personal Emergency">Personal Emergency</option>
                         <option value="Schedule Conflict">Schedule Conflict</option>
@@ -1197,9 +1512,9 @@ try {
                     </select>
                 </div>
 
-                <div class="form-group" id="other-reason-group" style="display: none;">
-                    <label for="other-reason">Please specify:</label>
-                    <textarea id="other-reason" class="form-control" rows="3" placeholder="Please provide details..."></textarea>
+                <div class="cancel-form-group" id="other-reason-group" style="display: none;">
+                    <label for="other-reason" class="cancel-form-label">Please specify:</label>
+                    <textarea id="other-reason" class="cancel-form-control" rows="3" placeholder="Please provide details..."></textarea>
                 </div>
 
                 <div class="appointment-info" id="cancel-appointment-info">
@@ -1246,8 +1561,9 @@ try {
     <script>
         // Filter functionality for appointments
         function filterAppointments(status, clickedElement) {
-            // Remove active class from all tabs
-            document.querySelectorAll('#appointments-grid').closest('.section-container').querySelectorAll('.filter-tab').forEach(tab => {
+            // Remove active class from all appointment filter tabs
+            const appointmentTabs = document.querySelectorAll('.section-container .filter-tab');
+            appointmentTabs.forEach(tab => {
                 tab.classList.remove('active');
             });
 
@@ -1286,7 +1602,7 @@ try {
                         <i class="fas fa-search"></i>
                         <h3>No ${status === 'all' ? 'Appointments' : status.charAt(0).toUpperCase() + status.slice(1) + ' Appointments'} Found</h3>
                         <p>No ${status === 'all' ? 'appointments' : status + ' appointments'} are available at this time.</p>
-                        <button class="btn btn-secondary" onclick="filterAppointments('all', this.closest('.section-container').querySelector('.filter-tab'))" style="margin-top: 1rem;">
+                        <button class="btn btn-secondary" onclick="filterAppointments('all', document.querySelectorAll('.section-container')[0].querySelector('.filter-tab'))" style="margin-top: 1rem;">
                             <i class="fas fa-list"></i> Show All Appointments
                         </button>
                     </div>
@@ -1373,7 +1689,8 @@ try {
 
             // Clear tab selections when using search
             if (searchTerm || dateFrom || dateTo || statusFilter) {
-                document.querySelectorAll('#appointments-grid').closest('.section-container').querySelectorAll('.filter-tab').forEach(tab => {
+                const appointmentTabs = document.querySelectorAll('.section-container .filter-tab');
+                appointmentTabs.forEach(tab => {
                     tab.classList.remove('active');
                 });
             }
@@ -1399,14 +1716,18 @@ try {
                 card.style.display = 'block';
             });
 
-            // Reset to "All Appointments" tab
-            document.querySelectorAll('#appointments-grid').closest('.section-container').querySelectorAll('.filter-tab').forEach((tab, index) => {
-                if (index === 0) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
+            // Reset to "All Appointments" tab - find the first appointments section
+            const appointmentSections = document.querySelectorAll('.section-container');
+            if (appointmentSections.length > 0) {
+                const appointmentTabs = appointmentSections[0].querySelectorAll('.filter-tab');
+                appointmentTabs.forEach((tab, index) => {
+                    if (index === 0) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                });
+            }
         }
 
         // Filter functionality for referrals
@@ -1452,7 +1773,7 @@ try {
                         <i class="fas fa-search"></i>
                         <h3>No ${status === 'all' ? 'Referrals' : status.charAt(0).toUpperCase() + status.slice(1) + ' Referrals'} Found</h3>
                         <p>No ${status === 'all' ? 'referrals' : status + ' referrals'} are available at this time.</p>
-                        <button class="btn btn-secondary" onclick="filterReferrals('all', this.closest('.section-container').querySelector('.filter-tab'))" style="margin-top: 1rem;">
+                        <button class="btn btn-secondary" onclick="filterReferrals('all', document.querySelectorAll('.section-container')[document.querySelectorAll('.section-container').length-1].querySelector('.filter-tab'))" style="margin-top: 1rem;">
                             <i class="fas fa-list"></i> Show All Referrals
                         </button>
                     </div>
@@ -1528,9 +1849,13 @@ try {
 
             // Clear tab selections when using search
             if (searchTerm || dateFrom || dateTo || statusFilter) {
-                document.querySelectorAll('.section-container:last-child .filter-tabs .filter-tab').forEach(tab => {
-                    tab.classList.remove('active');
-                });
+                const sectionContainers = document.querySelectorAll('.section-container');
+                if (sectionContainers.length > 1) {
+                    const referralTabs = sectionContainers[sectionContainers.length - 1].querySelectorAll('.filter-tab');
+                    referralTabs.forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                }
             }
         }
 
@@ -1554,14 +1879,18 @@ try {
                 card.style.display = 'block';
             });
 
-            // Reset to "All Referrals" tab
-            document.querySelectorAll('.section-container:last-child .filter-tabs .filter-tab').forEach((tab, index) => {
-                if (index === 0) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
+            // Reset to "All Referrals" tab - find the referrals section (last section)
+            const sectionContainers = document.querySelectorAll('.section-container');
+            if (sectionContainers.length > 1) {
+                const referralTabs = sectionContainers[sectionContainers.length - 1].querySelectorAll('.filter-tab');
+                referralTabs.forEach((tab, index) => {
+                    if (index === 0) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                });
+            }
         }
 
         // View appointment details
@@ -1589,14 +1918,14 @@ try {
             const createdDate = new Date(appointment.created_at);
             const appointmentId = 'APT-' + String(appointment.appointment_id).padStart(8, '0');
             const patientInfo = <?php echo json_encode($patient_info); ?>;
-
+            
             // Determine status styling
             const statusClass = {
                 'confirmed': 'status-confirmed',
-                'completed': 'status-completed',
+                'completed': 'status-completed', 
                 'cancelled': 'status-cancelled'
-            } [appointment.status] || 'status-pending';
-
+            }[appointment.status] || 'status-pending';
+            
             content.innerHTML = `
                 <div class="appointment-details-container" id="printable-content">
                     <!-- Header Section -->
@@ -1618,24 +1947,24 @@ try {
                         <h3><i class="fas fa-user"></i> Patient Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
-                                <label>Full Name:</label>
+                                <label>Full Name</label>
                                 <span>${patientInfo.first_name} ${patientInfo.middle_name || ''} ${patientInfo.last_name}</span>
                             </div>
                             <div class="info-item">
-                                <label>Patient ID:</label>
+                                <label>Patient ID</label>
                                 <span>${patientInfo.username}</span>
                             </div>
                             <div class="info-item">
-                                <label>Contact Number:</label>
+                                <label>Contact Number</label>
                                 <span>${patientInfo.contact_num || 'Not provided'}</span>
                             </div>
                             <div class="info-item">
-                                <label>Address:</label>
+                                <label>Address</label>
                                 <span>${patientInfo.barangay_name || 'Not specified'}</span>
                             </div>
                             ${patientInfo.priority_level === 1 ? `
                             <div class="info-item priority-info">
-                                <label>Priority Status:</label>
+                                <label>Priority Status</label>
                                 <span class="priority-badge">
                                     <i class="fas fa-star"></i> Priority Patient
                                 </span>
@@ -1649,15 +1978,15 @@ try {
                         <h3><i class="fas fa-calendar-check"></i> Appointment Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
-                                <label>Healthcare Facility:</label>
+                                <label>Healthcare Facility</label>
                                 <span>${appointment.facility_name}</span>
                             </div>
                             <div class="info-item">
-                                <label>Service Type:</label>
+                                <label>Service Type</label>
                                 <span>${appointment.service_name}</span>
                             </div>
                             <div class="info-item">
-                                <label>Appointment Date:</label>
+                                <label>Appointment Date</label>
                                 <span>${appointmentDate.toLocaleDateString('en-US', {
                                     weekday: 'long',
                                     year: 'numeric',
@@ -1666,7 +1995,7 @@ try {
                                 })}</span>
                             </div>
                             <div class="info-item">
-                                <label>Appointment Time:</label>
+                                <label>Appointment Time</label>
                                 <span>${appointmentTime.toLocaleTimeString('en-US', {
                                     hour: 'numeric',
                                     minute: '2-digit',
@@ -1674,7 +2003,7 @@ try {
                                 })}</span>
                             </div>
                             <div class="info-item">
-                                <label>Booking Date:</label>
+                                <label>Booking Date</label>
                                 <span>${createdDate.toLocaleDateString('en-US', {
                                     year: 'numeric',
                                     month: 'long',
@@ -1682,11 +2011,54 @@ try {
                                 })}</span>
                             </div>
                             <div class="info-item">
-                                <label>Status:</label>
+                                <label>Status</label>
                                 <span class="status-badge ${statusClass}">${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}</span>
+                            </div>
+                            ${appointment.queue_number ? `
+                            <div class="info-item">
+                                <label>Queue Number</label>
+                                <span style="color: #0077b6; font-weight: 600; font-size: 1.1rem;">#${appointment.queue_number}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Queue Type</label>
+                                <span>${appointment.queue_type ? appointment.queue_type.charAt(0).toUpperCase() + appointment.queue_type.slice(1) : 'Consultation'}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${appointment.queue_number ? `
+                    <!-- Queue Information -->
+                    <div class="info-section">
+                        <h3><i class="fas fa-ticket-alt"></i> Queue Information</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Queue Number</label>
+                                <span style="color: #0077b6; font-weight: bold; font-size: 1.3rem; background: #e3f2fd; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block;">#${appointment.queue_number}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Queue Type</label>
+                                <span>${appointment.queue_type ? appointment.queue_type.charAt(0).toUpperCase() + appointment.queue_type.slice(1) : 'Consultation'}</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Queue Status</label>
+                                <span class="status-badge ${appointment.queue_status ? 'status-' + appointment.queue_status : 'status-waiting'}">${appointment.queue_status ? appointment.queue_status.charAt(0).toUpperCase() + appointment.queue_status.slice(1) : 'Waiting'}</span>
+                            </div>
+                            ${appointment.queue_priority ? `
+                            <div class="info-item">
+                                <label>Priority Level</label>
+                                <span style="color: ${appointment.queue_priority === 'priority' ? '#dc3545' : '#28a745'}; font-weight: 600;">
+                                    ${appointment.queue_priority === 'priority' ? '⭐ Priority' : '👤 Regular'}
+                                </span>
+                            </div>
+                            ` : ''}
+                            <div class="info-item full-width">
+                                <label>Instructions</label>
+                                <span style="font-style: italic; color: #6c757d;">Present this queue number when you arrive at the facility for faster check-in.</span>
                             </div>
                         </div>
                     </div>
+                    ` : ''}
                     
                     ${appointment.referral_num ? `
                     <!-- Referral Information -->
@@ -1694,11 +2066,11 @@ try {
                         <h3><i class="fas fa-file-medical"></i> Referral Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
-                                <label>Referral Number:</label>
+                                <label>Referral Number</label>
                                 <span>#${appointment.referral_num}</span>
                             </div>
                             <div class="info-item full-width">
-                                <label>Referral Reason:</label>
+                                <label>Referral Reason</label>
                                 <span>${appointment.referral_reason || 'Not specified'}</span>
                             </div>
                         </div>
@@ -1711,7 +2083,7 @@ try {
                         <h3><i class="fas fa-times-circle"></i> Cancellation Information</h3>
                         <div class="info-grid">
                             <div class="info-item full-width">
-                                <label>Cancellation Reason:</label>
+                                <label>Cancellation Reason</label>
                                 <span>${appointment.cancellation_reason}</span>
                             </div>
                         </div>
@@ -1724,6 +2096,7 @@ try {
                         <ul class="notes-list">
                             <li><i class="fas fa-id-card"></i> Bring a valid government-issued ID</li>
                             <li><i class="fas fa-clock"></i> Arrive 15 minutes before your appointment time</li>
+                            ${appointment.queue_number ? '<li><i class="fas fa-ticket-alt"></i> Present your queue number (#' + appointment.queue_number + ') for faster check-in</li>' : ''}
                             ${appointment.referral_num ? '<li><i class="fas fa-file-medical"></i> Present your referral document at the facility</li>' : ''}
                             <li><i class="fas fa-phone"></i> Contact the facility if you need to reschedule</li>
                             <li><i class="fas fa-mask"></i> Follow health protocols as required</li>
@@ -1732,7 +2105,7 @@ try {
                     
                     <!-- Footer -->
                     <div class="details-footer">
-                        <div class="print-timestamp">
+                        <div>
                             <small>Generated on: ${new Date().toLocaleString('en-US', {
                                 year: 'numeric',
                                 month: 'long', 
@@ -1742,7 +2115,7 @@ try {
                                 hour12: true
                             })}</small>
                         </div>
-                        <div class="contact-info">
+                        <div>
                             <small>For inquiries, contact City Health Office of Koronadal</small>
                         </div>
                     </div>
@@ -1797,10 +2170,8 @@ try {
             // Update appointment info in modal
             const appointmentInfo = document.getElementById('cancel-appointment-info');
             appointmentInfo.innerHTML = `
-                <div style="background: #f8f9fa; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
-                    <h4 style="margin: 0 0 0.5rem 0; color: #0077b6;">Appointment Details</h4>
-                    <p style="margin: 0; font-weight: 600;">Appointment ID: ${appointmentNumber}</p>
-                </div>
+                <h4><i class="fas fa-calendar-check"></i> Appointment Details</h4>
+                <div class="info-text"><strong>Appointment ID:</strong> ${appointmentNumber}</div>
             `;
 
             // Reset form
@@ -1907,16 +2278,21 @@ try {
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            // Set default active filter for appointments
-            const appointmentTabs = document.querySelectorAll('.section-container:first-of-type .filter-tab');
-            if (appointmentTabs.length > 0) {
-                appointmentTabs[0].classList.add('active');
+            // Set default active filter for appointments - find first section
+            const sectionContainers = document.querySelectorAll('.section-container');
+            if (sectionContainers.length > 0) {
+                const appointmentTabs = sectionContainers[0].querySelectorAll('.filter-tab');
+                if (appointmentTabs.length > 0) {
+                    appointmentTabs[0].classList.add('active');
+                }
             }
 
-            // Set default active filter for referrals
-            const referralTabs = document.querySelectorAll('.section-container:last-child .filter-tab');
-            if (referralTabs.length > 0) {
-                referralTabs[0].classList.add('active');
+            // Set default active filter for referrals - find last section
+            if (sectionContainers.length > 1) {
+                const referralTabs = sectionContainers[sectionContainers.length - 1].querySelectorAll('.filter-tab');
+                if (referralTabs.length > 0) {
+                    referralTabs[0].classList.add('active');
+                }
             }
 
             // Setup cancel modal event listeners

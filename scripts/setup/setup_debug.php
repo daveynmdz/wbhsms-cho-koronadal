@@ -167,8 +167,8 @@ echo '<div class="actions">
     <a href="?action=regenerate_id">Regenerate Session ID</a>
     <a href="?action=view_session">View Session</a>
     <a href="?action=test_login_redirect">Test Login Redirect</a>
-    <a href="index.php">Go to Homepage</a>
-    <a href="pages/management/auth/employee_login.php">Go to Login Page</a>
+    <a href="../../index.php">Go to Homepage</a>
+    <a href="../../pages/management/auth/employee_login.php">Go to Login Page</a>
     <a href="?action=logout" class="warning">Logout</a>
 </div>';
 

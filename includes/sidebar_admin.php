@@ -130,9 +130,9 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments Management
         </a>
-        <a href="<?= $nav_base ?>management/admin/employee_management.php"
+        <a href="<?= $nav_base ?>management/admin/staff_assignments.php"
             class="<?= $activePage === 'employees' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-user-tie"></i> Employee Management
+            <i class="fas fa-user-tie"></i> Staff Assignment
         </a>
         <!-- These links are placeholders for pages not yet created -->
         <a href="#"
@@ -151,8 +151,8 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'reports' ? 'active' : '' ?> disabled" role="menuitem">
             <i class="fas fa-chart-bar"></i> Reports
         </a>
-        <a href="#"
-            class="<?= $activePage === 'queueing' ? 'active' : '' ?> disabled" role="menuitem">
+        <a href="<?= $nav_base ?>queueing/dashboard.php"
+            class="<?= $activePage === 'queueing' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-list-ol"></i> Queue Management
         </a>
         <a href="#"

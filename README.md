@@ -3,7 +3,27 @@
 
 A comprehensive healthcare management system for the City Health Office of Koronadal, designed for easy deployment with XAMPP.
 
-## 🚀 Quick XAMPP Setup
+## � Repository Structure
+
+```
+wbhsms-cho-koronadal/
+├── index.php                    # Main homepage
+├── api/                         # REST API endpoints and backend controllers
+├── assets/                      # CSS, JS, images
+├── config/                      # Database and environment configuration
+├── includes/                    # Shared navigation and headers
+├── pages/                       # Application pages (patient, management, queueing)
+├── scripts/                     # Setup, maintenance, and utility scripts
+│   ├── setup/                   # Installation and testing tools
+│   ├── maintenance/             # Database maintenance scripts
+│   └── cron/                    # Scheduled task scripts
+├── tests/                       # Testing and debugging tools
+├── docs/                        # Documentation and guides
+├── utils/                       # Utility functions and templates
+└── vendor/                      # Third-party libraries
+```
+
+## �🚀 Quick Setup
 
 ### Prerequisites
 - [XAMPP](https://www.apachefriends.org/download.html) (includes PHP, MySQL, Apache)
@@ -41,8 +61,10 @@ A comprehensive healthcare management system for the City Health Office of Koron
    - Edit `.env` file if needed (default XAMPP settings should work)
 
 6. **Test the Installation**
-   - Visit: http://localhost/wbhsms-cho-koronadal/testdb.php
+   - Visit: http://localhost/wbhsms-cho-koronadal/scripts/setup/testdb.php
    - You should see "Database Connection Successful!"
+   - Visit: http://localhost/wbhsms-cho-koronadal/scripts/setup/setup_check.php
+   - Verify all components are working properly
 
 7. **Access the System**
    - Homepage: http://localhost/wbhsms-cho-koronadal/

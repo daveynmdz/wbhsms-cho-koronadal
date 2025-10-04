@@ -209,8 +209,8 @@ foreach ($critical_files as $file => $desc) {
             <?php if ($overall_status): ?>
                 <p>✅ Your XAMPP setup is ready! You can now use the system.</p>
                 <a href="testdb.php" class="btn">🗄️ Test Database</a>
-                <a href="index.php" class="btn btn-success">🏠 Go to Homepage</a>
-                <a href="pages/patient/auth/patient_login.php" class="btn">👤 Patient Login</a>
+                <a href="../../index.php" class="btn btn-success">🏠 Go to Homepage</a>
+                <a href="../../pages/patient/auth/patient_login.php" class="btn">👤 Patient Login</a>
             <?php else: ?>
                 <p>❌ Please fix the issues above before proceeding:</p>
                 <ul>

@@ -9,6 +9,10 @@ This directory contains testing utilities for the CHO Koronadal Healthcare Manag
 - **Root Test:** `/testdb.php` - Simple XAMPP-friendly test
 - **Setup Check:** `/setup_check.php` - Complete system validation
 
+### Integration Tests
+- **File:** `test_appointment_queueing_integration.php` - Enhanced appointment booking + queueing integration test
+- **Features:** Tests time slot queue numbering, visit creation, appointment logging, 20-patient slot limits
+
 ## XAMPP Testing
 
 For XAMPP users, use the simplified tests in the root directory:
