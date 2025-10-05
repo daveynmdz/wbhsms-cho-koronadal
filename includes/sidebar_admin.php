@@ -130,7 +130,7 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments Management
         </a>
-        <a href="<?= $nav_base ?>management/admin/staff_assignments.php"
+        <a href="<?= $nav_base ?>queueing/staff_assignments.php"
             class="<?= $activePage === 'employees' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-user-tie"></i> Staff Assignment
         </a>

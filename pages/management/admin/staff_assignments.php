@@ -19,44 +19,51 @@ if (strtolower($_SESSION['role']) !== 'admin') {
 }
 
 require_once $root_path . '/config/db.php';
-require_once $root_path . '/utils/staff_assignment.php';
+require_once $root_path . '/utils/queue_management_service.php';
 
 $date = $_GET['date'] ?? date('Y-m-d');
-$assignments = getAllAssignmentsForDate($conn, $date);
+$queueService = new QueueManagementService($conn);
+$assignments = $queueService->getAllStationsWithAssignments($date);
 
-// Fetch all employees for assignment dropdown
-$employees = [];
-$res = $conn->query("SELECT employee_id, first_name, last_name, role FROM employees WHERE status = 'active' ORDER BY last_name, first_name");
-while ($row = $res->fetch_assoc()) {
-    $employees[] = $row;
-}
+// Fetch all employees for assignment dropdown using new service
+$employees = $queueService->getActiveEmployees(1);
 
-// Handle assignment form submission
+// Handle assignment form submission using new system
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
     $employee_id = intval($_POST['employee_id']);
-    $station_type = $_POST['station_type'];
-    $station_number = intval($_POST['station_number']);
+    $station_id = intval($_POST['station_id']);
     $assigned_date = $_POST['assigned_date'];
+    $assignment_type = $_POST['assignment_type'] ?? 'permanent';
+    $end_date = $_POST['end_date'] ?? null;
     $shift_start = $_POST['shift_start'] ?? '08:00:00';
     $shift_end = $_POST['shift_end'] ?? '17:00:00';
     $assigned_by = $_SESSION['employee_id'];
-    if (assignStaffToStation($conn, $employee_id, $station_type, $station_number, $assigned_date, $shift_start, $shift_end, $assigned_by)) {
+    
+    $result = $queueService->assignEmployeeToStation(
+        $employee_id, $station_id, $assigned_date, $assignment_type,
+        $shift_start, $shift_end, $assigned_by, $end_date
+    );
+    
+    if ($result['success']) {
         header('Location: staff_assignments.php?date=' . urlencode($assigned_date));
         exit();
     } else {
-        $error = 'Failed to assign staff.';
+        $error = $result['error'] ?? 'Failed to assign staff.';
     }
 }
 
-// Handle unassign action
+// Handle unassign action using new system
 if (isset($_GET['unassign'])) {
-    $assignment_id = intval($_GET['unassign']);
-    $res = $conn->query("SELECT * FROM staff_assignments WHERE id = $assignment_id");
-    $row = $res->fetch_assoc();
-    if ($row) {
-        unassignStaffFromStation($conn, $row['employee_id'], $row['station_type'], $row['station_number'], $row['assigned_date']);
-        header('Location: staff_assignments.php?date=' . urlencode($row['assigned_date']));
+    $station_id = intval($_GET['unassign']);
+    $removal_date = $_GET['date'] ?? date('Y-m-d');
+    
+    $result = $queueService->removeEmployeeAssignment($station_id, $removal_date, 'end_assignment');
+    
+    if ($result['success']) {
+        header('Location: staff_assignments.php?date=' . urlencode($removal_date));
         exit();
+    } else {
+        $error = $result['error'] ?? 'Failed to remove assignment.';
     }
 }
 ?>
@@ -75,6 +82,13 @@ if (isset($_GET['unassign'])) {
 </head>
 <body>
     <h2>Staff Assignments for <?php echo htmlspecialchars($date); ?></h2>
+    
+    <?php if (isset($error)): ?>
+        <div style="color: red; background: #ffe6e6; padding: 10px; margin: 10px 0; border-radius: 4px;">
+            <strong>Error:</strong> <?php echo htmlspecialchars($error); ?>
+        </div>
+    <?php endif; ?>
+    
     <form method="get" style="margin-bottom:1em;">
         <label for="date">Date:</label>
         <input type="date" name="date" id="date" value="<?php echo htmlspecialchars($date); ?>">
@@ -86,26 +100,32 @@ if (isset($_GET['unassign'])) {
             <select name="employee_id" required>
                 <option value="">Select...</option>
                 <?php foreach ($employees as $emp): ?>
-                    <option value="<?php echo $emp['employee_id']; ?>"><?php echo htmlspecialchars($emp['last_name'] . ', ' . $emp['first_name'] . ' (' . $emp['role'] . ')'); ?></option>
+                    <option value="<?php echo $emp['employee_id']; ?>"><?php echo htmlspecialchars($emp['full_name'] . ' (' . $emp['role_name'] . ')'); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="form-row">
-            <label>Station Type:</label>
-            <select name="station_type" required>
-                <option value="doctor">Doctor</option>
-                <option value="nurse">Nurse</option>
-                <option value="pharmacist">Pharmacist</option>
-                <option value="laboratory_tech">Laboratory Tech</option>
-                <option value="cashier">Cashier</option>
-                <option value="records_officer">Records Officer</option>
-                <option value="dho">DHO</option>
-                <option value="bhw">BHW</option>
+            <label>Station:</label>
+            <select name="station_id" required>
+                <option value="">Select...</option>
+                <?php 
+                $stations_result = $conn->query("SELECT station_id, station_name, station_type FROM stations WHERE is_active = 1 ORDER BY station_name");
+                while ($station = $stations_result->fetch_assoc()): 
+                ?>
+                    <option value="<?php echo $station['station_id']; ?>"><?php echo htmlspecialchars($station['station_name'] . ' (' . $station['station_type'] . ')'); ?></option>
+                <?php endwhile; ?>
             </select>
         </div>
         <div class="form-row">
-            <label>Station Number:</label>
-            <input type="number" name="station_number" min="1" required>
+            <label>Assignment Type:</label>
+            <select name="assignment_type" required onchange="toggleEndDate()">
+                <option value="permanent">Permanent Assignment</option>
+                <option value="temporary">Temporary Assignment</option>
+            </select>
+        </div>
+        <div class="form-row" id="end_date_field" style="display: none;">
+            <label>End Date:</label>
+            <input type="date" name="end_date" min="<?php echo htmlspecialchars($date); ?>">
         </div>
         <div class="form-row">
             <label>Date:</label>
@@ -123,11 +143,12 @@ if (isset($_GET['unassign'])) {
         <table>
             <thead>
                 <tr>
+                    <th>Station</th>
                     <th>Employee</th>
                     <th>Role</th>
-                    <th>Station Type</th>
-                    <th>Station #</th>
-                    <th>Date</th>
+                    <th>Assignment Type</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
                     <th>Shift</th>
                     <th>Status</th>
                     <th>Action</th>
@@ -136,16 +157,23 @@ if (isset($_GET['unassign'])) {
             <tbody>
                 <?php foreach ($assignments as $a): ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($a['last_name'] . ', ' . $a['first_name']); ?></td>
-                        <td><?php echo htmlspecialchars($a['role']); ?></td>
-                        <td><?php echo htmlspecialchars($a['station_type']); ?></td>
-                        <td><?php echo htmlspecialchars($a['station_number']); ?></td>
-                        <td><?php echo htmlspecialchars($a['assigned_date']); ?></td>
-                        <td><?php echo htmlspecialchars($a['shift_start'] . ' - ' . $a['shift_end']); ?></td>
-                        <td><?php echo htmlspecialchars($a['status']); ?></td>
+                        <td><?php echo htmlspecialchars($a['station_name'] ?? 'Unknown'); ?></td>
+                        <td><?php echo htmlspecialchars($a['employee_name'] ?? 'Unassigned'); ?></td>
+                        <td><?php echo htmlspecialchars($a['employee_role'] ?? '-'); ?></td>
+                        <td><?php echo htmlspecialchars($a['assignment_type'] ?? '-'); ?></td>
+                        <td><?php echo htmlspecialchars($a['start_date'] ?? '-'); ?></td>
+                        <td><?php echo $a['end_date'] ? htmlspecialchars($a['end_date']) : 'Permanent'; ?></td>
+                        <td><?php 
+                            if ($a['shift_start_time'] && $a['shift_end_time']) {
+                                echo htmlspecialchars($a['shift_start_time'] . ' - ' . $a['shift_end_time']);
+                            } else {
+                                echo '-';
+                            }
+                        ?></td>
+                        <td><?php echo ($a['is_active'] && $a['employee_name']) ? 'Active' : 'Inactive'; ?></td>
                         <td>
-                            <?php if ($a['status'] === 'active'): ?>
-                                <a href="?unassign=<?php echo $a['id']; ?>&date=<?php echo urlencode($a['assigned_date']); ?>" onclick="return confirm('Unassign this staff?');">Unassign</a>
+                            <?php if ($a['employee_name'] && $a['assignment_status']): ?>
+                                <a href="?unassign=<?php echo $a['station_id']; ?>&date=<?php echo urlencode($date); ?>" onclick="return confirm('Remove this assignment?');">Remove</a>
                             <?php else: ?>
                                 -
                             <?php endif; ?>
@@ -157,5 +185,21 @@ if (isset($_GET['unassign'])) {
     <?php else: ?>
         <p>No assignments for this date.</p>
     <?php endif; ?>
+    <script>
+        function toggleEndDate() {
+            const assignmentType = document.querySelector('select[name="assignment_type"]').value;
+            const endDateField = document.getElementById('end_date_field');
+            const endDateInput = document.querySelector('input[name="end_date"]');
+            
+            if (assignmentType === 'temporary') {
+                endDateField.style.display = 'block';
+                endDateInput.required = true;
+            } else {
+                endDateField.style.display = 'none';
+                endDateInput.required = false;
+                endDateInput.value = '';
+            }
+        }
+    </script>
 </body>
 </html>
