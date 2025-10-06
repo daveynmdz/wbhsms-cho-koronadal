@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 06, 2025 at 07:19 AM
+-- Generation Time: Oct 06, 2025 at 02:04 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -56,7 +56,7 @@ CREATE TABLE `appointments` (
   `service_id` int(10) UNSIGNED DEFAULT NULL,
   `scheduled_date` date NOT NULL,
   `scheduled_time` time NOT NULL,
-  `status` enum('confirmed','completed','cancelled') DEFAULT 'confirmed',
+  `status` enum('confirmed','completed','cancelled','checked_in') DEFAULT 'confirmed',
   `cancellation_reason` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -1181,6 +1181,7 @@ CREATE TABLE `stations` (
   `station_type` enum('checkin','triage','billing','consultation','lab','pharmacy','document') DEFAULT 'consultation',
   `station_number` int(10) UNSIGNED DEFAULT 1,
   `is_active` tinyint(1) DEFAULT 1,
+  `is_open` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1189,23 +1190,23 @@ CREATE TABLE `stations` (
 -- Dumping data for table `stations`
 --
 
-INSERT INTO `stations` (`station_id`, `station_name`, `service_id`, `station_type`, `station_number`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Triage 1', 1, 'triage', 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:38'),
-(2, 'Triage 2', 1, 'triage', 2, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:40'),
-(3, 'Triage 3', 1, 'triage', 3, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:42'),
-(4, 'Billing', 9, 'billing', 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:52'),
-(5, 'Primary Care 1', 1, 'consultation', 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:46'),
-(6, 'Primary Care 2', 1, 'consultation', 2, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(7, 'Dental', 2, 'consultation', 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(8, 'TB DOTS', 3, 'consultation', 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(9, 'Vaccination', 4, 'consultation', 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:44'),
-(10, 'Family Planning', 6, 'consultation', 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(11, 'Animal Bite Treatment', 7, 'consultation', 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(12, 'Medical Document Requests', 9, 'document', 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(13, 'Laboratory', 8, 'lab', 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(14, 'Dispensing 1', 1, 'pharmacy', 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(15, 'Dispensing 2', 1, 'pharmacy', 2, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(16, 'Check-In Counter', 10, 'checkin', 1, 1, '2025-10-04 04:57:03', '2025-10-04 13:15:35');
+INSERT INTO `stations` (`station_id`, `station_name`, `service_id`, `station_type`, `station_number`, `is_active`, `is_open`, `created_at`, `updated_at`) VALUES
+(1, 'Triage 1', 1, 'triage', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:38'),
+(2, 'Triage 2', 1, 'triage', 2, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:40'),
+(3, 'Triage 3', 1, 'triage', 3, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:42'),
+(4, 'Billing', 9, 'billing', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:52'),
+(5, 'Primary Care 1', 1, 'consultation', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:46'),
+(6, 'Primary Care 2', 1, 'consultation', 2, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(7, 'Dental', 2, 'consultation', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(8, 'TB DOTS', 3, 'consultation', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(9, 'Vaccination', 4, 'consultation', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:44'),
+(10, 'Family Planning', 6, 'consultation', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(11, 'Animal Bite Treatment', 7, 'consultation', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(12, 'Medical Document Requests', 9, 'document', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(13, 'Laboratory', 8, 'lab', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(14, 'Dispensing 1', 1, 'pharmacy', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(15, 'Dispensing 2', 1, 'pharmacy', 2, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
+(16, 'Check-In Counter', 10, 'checkin', 1, 1, 1, '2025-10-04 04:57:03', '2025-10-04 13:15:35');
 
 -- --------------------------------------------------------
 
@@ -1320,7 +1321,9 @@ ALTER TABLE `appointments`
   ADD KEY `idx_appointments_status` (`status`),
   ADD KEY `idx_appointments_scheduled_date` (`scheduled_date`),
   ADD KEY `idx_appointments_patient_status` (`patient_id`,`status`),
-  ADD KEY `idx_scheduled_slot` (`scheduled_date`,`scheduled_time`,`service_id`);
+  ADD KEY `idx_scheduled_slot` (`scheduled_date`,`scheduled_time`,`service_id`),
+  ADD KEY `idx_appointments_status_date` (`status`,`scheduled_date`),
+  ADD KEY `idx_appointments_facility_date` (`facility_id`,`scheduled_date`);
 
 --
 -- Indexes for table `appointment_logs`
@@ -1330,7 +1333,8 @@ ALTER TABLE `appointment_logs`
   ADD KEY `idx_appointment_id` (`appointment_id`),
   ADD KEY `idx_patient_id` (`patient_id`),
   ADD KEY `idx_action` (`action`),
-  ADD KEY `idx_created_at` (`created_at`);
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_appointment_logs_created_by` (`created_by_type`,`created_by_id`,`created_at`);
 
 --
 -- Indexes for table `assignment_logs`
@@ -1524,7 +1528,9 @@ ALTER TABLE `patient_flags`
   ADD KEY `fk_patient_flags_resolved_by` (`resolved_by_id`),
   ADD KEY `idx_patient_flags_type` (`flag_type`),
   ADD KEY `idx_patient_flags_status` (`is_resolved`),
-  ADD KEY `idx_patient_flags_created_date` (`created_at`);
+  ADD KEY `idx_patient_flags_created_date` (`created_at`),
+  ADD KEY `idx_patient_flags_appointment_date` (`appointment_id`,`created_at`),
+  ADD KEY `idx_patient_flags_flag_type` (`flag_type`,`is_resolved`);
 
 --
 -- Indexes for table `personal_information`
@@ -1634,7 +1640,8 @@ ALTER TABLE `service_items`
 ALTER TABLE `stations`
   ADD PRIMARY KEY (`station_id`),
   ADD KEY `idx_stations_type_active` (`station_type`,`is_active`),
-  ADD KEY `idx_stations_service_id` (`service_id`);
+  ADD KEY `idx_stations_service_id` (`service_id`),
+  ADD KEY `idx_station_is_open` (`is_open`);
 
 --
 -- Indexes for table `surgical_history`

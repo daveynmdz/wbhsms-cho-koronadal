@@ -45,6 +45,12 @@ class QueueManagementService {
                 throw new Exception("Appointment not found: $appointment_id");
             }
             
+            // Get facility_id using helper method
+            $facility_id = $this->getFacilityIdFromAppointment($appointment_id);
+            if (!$facility_id) {
+                throw new Exception("Could not retrieve facility_id for appointment");
+            }
+            
             // Create visit record first
             $stmt = $this->conn->prepare("
                 INSERT INTO visits (
@@ -53,7 +59,7 @@ class QueueManagementService {
                 ) VALUES (?, ?, ?, ?, 'ongoing', NOW(), NOW())
             ");
             $stmt->bind_param("iiis", 
-                $patient_id, $appointment['facility_id'], $appointment_id, $appointment['scheduled_date']
+                $patient_id, $facility_id, $appointment_id, $appointment['scheduled_date']
             );
             
             if (!$stmt->execute()) {
@@ -63,21 +69,36 @@ class QueueManagementService {
             $visit_id = $this->conn->insert_id;
             $stmt->close();
             
-            // Generate time slot-based queue number
-            $queue_number = $this->generateQueueNumber($appointment_id);
+            // Generate structured queue code (CHO appointments only)
+            $queue_data = $this->generateQueueCode($appointment_id);
+            if (!$queue_data) {
+                // Not a CHO appointment - still create entry but without queue code
+                $queue_number = null;
+                $queue_code = null;
+            } else {
+                list($queue_code, $queue_number) = $queue_data;
+            }
             
-            // Insert queue entry
+            // Insert queue entry with queue code support
+            // Get station_id for this service at the facility (only OPEN stations)
+            $station_id = $this->getDefaultStationForService($service_id, $facility_id);
+            
+            // Check if we found an open station
+            if (!$station_id) {
+                throw new Exception("No open stations available for this service. Please try again later or contact staff.");
+            }
+            
             $stmt = $this->conn->prepare("
                 INSERT INTO queue_entries (
-                    visit_id, appointment_id, patient_id, service_id, 
-                    queue_type, queue_number, priority_level, status, 
+                    visit_id, appointment_id, patient_id, service_id, station_id,
+                    queue_type, queue_number, queue_code, priority_level, status, 
                     time_in, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'waiting', NOW(), NOW(), NOW())
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting', NOW(), NOW(), NOW())
             ");
             
-            $stmt->bind_param("iiiisis", 
-                $visit_id, $appointment_id, $patient_id, $service_id,
-                $queue_type, $queue_number, $priority_level
+            $stmt->bind_param("iiiiisiss", 
+                $visit_id, $appointment_id, $patient_id, $service_id, $station_id,
+                $queue_type, $queue_number, $queue_code, $priority_level
             );
             
             if (!$stmt->execute()) {
@@ -87,21 +108,27 @@ class QueueManagementService {
             $queue_entry_id = $this->conn->insert_id;
             $stmt->close();
             
-            // Log the queue creation
-            $this->logQueueAction($queue_entry_id, 'created', null, 'waiting', 'Queue entry created for appointment', $performed_by);
+            // Log the queue creation with queue code in remarks
+            $remarks = $queue_code ? "Queue created with code: {$queue_code}" : 'Queue entry created for non-CHO appointment';
+            $this->logQueueAction($queue_entry_id, 'created', null, 'waiting', $remarks, $performed_by);
             
             // Commit transaction
             $this->conn->commit();
+            
+            $message = $queue_code ? 
+                "Queue entry created successfully with code: {$queue_code}" : 
+                "Queue entry created successfully (CHO appointments only get queue codes)";
             
             return [
                 'success' => true,
                 'queue_entry_id' => $queue_entry_id,
                 'visit_id' => $visit_id,
                 'queue_number' => $queue_number,
+                'queue_code' => $queue_code,
                 'queue_type' => $queue_type,
                 'priority_level' => $priority_level,
                 'status' => 'waiting',
-                'message' => 'Queue entry created successfully with visit record'
+                'message' => $message
             ];
             
         } catch (Exception $e) {
@@ -514,17 +541,19 @@ class QueueManagementService {
     }
     
     /**
-     * Generate time slot-based queue number with 20 patient limit per slot
+     * Generate structured queue code for CHO appointments only
+     * Format: DDMMYY-SLOT-###
+     * Example: 100725-08A-001
      * 
      * @param int $appointment_id Appointment ID to get date and time
-     * @return int Queue number
+     * @return array|null [queue_code, queue_number] or null if not CHO
      * @throws Exception If time slot is full (20 patients)
      */
-    private function generateQueueNumber($appointment_id) {
-        // Get appointment date and time
+    private function generateQueueCode($appointment_id) {
+        // Get appointment details
         $stmt = $this->conn->prepare("
-            SELECT scheduled_date, scheduled_time, facility_id
-            FROM appointments 
+            SELECT scheduled_date, scheduled_time, facility_id, service_id
+            FROM appointments
             WHERE appointment_id = ?
         ");
         $stmt->bind_param("i", $appointment_id);
@@ -534,38 +563,71 @@ class QueueManagementService {
         $stmt->close();
         
         if (!$appointment) {
-            throw new Exception("Appointment not found for queue number generation");
+            throw new Exception("Appointment not found");
+        }
+        
+        // Only generate queue codes for City Health Office (facility_id = 1)
+        if ($appointment['facility_id'] != 1) {
+            return null;
         }
         
         $scheduled_date = $appointment['scheduled_date'];
         $scheduled_time = $appointment['scheduled_time'];
-        $facility_id = $appointment['facility_id'];
         
-        // Count existing queue entries for this date, time slot, and facility
+        // Build queue code components
+        $date_part = date('dmy', strtotime($scheduled_date));
+        $slot_code = $this->getTimeSlotCode($scheduled_time);
+        
+        // Count existing queue entries for this date and slot
         $stmt = $this->conn->prepare("
-            SELECT COUNT(*) as patient_count, COALESCE(MAX(qe.queue_number), 0) as max_number
+            SELECT COUNT(*) + 1 as seq_num
             FROM queue_entries qe
             INNER JOIN appointments a ON qe.appointment_id = a.appointment_id
-            WHERE a.scheduled_date = ? 
-              AND a.scheduled_time = ?
-              AND a.facility_id = ?
-              AND qe.status NOT IN ('cancelled')
+            WHERE DATE(a.scheduled_date) = ? 
+            AND qe.queue_type = 'consultation' 
+            AND qe.queue_code LIKE ?
+            AND qe.status NOT IN ('cancelled')
         ");
-        $stmt->bind_param("ssi", $scheduled_date, $scheduled_time, $facility_id);
+        $slot_pattern = "%-{$slot_code}-%";
+        $stmt->bind_param("ss", $scheduled_date, $slot_pattern);
         $stmt->execute();
         $result = $stmt->get_result();
-        $slot_info = $result->fetch_assoc();
+        $seq_data = $result->fetch_assoc();
         $stmt->close();
         
-        $current_count = (int)$slot_info['patient_count'];
-        $max_number = (int)$slot_info['max_number'];
+        $seq_num = (int)$seq_data['seq_num'];
         
-        // Check if time slot is full (20 patient limit)
-        if ($current_count >= 20) {
-            throw new Exception("Time slot is full. Maximum 20 patients allowed per time slot.");
+        // Enforce 20-patient limit per time slot
+        if ($seq_num > 20) {
+            throw new Exception("Time slot is full. Please select another slot.");
         }
         
-        return $max_number + 1;
+        // Build final queue code
+        $queue_code = "{$date_part}-{$slot_code}-" . str_pad($seq_num, 3, '0', STR_PAD_LEFT);
+        
+        return [$queue_code, $seq_num];
+    }
+    
+    /**
+     * Convert appointment time to slot code
+     * 
+     * @param string $time Time in HH:MM format
+     * @return string Slot code (08A, 09A, etc.)
+     */
+    private function getTimeSlotCode($time) {
+        $hour = (int)date('H', strtotime($time));
+        switch (true) {
+            case ($hour >= 8 && $hour < 9): return '08A';
+            case ($hour >= 9 && $hour < 10): return '09A';
+            case ($hour >= 10 && $hour < 11): return '10A';
+            case ($hour >= 11 && $hour < 12): return '11A';
+            case ($hour >= 12 && $hour < 13): return '12N';
+            case ($hour >= 13 && $hour < 14): return '01P';
+            case ($hour >= 14 && $hour < 15): return '02P';
+            case ($hour >= 15 && $hour < 16): return '03P';
+            case ($hour >= 16 && $hour < 17): return '04P';
+            default: return 'XX';
+        }
     }
     
     /**
@@ -578,8 +640,29 @@ class QueueManagementService {
      * @param string|null $remarks
      * @param int|null $performed_by
      */
+    /**
+     * Enhanced queue action logging with comprehensive audit trail
+     * Maps all possible queue operations to proper action types
+     */
     private function logQueueAction($queue_entry_id, $action, $old_status, $new_status, $remarks = null, $performed_by = null) {
         try {
+            // Map action types to standardized values for better audit trail
+            $action_map = [
+                'created' => 'created',
+                'status_changed' => 'status_changed', 
+                'called' => 'status_changed',
+                'in_progress' => 'status_changed',
+                'done' => 'status_changed',
+                'completed' => 'status_changed',
+                'skipped' => 'skipped',
+                'no_show' => 'status_changed',
+                'cancelled' => 'cancelled',
+                'reinstated' => 'reinstated',
+                'moved' => 'moved'
+            ];
+            
+            $final_action = $action_map[$action] ?? 'status_changed';
+            
             $stmt = $this->conn->prepare("
                 INSERT INTO queue_logs (
                     queue_entry_id, action, old_status, new_status, 
@@ -587,11 +670,15 @@ class QueueManagementService {
                 ) VALUES (?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->bind_param("issssi", 
-                $queue_entry_id, $action, $old_status, $new_status, 
+                $queue_entry_id, $final_action, $old_status, $new_status, 
                 $remarks, $performed_by
             );
             $stmt->execute();
             $stmt->close();
+            
+            // Enhanced logging for debugging
+            error_log("Queue action logged: entry_id=$queue_entry_id, action=$final_action, $old_status->$new_status, by=$performed_by");
+            
         } catch (Exception $e) {
             // Log error but don't fail the main operation
             error_log("Failed to log queue action: " . $e->getMessage());
@@ -707,6 +794,7 @@ class QueueManagementService {
                 s.station_type,
                 s.station_number,
                 s.is_active,
+                s.is_open,
                 sv.name as service_name,
                 asch.schedule_id,
                 asch.employee_id,
@@ -983,7 +1071,11 @@ class QueueManagementService {
     /**
      * Get queue entries for a specific station
      */
-    public function getStationQueue($station_id, $status_filter = null) {
+    public function getStationQueue($station_id, $status_filter = null, $date = null, $limit = null) {
+        if ($date === null) {
+            $date = date('Y-m-d');
+        }
+        
         $base_query = "
             SELECT 
                 qe.queue_entry_id,
@@ -996,6 +1088,7 @@ class QueueManagementService {
                 qe.waiting_time,
                 qe.turnaround_time,
                 qe.remarks,
+                qe.appointment_id,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.patient_id,
                 sv.name as service_name,
@@ -1004,12 +1097,12 @@ class QueueManagementService {
             FROM queue_entries qe
             JOIN patients p ON qe.patient_id = p.patient_id
             JOIN services sv ON qe.service_id = sv.service_id
-            JOIN stations s ON s.service_id = sv.service_id AND s.station_id = ?
-            WHERE DATE(qe.created_at) = CURDATE()
+            JOIN stations s ON qe.station_id = s.station_id
+            WHERE qe.station_id = ? AND DATE(qe.created_at) = ?
         ";
         
-        $params = [$station_id];
-        $types = "i";
+        $params = [$station_id, $date];
+        $types = "is";
         
         if ($status_filter) {
             $base_query .= " AND qe.status = ?";
@@ -1022,11 +1115,65 @@ class QueueManagementService {
             qe.queue_number ASC
         ";
         
+        if ($limit !== null) {
+            $base_query .= " LIMIT ?";
+            $params[] = $limit;
+            $types .= "i";
+        }
+        
         $stmt = $this->conn->prepare($base_query);
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    /**
+     * Call next patient in queue for a specific station
+     */
+    public function callNextPatient($station_type, $station_id, $employee_id) {
+        try {
+            // Find next waiting patient for this station
+            $stmt = $this->conn->prepare("
+                SELECT qe.queue_entry_id
+                FROM queue_entries qe
+                WHERE qe.station_id = ? 
+                AND qe.status = 'waiting' 
+                AND DATE(qe.created_at) = CURDATE()
+                ORDER BY 
+                    FIELD(qe.priority_level, 'emergency', 'priority', 'normal'),
+                    qe.queue_number ASC
+                LIMIT 1
+            ");
+            
+            $stmt->bind_param("i", $station_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($next_patient = $result->fetch_assoc()) {
+                // Update the next patient to in_progress
+                $update_result = $this->updateQueueStatus(
+                    $next_patient['queue_entry_id'], 
+                    'in_progress', 
+                    'waiting', 
+                    $employee_id, 
+                    'Called to station'
+                );
+                
+                return $update_result;
+            } else {
+                return [
+                    'success' => false,
+                    'error' => 'No patients waiting in queue'
+                ];
+            }
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Error calling next patient: ' . $e->getMessage()
+            ];
+        }
     }
 
     /**
@@ -1043,18 +1190,117 @@ class QueueManagementService {
                 COUNT(CASE WHEN qe.status = 'in_progress' THEN 1 END) as in_progress_count,
                 COUNT(CASE WHEN qe.status = 'done' THEN 1 END) as completed_count,
                 COUNT(CASE WHEN qe.status = 'skipped' THEN 1 END) as skipped_count,
+                COUNT(CASE WHEN qe.status = 'no_show' THEN 1 END) as no_show_count,
                 AVG(qe.turnaround_time) as avg_turnaround_time,
                 MIN(CASE WHEN qe.status = 'waiting' THEN qe.queue_number END) as next_queue_number
             FROM queue_entries qe
-            JOIN services sv ON qe.service_id = sv.service_id
-            JOIN stations s ON s.service_id = sv.service_id AND s.station_id = ?
-            WHERE DATE(qe.created_at) = ?
+            WHERE qe.station_id = ? AND DATE(qe.created_at) = ?
         ");
         
         $stmt->bind_param("is", $station_id, $date);
         $stmt->execute();
         
         return $stmt->get_result()->fetch_assoc();
+    }
+
+    /**
+     * Helper method to get facility_id from appointments table
+     * 
+     * @param int $appointment_id
+     * @return int|null facility_id or null if appointment not found
+     */
+    private function getFacilityIdFromAppointment($appointment_id) {
+        try {
+            $stmt = $this->conn->prepare("SELECT facility_id FROM appointments WHERE appointment_id = ?");
+            $stmt->bind_param("i", $appointment_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $appointment = $result->fetch_assoc();
+            $stmt->close();
+            
+            return $appointment ? (int)$appointment['facility_id'] : null;
+        } catch (Exception $e) {
+            error_log("Failed to get facility_id from appointment: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get default station for a service at facility (for queue_entries.station_id)
+     */
+    private function getDefaultStationForService($service_id, $facility_id = 1) {
+        try {
+            // First priority: Find OPEN stations for this service
+            $stmt = $this->conn->prepare("
+                SELECT station_id 
+                FROM stations 
+                WHERE service_id = ? AND is_active = 1 AND is_open = 1
+                ORDER BY station_number ASC 
+                LIMIT 1
+            ");
+            $stmt->bind_param("i", $service_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($row = $result->fetch_assoc()) {
+                return $row['station_id'];
+            }
+            
+            // Fallback: return first active AND OPEN station for facility
+            $stmt2 = $this->conn->prepare("
+                SELECT station_id 
+                FROM stations 
+                WHERE is_active = 1 AND is_open = 1
+                ORDER BY station_id ASC 
+                LIMIT 1
+            ");
+            $stmt2->execute();
+            $result2 = $stmt2->get_result();
+            
+            if ($row2 = $result2->fetch_assoc()) {
+                return $row2['station_id'];
+            }
+            
+            return null; // No active stations found
+            
+        } catch (Exception $e) {
+            error_log("Failed to get default station for service: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * MIGRATION HELPER: Update existing queue_entries with station_id
+     * Run this once to populate station_id for existing queue entries
+     */
+    public function migrateQueueEntriesStationId() {
+        try {
+            // Update queue_entries with NULL station_id
+            $stmt = $this->conn->prepare("
+                UPDATE queue_entries qe
+                JOIN services sv ON qe.service_id = sv.service_id  
+                JOIN stations s ON sv.service_id = s.service_id
+                SET qe.station_id = s.station_id
+                WHERE qe.station_id IS NULL
+                AND s.is_active = 1
+                AND s.station_number = 1
+            ");
+            
+            $stmt->execute();
+            $affected_rows = $stmt->affected_rows;
+            $stmt->close();
+            
+            return [
+                'success' => true,
+                'message' => "Updated {$affected_rows} queue entries with station_id"
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => 'Migration failed: ' . $e->getMessage()
+            ];
+        }
     }
 
     /**
@@ -1103,10 +1349,10 @@ class QueueManagementService {
      */
     public function getMostRecentAssignment($station_id, $before_date) {
         $stmt = $this->conn->prepare("
-            SELECT employee_id, shift_start, shift_end
-            FROM station_assignments 
-            WHERE station_id = ? AND assigned_date < ?
-            ORDER BY assigned_date DESC, assignment_id DESC
+            SELECT employee_id, shift_start_time as shift_start, shift_end_time as shift_end
+            FROM assignment_schedules 
+            WHERE station_id = ? AND start_date < ? AND is_active = 1
+            ORDER BY start_date DESC, schedule_id DESC
             LIMIT 1
         ");
         $stmt->bind_param("is", $station_id, $before_date);
@@ -1127,9 +1373,9 @@ class QueueManagementService {
             
             // Get all assignments from source date
             $stmt = $this->conn->prepare("
-                SELECT station_id, employee_id, shift_start, shift_end
-                FROM station_assignments 
-                WHERE assigned_date = ?
+                SELECT station_id, employee_id, shift_start_time, shift_end_time, assignment_type
+                FROM assignment_schedules 
+                WHERE start_date = ? AND is_active = 1
             ");
             $stmt->bind_param("s", $source_date);
             $stmt->execute();
@@ -1139,16 +1385,17 @@ class QueueManagementService {
             while ($assignment = $result->fetch_assoc()) {
                 // Insert into target date
                 $insert_stmt = $this->conn->prepare("
-                    INSERT INTO station_assignments 
-                    (station_id, employee_id, assigned_date, shift_start, shift_end, assigned_by, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                    INSERT INTO assignment_schedules 
+                    (station_id, employee_id, start_date, shift_start_time, shift_end_time, assignment_type, assigned_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
                 ");
-                $insert_stmt->bind_param("iisssi", 
+                $insert_stmt->bind_param("iissssi", 
                     $assignment['station_id'], 
                     $assignment['employee_id'], 
                     $target_date,
-                    $assignment['shift_start'], 
-                    $assignment['shift_end'], 
+                    $assignment['shift_start_time'], 
+                    $assignment['shift_end_time'], 
+                    $assignment['assignment_type'],
                     $assigned_by
                 );
                 
@@ -1230,6 +1477,24 @@ class QueueManagementService {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
     
+    /**
+     * Generate queue entry (wrapper for createQueueEntry for backward compatibility)
+     * This method matches the call signature used in checkin.php
+     * 
+     * @param int $patient_id
+     * @param int $facility_id (ignored - retrieved from appointment)
+     * @param int $service_id
+     * @param int $appointment_id
+     * @param string $queue_type
+     * @param string $priority_level
+     * @return array Result with success status and queue details
+     */
+    public function generateQueue($patient_id, $facility_id, $service_id, $appointment_id, $queue_type = 'consultation', $priority_level = 'normal') {
+        // Note: facility_id parameter is ignored and retrieved from appointments table instead
+        // Call the existing createQueueEntry method with proper parameter order
+        return $this->createQueueEntry($appointment_id, $patient_id, $service_id, $queue_type, $priority_level, null);
+    }
+
     /**
      * Check for assignment conflicts before creating new assignment
      */

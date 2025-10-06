@@ -259,12 +259,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             s.station_type,
                             s.station_number,
                             sv.name as service_name
-                        FROM station_assignments sa
-                        JOIN stations s ON sa.station_id = s.station_id
+                        FROM assignment_schedules asch
+                        JOIN stations s ON asch.station_id = s.station_id
                         JOIN services sv ON s.service_id = sv.service_id
-                        WHERE sa.employee_id = ? 
-                        AND sa.assigned_date = CURDATE()
-                        AND sa.status = 'active'
+                        WHERE asch.employee_id = ? 
+                        AND asch.start_date <= CURDATE()
+                        AND (asch.end_date IS NULL OR asch.end_date >= CURDATE())
+                        AND asch.is_active = 1
                         AND s.is_active = 1
                         LIMIT 1
                     ");

@@ -73,6 +73,11 @@ if (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/profile/') !== false) {
     $assets_path = '../../../assets/css/sidebar.css';
     $vendor_path = '../../../vendor/photo_controller.php';
     $nav_base = '../';
+} elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/referrals/') !== false) {
+    // Called from /pages/patient/referrals/ (3 levels deep)
+    $assets_path = '../../../assets/css/sidebar.css';
+    $vendor_path = '../../../vendor/photo_controller.php';
+    $nav_base = '../';
 } elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/') !== false) {
     // Called from /pages/patient/ (2 levels deep)  
     $assets_path = '../../assets/css/sidebar.css';
@@ -119,11 +124,11 @@ if (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/profile/') !== false) {
         </a>
         <a href="<?= $nav_base ?>appointment/appointments.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-calendar-check"></i> Appointments & Referrals
+            <i class="fas fa-calendar-check"></i> My Appointments
         </a>
-        <a href="#"
+        <a href="<?= $nav_base ?>referrals/referrals.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-file-medical-alt"></i> Referrals
+            <i class="fas fa-file-medical"></i> Medical Referrals
         </a>
         <a href="<?= $nav_base ?>prescription/prescriptions.php"
             class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">

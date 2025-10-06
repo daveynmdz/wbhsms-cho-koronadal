@@ -50,17 +50,17 @@ class AppointmentLogger {
                 INSERT INTO appointment_logs (
                     appointment_id, patient_id, action, old_status, new_status,
                     old_scheduled_date, new_scheduled_date, old_scheduled_time, new_scheduled_time,
-                    reason, notes, created_by_type, created_by_id, ip_address, user_agent, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    reason, created_by_type, created_by_id, ip_address, user_agent, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             
             $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
             $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
             
-            $stmt->bind_param("iisssssssssiss", 
+            $stmt->bind_param("iissssssssisss", 
                 $appointment_id, $patient_id, $action, $old_status, $new_status,
                 $old_scheduled_date, $new_scheduled_date, $old_scheduled_time, $new_scheduled_time,
-                $reason, $notes, $created_by_type, $created_by_id, $ip_address, $user_agent
+                $reason, $created_by_type, $created_by_id, $ip_address, $user_agent
             );
             
             $result = $stmt->execute();
