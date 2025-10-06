@@ -5,7 +5,7 @@ require_once $root_path . '/config/session/patient_session.php';
 
 // If user is not logged in, redirect to login
 if (!isset($_SESSION['patient_id'])) {
-    header('Location: ../patient/auth/patient_login.php');
+    header('Location: ../auth/patient_login.php');
     exit();
 }
 
@@ -58,31 +58,29 @@ try {
     $error = "Failed to fetch patient information: " . $e->getMessage();
 }
 
-// Fetch appointments (limit to recent 30 for better overview)
-$appointments = [];
+// Fetch referrals (limit to recent 30 for better overview)
+$referrals = [];
 try {
     $stmt = $conn->prepare("
-        SELECT a.*, 
-               s.name as service_name, s.description as service_description,
-               d.first_name as doctor_first_name, d.last_name as doctor_last_name,
-               e.first_name as employee_first_name, e.last_name as employee_last_name,
-               f.name as facility_name
-        FROM appointments a
-        LEFT JOIN services s ON a.service_id = s.service_id
-        LEFT JOIN employees d ON a.doctor_id = d.employee_id
-        LEFT JOIN employees e ON a.employee_id = e.employee_id
-        LEFT JOIN facilities f ON a.facility_id = f.facility_id
-        WHERE a.patient_id = ?
-        ORDER BY a.appointment_date DESC, a.appointment_time DESC
+        SELECT r.*, 
+               f.name as facility_name, f.type as facility_type,
+               e.first_name as doctor_first_name, e.last_name as doctor_last_name,
+               s.name as service_name, s.description as service_description
+        FROM referrals r
+        LEFT JOIN facilities f ON r.referred_to_facility_id = f.facility_id
+        LEFT JOIN employees e ON r.referred_by = e.employee_id
+        LEFT JOIN services s ON r.service_id = s.service_id
+        WHERE r.patient_id = ?
+        ORDER BY r.referral_date DESC
         LIMIT 30
     ");
     $stmt->bind_param("i", $patient_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    $appointments = $result->fetch_all(MYSQLI_ASSOC);
+    $referrals = $result->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 } catch (Exception $e) {
-    $error = "Failed to fetch appointments: " . $e->getMessage();
+    $error = "Failed to fetch referrals: " . $e->getMessage();
 }
 ?>
 <!DOCTYPE html>
@@ -91,10 +89,10 @@ try {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Appointments - CHO Koronadal</title>
+    <title>Medical Referrals - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/sidebar.css">
+    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
         .content-wrapper {
             margin-left: 300px;
@@ -352,7 +350,7 @@ try {
             gap: 1.5rem;
         }
 
-        .appointment-card {
+        .referral-card {
             background: white;
             border: 2px solid #e9ecef;
             border-radius: 15px;
@@ -367,7 +365,7 @@ try {
             box-sizing: content-box;
         }
 
-        .appointment-card:hover {
+        .referral-card:hover {
             border-color: #0077b6;
             transform: translateY(-3px);
             box-shadow: 0 12px 30px rgba(0, 119, 182, 0.2);
@@ -398,19 +396,19 @@ try {
             text-transform: uppercase;
         }
 
-        .status-scheduled {
+        .status-active {
             background: #d4edda;
             color: #155724;
         }
 
-        .status-confirmed {
-            background: #cce7ff;
-            color: #004085;
+        .status-expired {
+            background: #f8d7da;
+            color: #721c24;
         }
 
-        .status-completed {
-            background: #e2e3e5;
-            color: #383d41;
+        .status-accepted {
+            background: #cce7ff;
+            color: #004085;
         }
 
         .status-cancelled {
@@ -423,9 +421,9 @@ try {
             color: #856404;
         }
 
-        .status-checked_in {
-            background: #d1ecf1;
-            color: #0c5460;
+        .status-issued {
+            background: #e2e3e5;
+            color: #383d41;
         }
 
         .card-info {
@@ -510,16 +508,6 @@ try {
             color: white;
         }
 
-        .btn-outline-danger {
-            border-color: #dc3545;
-            color: #dc3545;
-        }
-
-        .btn-outline-danger:hover {
-            background: #dc3545;
-            color: white;
-        }
-
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
@@ -560,11 +548,11 @@ try {
         @media (max-width: 768px) {
             .page-header {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: stretch;
             }
 
             .action-buttons {
-                width: 100%;
+                justify-content: center;
             }
 
             .card-grid {
@@ -580,11 +568,11 @@ try {
             }
 
             .filter-actions {
-                grid-column: 1;
+                justify-content: stretch;
             }
 
             .btn-filter {
-                font-size: 0.8rem;
+                flex: 1;
             }
         }
     </style>
@@ -593,26 +581,26 @@ try {
 <body>
     <?php
     // Tell the sidebar which menu item to highlight
-    $activePage = 'appointments';
-    include '../../includes/sidebar_patient.php';
+    $activePage = 'referrals';
+    include '../../../includes/sidebar_patient.php';
     ?>
 
     <section class="content-wrapper">
         <!-- Breadcrumb Navigation -->
         <div class="breadcrumb" style="margin-top: 50px;">
-            <a href="../patient/dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
             <span> / </span>
-            <span style="color: #0077b6; font-weight: 600;">My Appointments</span>
+            <span style="color: #0077b6; font-weight: 600;">Medical Referrals</span>
         </div>
 
         <div class="page-header">
-            <h1><i class="fas fa-calendar-check" style="margin-right: 0.5rem;"></i>My Appointments</h1>
+            <h1><i class="fas fa-file-medical" style="margin-right: 0.5rem;"></i>Medical Referrals</h1>
             <div class="action-buttons">
-                <a href="book_appointment.php" class="btn btn-primary">
-                    <i class="fas fa-calendar-plus"></i>
-                    <span class="hide-on-mobile">Book New Appointment</span>
+                <a href="../appointment/appointments.php" class="btn btn-secondary">
+                    <i class="fas fa-calendar-check"></i>
+                    <span class="hide-on-mobile">View Appointments</span>
                 </a>
-                <button class="btn btn-secondary" onclick="downloadAppointmentHistory()">
+                <button class="btn btn-primary" onclick="downloadReferralHistory()">
                     <i class="fas fa-download"></i>
                     <span class="hide-on-mobile">Download History</span>
                 </button>
@@ -621,25 +609,25 @@ try {
 
         <?php if (!empty($message)): ?>
             <div class="alert alert-success">
-                <i class="fas fa-check-circle"></i> <?= htmlspecialchars($message) ?>
+                <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
             <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($error) ?>
+                <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
 
-        <!-- Appointments Section -->
+        <!-- Referrals Section -->
         <div class="section-container">
             <div class="section-header">
                 <div class="section-icon">
-                    <i class="fas fa-calendar-check"></i>
+                    <i class="fas fa-file-medical"></i>
                 </div>
-                <h2 class="section-title">Appointment History</h2>
+                <h2 class="section-title">Referral History</h2>
                 <div style="margin-left: auto; color: #6c757d; font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Showing recent 30 appointments
+                    <i class="fas fa-info-circle"></i> Showing recent 30 referrals
                 </div>
             </div>
 
@@ -647,158 +635,144 @@ try {
             <div class="search-filters">
                 <div class="filters-grid">
                     <div class="filter-group">
-                        <label for="appointment-search">Search Appointments</label>
-                        <input type="text" id="appointment-search" placeholder="Search by service, doctor, or appointment ID..." 
-                               onkeypress="handleSearchKeyPress(event, 'appointment')">
+                        <label for="referral-search">Search Referrals</label>
+                        <input type="text" id="referral-search" placeholder="Search by facility, service, or referral ID..." 
+                               onkeypress="handleSearchKeyPress(event, 'referral')">
                     </div>
                     <div class="filter-group">
-                        <label for="appointment-date-from">From Date</label>
-                        <input type="date" id="appointment-date-from">
+                        <label for="referral-date-from">Date From</label>
+                        <input type="date" id="referral-date-from">
                     </div>
                     <div class="filter-group">
-                        <label for="appointment-date-to">To Date</label>
-                        <input type="date" id="appointment-date-to">
+                        <label for="referral-date-to">Date To</label>
+                        <input type="date" id="referral-date-to">
                     </div>
                     <div class="filter-group">
-                        <label for="appointment-status-filter">Status</label>
-                        <select id="appointment-status-filter">
+                        <label for="referral-status-filter">Status</label>
+                        <select id="referral-status-filter">
                             <option value="">All Statuses</option>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="checked_in">Checked In</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                            <option value="pending">Pending</option>
+                            <option value="active">Active</option>
+                            <option value="accepted">Used</option>
+                            <option value="issued">Issued</option>
+                            <option value="expired">Expired</option>
                         </select>
                     </div>
-                    <div class="filter-actions">
-                        <button class="btn-filter btn-filter-primary" onclick="filterAppointmentsBySearch()">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                        <button class="btn-filter btn-filter-secondary" onclick="clearAppointmentFilters()">
-                            <i class="fas fa-times"></i> Clear
-                        </button>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <div class="filter-actions">
+                            <button type="button" class="btn-filter btn-filter-primary" onclick="filterReferralsBySearch()">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                            <button type="button" class="btn-filter btn-filter-secondary" onclick="clearReferralFilters()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Filter Tabs -->
             <div class="filter-tabs">
-                <div class="filter-tab active" onclick="filterAppointments('all', this)">
-                    <i class="fas fa-list"></i> All Appointments
+                <div class="filter-tab active" onclick="filterReferrals('all', this)">
+                    <i class="fas fa-list"></i> All Referrals
                 </div>
-                <div class="filter-tab" onclick="filterAppointments('scheduled', this)">
-                    <i class="fas fa-calendar-alt"></i> Scheduled
+                <div class="filter-tab" onclick="filterReferrals('active', this)">
+                    <i class="fas fa-check-circle"></i> Active
                 </div>
-                <div class="filter-tab" onclick="filterAppointments('confirmed', this)">
-                    <i class="fas fa-check-circle"></i> Confirmed
+                <div class="filter-tab" onclick="filterReferrals('accepted', this)">
+                    <i class="fas fa-calendar-check"></i> Used
                 </div>
-                <div class="filter-tab" onclick="filterAppointments('completed', this)">
-                    <i class="fas fa-check-double"></i> Completed
-                </div>
-                <div class="filter-tab" onclick="filterAppointments('cancelled', this)">
-                    <i class="fas fa-times-circle"></i> Cancelled
+                <div class="filter-tab" onclick="filterReferrals('expired', this)">
+                    <i class="fas fa-times-circle"></i> Expired
                 </div>
             </div>
 
-            <!-- Appointments Grid -->
-            <div class="card-grid" id="appointments-grid">
-                <?php if (empty($appointments)): ?>
+            <!-- Referrals Grid -->
+            <div class="card-grid" id="referrals-grid">
+                <?php if (empty($referrals)): ?>
                     <div class="empty-state" style="grid-column: 1 / -1;">
-                        <i class="fas fa-calendar-times"></i>
-                        <h3>No Appointments Found</h3>
-                        <p>You haven't booked any appointments yet.</p>
-                        <a href="book_appointment.php" class="btn btn-primary">
-                            <i class="fas fa-calendar-plus"></i> Book Your First Appointment
-                        </a>
+                        <i class="fas fa-file-medical"></i>
+                        <h3>No Medical Referrals Found</h3>
+                        <p>You don't have any medical referrals yet. Referrals will appear here when doctors refer you to other facilities or services.</p>
                     </div>
                 <?php else: ?>
-                    <?php foreach ($appointments as $appointment): ?>
-                        <div class="appointment-card" data-status="<?= htmlspecialchars($appointment['status']) ?>" 
-                             data-date="<?= htmlspecialchars($appointment['appointment_date']) ?>" 
-                             data-search-text="<?= htmlspecialchars(strtolower(($appointment['service_name'] ?? '') . ' ' . ($appointment['doctor_first_name'] ?? '') . ' ' . ($appointment['doctor_last_name'] ?? '') . ' ' . ($appointment['appointment_id'] ?? ''))) ?>">
+                    <?php foreach ($referrals as $referral): ?>
+                        <div class="referral-card" data-status="<?php echo htmlspecialchars($referral['status']); ?>" data-referral-date="<?php echo htmlspecialchars($referral['referral_date']); ?>">
                             <div class="card-header">
-                                <h3 class="card-title">
-                                    <?= htmlspecialchars($appointment['service_name'] ?? 'General Consultation') ?>
-                                </h3>
-                                <span class="status-badge status-<?= htmlspecialchars($appointment['status']) ?>">
-                                    <?= htmlspecialchars(ucwords(str_replace('_', ' ', $appointment['status']))) ?>
+                                <h4 class="card-title"><?php echo htmlspecialchars($referral['referral_num']); ?></h4>
+                                <span class="status-badge status-<?php echo htmlspecialchars($referral['status']); ?>">
+                                    <?php echo htmlspecialchars(strtoupper($referral['status'])); ?>
                                 </span>
                             </div>
-
+                            
                             <div class="card-info">
                                 <div class="info-row">
-                                    <i class="fas fa-id-card"></i>
-                                    <strong>ID:</strong>
-                                    <span class="value"><?= htmlspecialchars($appointment['appointment_id']) ?></span>
+                                    <i class="fas fa-hospital"></i>
+                                    <strong>Facility:</strong>
+                                    <span class="value">
+                                        <?php 
+                                        if (!empty($referral['facility_name'])) {
+                                            echo htmlspecialchars($referral['facility_name']) . ' (' . htmlspecialchars($referral['facility_type']) . ')';
+                                        } else {
+                                            echo htmlspecialchars($referral['external_facility_name'] ?? 'External Facility');
+                                        }
+                                        ?>
+                                    </span>
                                 </div>
+                                
+                                <?php if (!empty($referral['service_name'])): ?>
+                                <div class="info-row">
+                                    <i class="fas fa-stethoscope"></i>
+                                    <strong>Service:</strong>
+                                    <span class="value"><?php echo htmlspecialchars($referral['service_name']); ?></span>
+                                </div>
+                                <?php endif; ?>
                                 
                                 <div class="info-row">
                                     <i class="fas fa-calendar"></i>
                                     <strong>Date:</strong>
-                                    <span class="value"><?= date('M j, Y', strtotime($appointment['appointment_date'])) ?></span>
+                                    <span class="value"><?php echo date('M j, Y', strtotime($referral['referral_date'])); ?></span>
                                 </div>
                                 
-                                <div class="info-row">
-                                    <i class="fas fa-clock"></i>
-                                    <strong>Time:</strong>
-                                    <span class="value"><?= date('g:i A', strtotime($appointment['appointment_time'])) ?></span>
-                                </div>
-                                
-                                <?php if (!empty($appointment['doctor_first_name']) || !empty($appointment['doctor_last_name'])): ?>
+                                <?php if (!empty($referral['doctor_first_name'])): ?>
                                 <div class="info-row">
                                     <i class="fas fa-user-md"></i>
                                     <strong>Doctor:</strong>
-                                    <span class="value">Dr. <?= htmlspecialchars(trim($appointment['doctor_first_name'] . ' ' . $appointment['doctor_last_name'])) ?></span>
-                                </div>
-                                <?php elseif (!empty($appointment['employee_first_name']) || !empty($appointment['employee_last_name'])): ?>
-                                <div class="info-row">
-                                    <i class="fas fa-user"></i>
-                                    <strong>Staff:</strong>
-                                    <span class="value"><?= htmlspecialchars(trim($appointment['employee_first_name'] . ' ' . $appointment['employee_last_name'])) ?></span>
+                                    <span class="value">Dr. <?php echo htmlspecialchars($referral['doctor_first_name'] . ' ' . $referral['doctor_last_name']); ?></span>
                                 </div>
                                 <?php endif; ?>
                                 
-                                <?php if (!empty($appointment['facility_name'])): ?>
+                                <?php if (!empty($referral['referral_reason'])): ?>
                                 <div class="info-row">
-                                    <i class="fas fa-hospital"></i>
-                                    <strong>Facility:</strong>
-                                    <span class="value"><?= htmlspecialchars($appointment['facility_name']) ?></span>
+                                    <i class="fas fa-clipboard"></i>
+                                    <strong>Reason:</strong>
+                                    <span class="value"><?php echo htmlspecialchars($referral['referral_reason']); ?></span>
                                 </div>
                                 <?php endif; ?>
                                 
-                                <?php if (!empty($appointment['notes'])): ?>
+                                <?php if (!empty($referral['validity_date'])): ?>
                                 <div class="info-row">
-                                    <i class="fas fa-sticky-note"></i>
-                                    <strong>Notes:</strong>
-                                    <span class="value"><?= htmlspecialchars($appointment['notes']) ?></span>
+                                    <i class="fas fa-clock"></i>
+                                    <strong>Valid Until:</strong>
+                                    <span class="value"><?php echo date('M j, Y', strtotime($referral['validity_date'])); ?></span>
                                 </div>
                                 <?php endif; ?>
                             </div>
-
+                            
                             <div class="card-actions">
-                                <button class="btn btn-outline btn-outline-primary btn-sm" 
-                                        onclick="viewAppointmentDetails(<?= $appointment['appointment_id'] ?>)">
+                                <button type="button" class="btn btn-outline btn-outline-primary btn-sm" onclick="viewReferralDetails(<?php echo $referral['referral_id']; ?>)">
                                     <i class="fas fa-eye"></i> View Details
                                 </button>
                                 
-                                <?php if (in_array($appointment['status'], ['scheduled', 'confirmed'])): ?>
-                                    <button class="btn btn-outline btn-outline-success btn-sm" 
-                                            onclick="rescheduleAppointment(<?= $appointment['appointment_id'] ?>)">
-                                        <i class="fas fa-calendar-alt"></i> Reschedule
-                                    </button>
-                                    <button class="btn btn-outline btn-outline-danger btn-sm" 
-                                            onclick="cancelAppointment(<?= $appointment['appointment_id'] ?>)">
-                                        <i class="fas fa-times"></i> Cancel
+                                <?php if ($referral['status'] === 'active'): ?>
+                                    <button type="button" class="btn btn-outline btn-outline-success btn-sm" onclick="bookFromReferral(<?php echo $referral['referral_id']; ?>)">
+                                        <i class="fas fa-calendar-plus"></i> Book Appointment
                                     </button>
                                 <?php endif; ?>
                                 
-                                <?php if ($appointment['status'] === 'completed'): ?>
-                                    <button class="btn btn-outline btn-outline-secondary btn-sm" 
-                                            onclick="downloadAppointmentReport(<?= $appointment['appointment_id'] ?>)">
-                                        <i class="fas fa-download"></i> Download Report
-                                    </button>
-                                <?php endif; ?>
+                                <button type="button" class="btn btn-outline btn-outline-secondary btn-sm" onclick="printReferral(<?php echo $referral['referral_id']; ?>)">
+                                    <i class="fas fa-print"></i> Print
+                                </button>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -808,11 +782,11 @@ try {
     </section>
 
     <script>
-        // Filter functionality for appointments
-        function filterAppointments(status, clickedElement) {
+        // Filter functionality for referrals
+        function filterReferrals(status, clickedElement) {
             // Remove active class from all tabs
-            const appointmentTabs = document.querySelectorAll('.filter-tab');
-            appointmentTabs.forEach(tab => {
+            const referralTabs = document.querySelectorAll('.filter-tab');
+            referralTabs.forEach(tab => {
                 tab.classList.remove('active');
             });
 
@@ -822,87 +796,93 @@ try {
             }
 
             // Remove any existing no-results messages
-            const appointmentsGrid = document.getElementById('appointments-grid');
-            const existingNoResults = appointmentsGrid.querySelector('.no-results-message');
+            const referralsGrid = document.getElementById('referrals-grid');
+            const existingNoResults = referralsGrid.querySelector('.no-results-message');
             if (existingNoResults) {
                 existingNoResults.remove();
             }
 
-            // Show/hide appointment cards based on status
-            const appointments = document.querySelectorAll('#appointments-grid .appointment-card');
+            // Show/hide referral cards based on status
+            const referrals = document.querySelectorAll('#referrals-grid .referral-card');
             let visibleCount = 0;
 
-            appointments.forEach(card => {
-                const cardStatus = card.getAttribute('data-status');
-                const shouldShow = status === 'all' || cardStatus === status;
-                
-                card.style.display = shouldShow ? 'block' : 'none';
-                if (shouldShow) visibleCount++;
+            referrals.forEach(card => {
+                if (status === 'all' || card.dataset.status === status) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
             });
 
-            // Show no results message if no appointments match the filter
-            if (visibleCount === 0 && appointments.length > 0) {
+            // Show no results message if no referrals match the filter
+            if (visibleCount === 0 && referrals.length > 0) {
                 const noResultsDiv = document.createElement('div');
                 noResultsDiv.className = 'no-results-message';
+                noResultsDiv.style.gridColumn = '1 / -1';
                 noResultsDiv.innerHTML = `
                     <div class="empty-state">
-                        <i class="fas fa-calendar-times"></i>
-                        <h3>No ${status === 'all' ? '' : status.charAt(0).toUpperCase() + status.slice(1)} Appointments Found</h3>
-                        <p>Try selecting a different status filter or adjust your search criteria.</p>
+                        <i class="fas fa-filter"></i>
+                        <h3>No matching referrals</h3>
+                        <p>No referrals match the selected filter. Try selecting a different status.</p>
+                        <button type="button" class="btn btn-outline-secondary" onclick="filterReferrals('all', document.querySelector('.filter-tab'))">
+                            <i class="fas fa-list"></i> Show All Referrals
+                        </button>
                     </div>
                 `;
-                appointmentsGrid.appendChild(noResultsDiv);
+                referralsGrid.appendChild(noResultsDiv);
             }
         }
 
         // Handle Enter key press in search fields
         function handleSearchKeyPress(event, type) {
             if (event.key === 'Enter') {
-                if (type === 'appointment') {
-                    filterAppointmentsBySearch();
+                if (type === 'referral') {
+                    filterReferralsBySearch();
                 }
             }
         }
 
-        // Advanced filter functionality for appointments
-        function filterAppointmentsBySearch() {
-            const searchTerm = document.getElementById('appointment-search').value.toLowerCase();
-            const dateFrom = document.getElementById('appointment-date-from').value;
-            const dateTo = document.getElementById('appointment-date-to').value;
-            const statusFilter = document.getElementById('appointment-status-filter').value;
+        // Advanced filter functionality for referrals
+        function filterReferralsBySearch() {
+            const searchTerm = document.getElementById('referral-search').value.toLowerCase();
+            const dateFrom = document.getElementById('referral-date-from').value;
+            const dateTo = document.getElementById('referral-date-to').value;
+            const statusFilter = document.getElementById('referral-status-filter').value;
 
-            const appointments = document.querySelectorAll('#appointments-grid .appointment-card');
-            const appointmentsGrid = document.getElementById('appointments-grid');
+            const referrals = document.querySelectorAll('#referrals-grid .referral-card');
+            const referralsGrid = document.getElementById('referrals-grid');
             let visibleCount = 0;
 
             // Remove existing no-results message
-            const existingNoResults = appointmentsGrid.querySelector('.no-results-message');
+            const existingNoResults = referralsGrid.querySelector('.no-results-message');
             if (existingNoResults) {
                 existingNoResults.remove();
             }
 
-            appointments.forEach(card => {
-                const cardSearchText = card.getAttribute('data-search-text');
-                const cardStatus = card.getAttribute('data-status');
-                const cardDate = card.getAttribute('data-date');
-
+            referrals.forEach(card => {
                 let shouldShow = true;
 
                 // Text search
-                if (searchTerm && !cardSearchText.includes(searchTerm)) {
-                    shouldShow = false;
-                }
-
-                // Status filter
-                if (statusFilter && cardStatus !== statusFilter) {
-                    shouldShow = false;
+                if (searchTerm) {
+                    const cardText = card.textContent.toLowerCase();
+                    if (!cardText.includes(searchTerm)) {
+                        shouldShow = false;
+                    }
                 }
 
                 // Date range filter
-                if (dateFrom && cardDate < dateFrom) {
-                    shouldShow = false;
+                if (dateFrom || dateTo) {
+                    const cardDateElement = card.querySelector('[data-referral-date]');
+                    if (cardDateElement) {
+                        const cardDate = cardDateElement.getAttribute('data-referral-date');
+                        if (dateFrom && cardDate < dateFrom) shouldShow = false;
+                        if (dateTo && cardDate > dateTo) shouldShow = false;
+                    }
                 }
-                if (dateTo && cardDate > dateTo) {
+
+                // Status filter
+                if (statusFilter && card.dataset.status !== statusFilter) {
                     shouldShow = false;
                 }
 
@@ -910,52 +890,56 @@ try {
                 if (shouldShow) visibleCount++;
             });
 
-            // Show no results message if no appointments match the filter
-            if (visibleCount === 0 && appointments.length > 0) {
+            // Show no results message if no referrals match the filter
+            if (visibleCount === 0 && referrals.length > 0) {
                 const noResultsDiv = document.createElement('div');
                 noResultsDiv.className = 'no-results-message';
+                noResultsDiv.style.gridColumn = '1 / -1';
                 noResultsDiv.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-search"></i>
-                        <h3>No Appointments Match Your Search</h3>
-                        <p>Try adjusting your search criteria or clearing the filters.</p>
+                        <h3>No matching referrals found</h3>
+                        <p>No referrals match your search criteria. Try adjusting your filters.</p>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearReferralFilters()">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
                     </div>
                 `;
-                appointmentsGrid.appendChild(noResultsDiv);
+                referralsGrid.appendChild(noResultsDiv);
             }
 
             // Clear tab selections when using search
             if (searchTerm || dateFrom || dateTo || statusFilter) {
-                const appointmentTabs = document.querySelectorAll('.filter-tab');
-                appointmentTabs.forEach(tab => {
+                const referralTabs = document.querySelectorAll('.filter-tab');
+                referralTabs.forEach(tab => {
                     tab.classList.remove('active');
                 });
             }
         }
 
-        // Clear appointment filters
-        function clearAppointmentFilters() {
-            document.getElementById('appointment-search').value = '';
-            document.getElementById('appointment-date-from').value = '';
-            document.getElementById('appointment-date-to').value = '';
-            document.getElementById('appointment-status-filter').value = '';
+        // Clear referral filters
+        function clearReferralFilters() {
+            document.getElementById('referral-search').value = '';
+            document.getElementById('referral-date-from').value = '';
+            document.getElementById('referral-date-to').value = '';
+            document.getElementById('referral-status-filter').value = '';
 
             // Remove no-results message if it exists
-            const appointmentsGrid = document.getElementById('appointments-grid');
-            const existingNoResults = appointmentsGrid.querySelector('.no-results-message');
+            const referralsGrid = document.getElementById('referrals-grid');
+            const existingNoResults = referralsGrid.querySelector('.no-results-message');
             if (existingNoResults) {
                 existingNoResults.remove();
             }
 
-            // Show all appointments
-            const appointments = document.querySelectorAll('#appointments-grid .appointment-card');
-            appointments.forEach(card => {
+            // Show all referrals
+            const referrals = document.querySelectorAll('#referrals-grid .referral-card');
+            referrals.forEach(card => {
                 card.style.display = 'block';
             });
 
-            // Reset to "All Appointments" tab
-            const appointmentTabs = document.querySelectorAll('.filter-tab');
-            appointmentTabs.forEach((tab, index) => {
+            // Reset to "All Referrals" tab
+            const referralTabs = document.querySelectorAll('.filter-tab');
+            referralTabs.forEach((tab, index) => {
                 if (index === 0) {
                     tab.classList.add('active');
                 } else {
@@ -964,77 +948,66 @@ try {
             });
         }
 
-        // View appointment details
-        function viewAppointmentDetails(appointmentId) {
+        // View referral details
+        function viewReferralDetails(referralId) {
             // TODO: Implement detailed view modal or page
-            alert('View appointment details for ID: ' + appointmentId + '\n\nThis will show complete appointment information including medical records and visit history.');
+            alert('View referral details for ID: ' + referralId + '\n\nThis will show complete referral information including validity and usage status.');
         }
 
-        // Reschedule appointment
-        function rescheduleAppointment(appointmentId) {
-            window.location.href = 'reschedule_appointment.php?id=' + appointmentId;
+        // Book appointment from referral
+        function bookFromReferral(referralId) {
+            window.location.href = '../appointment/book_appointment.php?referral_id=' + referralId;
         }
 
-        // Cancel appointment
-        function cancelAppointment(appointmentId) {
-            if (confirm('Are you sure you want to cancel this appointment?')) {
-                // TODO: Implement cancel functionality
-                alert('Cancel appointment functionality will be implemented here for appointment ID: ' + appointmentId);
-            }
+        // Print referral
+        function printReferral(referralId) {
+            // TODO: Implement print functionality
+            alert('Print referral for ID: ' + referralId + '\n\nThis will generate a printable referral document.');
         }
 
-        // Download appointment history
-        function downloadAppointmentHistory() {
+        // Download referral history
+        function downloadReferralHistory() {
             // TODO: Implement download functionality
-            alert('Download appointment history functionality will be implemented here.');
-        }
-
-        // Download appointment report
-        function downloadAppointmentReport(appointmentId) {
-            // TODO: Implement download functionality
-            alert('Download appointment report for ID: ' + appointmentId + '\n\nThis will generate a PDF report with appointment details and medical records.');
+            alert('Download referral history functionality will be implemented here.');
         }
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            // Set default date range to last 3 months
-            const today = new Date();
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(today.getMonth() - 3);
-            
-            // Format dates for input fields
-            const formatDate = (date) => {
-                return date.toISOString().split('T')[0];
-            };
-            
-            // Uncomment these if you want to set default date range
-            // document.getElementById('appointment-date-from').value = formatDate(threeMonthsAgo);
-            // document.getElementById('appointment-date-to').value = formatDate(today);
+            // Set default active filter
+            const referralTabs = document.querySelectorAll('.filter-tab');
+            if (referralTabs.length > 0) {
+                referralTabs[0].classList.add('active');
+            }
+
+            // Add smooth transitions
+            document.querySelectorAll('.referral-card').forEach(card => {
+                card.style.transition = 'all 0.3s ease';
+            });
         });
     </script>
 
     <!-- Alert Styles -->
     <style>
         .alert {
-            padding: 1rem 1.5rem;
+            padding: 1rem;
             border-radius: 8px;
-            margin-bottom: 1.5rem;
-            border: 1px solid transparent;
+            margin-bottom: 1rem;
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
         .alert-success {
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-            color: #155724;
+            background-color: #d1f2eb;
+            color: #0d5e3d;
+            border: 1px solid #7fb069;
         }
 
         .alert-danger {
             background-color: #f8d7da;
-            border-color: #f5c6cb;
             color: #721c24;
+            border: 1px solid #f1b2b7;
         }
 
         .alert i {
@@ -1043,4 +1016,5 @@ try {
     </style>
 
 </body>
+
 </html>

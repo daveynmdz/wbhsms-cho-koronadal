@@ -104,7 +104,7 @@ try {
     $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
     
-    $stmt->bind_param("iissiiss", 
+    $stmt->bind_param("iississ", 
         $appointment_id, $patient_id, $old_status, $cancellation_reason, 
         $patient_id, $ip_address, $user_agent
     );
