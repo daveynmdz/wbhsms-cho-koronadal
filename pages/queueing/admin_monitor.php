@@ -614,10 +614,10 @@ $activePage = 'queue_management';
                                         </div>
                                         <div class="employee-role">
                                             <span class="badge bg-secondary"><?php echo htmlspecialchars(ucfirst($station['employee_role'])); ?></span>
-                                            <?php if ($station['shift_start'] && $station['shift_end']): ?>
+                                            <?php if (isset($station['shift_start_time']) && isset($station['shift_end_time']) && $station['shift_start_time'] && $station['shift_end_time']): ?>
                                                 <span class="text-muted">
-                                                    <?php echo date('g:i A', strtotime($station['shift_start'])); ?> - 
-                                                    <?php echo date('g:i A', strtotime($station['shift_end'])); ?>
+                                                    <?php echo date('g:i A', strtotime($station['shift_start_time'])); ?> - 
+                                                    <?php echo date('g:i A', strtotime($station['shift_end_time'])); ?>
                                                 </span>
                                             <?php endif; ?>
                                         </div>
