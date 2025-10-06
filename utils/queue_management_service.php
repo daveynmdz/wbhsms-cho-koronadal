@@ -1693,6 +1693,465 @@ class QueueManagementService {
             ];
         }
     }
+
+    // ============================================
+    // CHECK-IN OPERATIONS FOR PATIENT MANAGEMENT
+    // ============================================
+
+    /**
+     * Check-in a patient for their appointment
+     * Register patient arrival, assign to queue, and create visit entry
+     * 
+     * @param int $appointment_id Appointment ID to check-in
+     * @param int $employee_id Employee performing the check-in
+     * @return array Result with success status and queue details
+     */
+    public function checkin_patient($appointment_id, $employee_id) {
+        try {
+            $this->conn->begin_transaction();
+            
+            // 1. Validate the appointment
+            $stmt = $this->conn->prepare("
+                SELECT 
+                    a.appointment_id,
+                    a.patient_id,
+                    a.facility_id,
+                    a.service_id,
+                    a.status,
+                    a.scheduled_date,
+                    a.scheduled_time,
+                    p.isSenior,
+                    p.isPWD,
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name
+                FROM appointments a
+                JOIN patients p ON a.patient_id = p.patient_id
+                WHERE a.appointment_id = ? AND a.status NOT IN ('cancelled', 'completed')
+            ");
+            $stmt->bind_param("i", $appointment_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $appointment = $result->fetch_assoc();
+            $stmt->close();
+            
+            if (!$appointment) {
+                throw new Exception("Appointment not found or already cancelled/completed");
+            }
+            
+            // 2. Check for an open triage station
+            $station_stmt = $this->conn->prepare("
+                SELECT 
+                    s.station_id,
+                    s.station_name,
+                    s.station_code,
+                    COUNT(qe.queue_entry_id) as waiting_count
+                FROM stations s
+                LEFT JOIN queue_entries qe ON s.station_id = qe.station_id 
+                    AND qe.status = 'waiting' 
+                    AND DATE(qe.created_at) = CURDATE()
+                WHERE s.station_type = 'triage' 
+                AND s.is_open = 1 
+                AND s.is_active = 1
+                GROUP BY s.station_id
+                ORDER BY waiting_count ASC, s.station_number ASC
+                LIMIT 1
+            ");
+            $station_stmt->execute();
+            $station_result = $station_stmt->get_result();
+            $station = $station_result->fetch_assoc();
+            $station_stmt->close();
+            
+            if (!$station) {
+                throw new Exception("No open triage stations available");
+            }
+            
+            // 3. Create new record in visits
+            $visit_stmt = $this->conn->prepare("
+                INSERT INTO visits (
+                    patient_id, facility_id, appointment_id, 
+                    visit_date, time_in, visit_status, 
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, CURDATE(), NOW(), 'ongoing', NOW(), NOW())
+            ");
+            $visit_stmt->bind_param("iii", 
+                $appointment['patient_id'], 
+                $appointment['facility_id'], 
+                $appointment_id
+            );
+            
+            if (!$visit_stmt->execute()) {
+                throw new Exception("Failed to create visit record: " . $visit_stmt->error);
+            }
+            
+            $visit_id = $this->conn->insert_id;
+            $visit_stmt->close();
+            
+            // 4. Generate new queue_code
+            $queue_prefix = $station['station_code'] ?: date('d') . 'A';
+            
+            // Get sequential number for today
+            $seq_stmt = $this->conn->prepare("
+                SELECT COUNT(*) + 1 as seq_num
+                FROM queue_entries 
+                WHERE DATE(created_at) = CURDATE()
+            ");
+            $seq_stmt->execute();
+            $seq_result = $seq_stmt->get_result();
+            $seq_data = $seq_result->fetch_assoc();
+            $seq_num = (int)$seq_data['seq_num'];
+            $seq_stmt->close();
+            
+            $queue_code = $queue_prefix . '-' . str_pad($seq_num, 3, '0', STR_PAD_LEFT);
+            
+            // 5. Determine priority based on patient status
+            $priority = 'normal';
+            if ($appointment['isSenior'] || $appointment['isPWD']) {
+                $priority = 'priority';
+            }
+            
+            // 6. Insert into queue_entries
+            $queue_stmt = $this->conn->prepare("
+                INSERT INTO queue_entries (
+                    visit_id, appointment_id, patient_id, service_id, station_id,
+                    queue_type, queue_number, queue_code, priority_level, status,
+                    time_in, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, 'triage', ?, ?, ?, 'waiting', NOW(), NOW(), NOW())
+            ");
+            $queue_stmt->bind_param("iiiiisis", 
+                $visit_id, $appointment_id, $appointment['patient_id'], 
+                $appointment['service_id'], $station['station_id'],
+                $seq_num, $queue_code, $priority
+            );
+            
+            if (!$queue_stmt->execute()) {
+                throw new Exception("Failed to create queue entry: " . $queue_stmt->error);
+            }
+            
+            $queue_entry_id = $this->conn->insert_id;
+            $queue_stmt->close();
+            
+            // 7. Update appointment status to 'checked_in'
+            $appt_stmt = $this->conn->prepare("
+                UPDATE appointments 
+                SET status = 'checked_in', updated_at = NOW()
+                WHERE appointment_id = ?
+            ");
+            $appt_stmt->bind_param("i", $appointment_id);
+            $appt_stmt->execute();
+            $appt_stmt->close();
+            
+            // 8. Insert audit log
+            $this->logQueueAction($queue_entry_id, 'created', null, 'waiting', 
+                "Patient checked in from appointment - Queue: {$queue_code}", $employee_id);
+            
+            $this->conn->commit();
+            
+            return [
+                'success' => true,
+                'message' => "Patient successfully checked in and added to Triage queue",
+                'data' => [
+                    'queue_code' => $queue_code,
+                    'station_name' => $station['station_name'],
+                    'patient_name' => $appointment['patient_name'],
+                    'priority' => $priority,
+                    'queue_entry_id' => $queue_entry_id,
+                    'visit_id' => $visit_id
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log("Check-in failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Flag a patient for compliance or administrative issues
+     * 
+     * @param int $patient_id Patient ID to flag
+     * @param string $flag_type Type of flag (false_senior, false_philhealth, etc.)
+     * @param string $remarks Detailed remarks about the flag
+     * @param int $employee_id Employee creating the flag
+     * @param int|null $appointment_id Optional appointment ID related to the flag
+     * @return array Result with success status
+     */
+    public function flag_patient($patient_id, $flag_type, $remarks, $employee_id, $appointment_id = null) {
+        try {
+            $this->conn->begin_transaction();
+            
+            // 1. Insert new row into patient_flags
+            $flag_stmt = $this->conn->prepare("
+                INSERT INTO patient_flags (
+                    patient_id, appointment_id, flag_type, remarks, 
+                    flagged_by, created_at
+                ) VALUES (?, ?, ?, ?, ?, NOW())
+            ");
+            $flag_stmt->bind_param("iissi", 
+                $patient_id, $appointment_id, $flag_type, $remarks, $employee_id
+            );
+            
+            if (!$flag_stmt->execute()) {
+                throw new Exception("Failed to create patient flag: " . $flag_stmt->error);
+            }
+            $flag_stmt->close();
+            
+            $message = "Patient flag recorded successfully";
+            
+            // 2. Handle special flag types
+            if ($flag_type === 'false_patient_booked') {
+                // Cancel any active appointments for this patient
+                $cancel_stmt = $this->conn->prepare("
+                    UPDATE appointments 
+                    SET status = 'cancelled', 
+                        cancellation_reason = 'Auto-cancelled due to false booking flag',
+                        updated_at = NOW()
+                    WHERE patient_id = ? 
+                    AND status IN ('confirmed', 'checked_in')
+                ");
+                $cancel_stmt->bind_param("i", $patient_id);
+                $cancel_stmt->execute();
+                $cancelled_count = $cancel_stmt->affected_rows;
+                $cancel_stmt->close();
+                
+                // Log the cancellations if there's a specific appointment ID
+                if ($appointment_id && $cancelled_count > 0) {
+                    $log_stmt = $this->conn->prepare("
+                        INSERT INTO appointment_logs (
+                            appointment_id, patient_id, action, reason, 
+                            performed_by, created_at
+                        ) VALUES (?, ?, 'cancelled', 'Auto-cancelled due to false booking flag', ?, NOW())
+                    ");
+                    $log_stmt->bind_param("iii", $appointment_id, $patient_id, $employee_id);
+                    $log_stmt->execute();
+                    $log_stmt->close();
+                }
+                
+                $message .= ". {$cancelled_count} active appointment(s) have been cancelled";
+            }
+            
+            $this->conn->commit();
+            
+            return [
+                'success' => true,
+                'message' => $message
+            ];
+            
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log("Patient flag failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Flag operation failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Cancel an appointment and record the reason
+     * 
+     * @param int $appointment_id Appointment ID to cancel
+     * @param string $reason Cancellation reason
+     * @param int $employee_id Employee performing the cancellation
+     * @return array Result with success status
+     */
+    public function cancel_appointment($appointment_id, $reason, $employee_id) {
+        try {
+            $this->conn->begin_transaction();
+            
+            // 1. Validate appointment exists and get details
+            $appt_stmt = $this->conn->prepare("
+                SELECT 
+                    a.appointment_id,
+                    a.patient_id,
+                    a.status,
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name
+                FROM appointments a
+                JOIN patients p ON a.patient_id = p.patient_id
+                WHERE a.appointment_id = ?
+            ");
+            $appt_stmt->bind_param("i", $appointment_id);
+            $appt_stmt->execute();
+            $result = $appt_stmt->get_result();
+            $appointment = $result->fetch_assoc();
+            $appt_stmt->close();
+            
+            if (!$appointment) {
+                throw new Exception("Appointment not found");
+            }
+            
+            if ($appointment['status'] === 'completed') {
+                throw new Exception("Cannot cancel a completed appointment");
+            }
+            
+            if ($appointment['status'] === 'cancelled') {
+                throw new Exception("Appointment is already cancelled");
+            }
+            
+            // 2. Update appointments table
+            $update_stmt = $this->conn->prepare("
+                UPDATE appointments 
+                SET status = 'cancelled', 
+                    cancellation_reason = ?,
+                    updated_at = NOW()
+                WHERE appointment_id = ?
+            ");
+            $update_stmt->bind_param("si", $reason, $appointment_id);
+            
+            if (!$update_stmt->execute()) {
+                throw new Exception("Failed to update appointment status: " . $update_stmt->error);
+            }
+            $update_stmt->close();
+            
+            // 3. Insert into appointment_logs
+            $log_stmt = $this->conn->prepare("
+                INSERT INTO appointment_logs (
+                    appointment_id, patient_id, action, reason, 
+                    performed_by, created_at
+                ) VALUES (?, ?, 'cancelled', ?, ?, NOW())
+            ");
+            $log_stmt->bind_param("iisi", 
+                $appointment_id, $appointment['patient_id'], $reason, $employee_id
+            );
+            
+            if (!$log_stmt->execute()) {
+                throw new Exception("Failed to create appointment log: " . $log_stmt->error);
+            }
+            $log_stmt->close();
+            
+            // 4. Cancel any related queue entries
+            $queue_cancel_result = $this->cancelQueueEntry($appointment_id, $reason, $employee_id);
+            // Don't fail if no queue entry exists (appointment might not have been checked in yet)
+            
+            $this->conn->commit();
+            
+            return [
+                'success' => true,
+                'message' => "Appointment cancelled successfully",
+                'data' => [
+                    'appointment_id' => $appointment_id,
+                    'patient_name' => $appointment['patient_name'],
+                    'reason' => $reason
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log("Appointment cancellation failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Cancellation failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get comprehensive patient details for check-in interface
+     * 
+     * @param int $patient_id Patient ID
+     * @param int|null $appointment_id Optional appointment ID for appointment-specific details
+     * @return array Patient information including flags and appointment history
+     */
+    public function getPatientCheckInDetails($patient_id, $appointment_id = null) {
+        try {
+            // Get patient basic information
+            $patient_stmt = $this->conn->prepare("
+                SELECT 
+                    p.*,
+                    b.barangay_name as barangay,
+                    TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) as age
+                FROM patients p
+                LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
+                WHERE p.patient_id = ?
+            ");
+            $patient_stmt->bind_param("i", $patient_id);
+            $patient_stmt->execute();
+            $patient_result = $patient_stmt->get_result();
+            $patient = $patient_result->fetch_assoc();
+            $patient_stmt->close();
+            
+            if (!$patient) {
+                return [
+                    'success' => false,
+                    'message' => 'Patient not found'
+                ];
+            }
+            
+            // Get appointment details if provided
+            $appointment = null;
+            if ($appointment_id) {
+                $appt_stmt = $this->conn->prepare("
+                    SELECT 
+                        a.*,
+                        s.name as service_name,
+                        DATE_FORMAT(a.scheduled_date, '%M %d, %Y') as formatted_date,
+                        TIME_FORMAT(a.scheduled_time, '%h:%i %p') as formatted_time
+                    FROM appointments a
+                    LEFT JOIN services s ON a.service_id = s.service_id
+                    WHERE a.appointment_id = ? AND a.patient_id = ?
+                ");
+                $appt_stmt->bind_param("ii", $appointment_id, $patient_id);
+                $appt_stmt->execute();
+                $appt_result = $appt_stmt->get_result();
+                $appointment = $appt_result->fetch_assoc();
+                $appt_stmt->close();
+            }
+            
+            // Get recent patient flags
+            $flags_stmt = $this->conn->prepare("
+                SELECT 
+                    pf.*,
+                    CONCAT(e.first_name, ' ', e.last_name) as flagged_by_name
+                FROM patient_flags pf
+                LEFT JOIN employees e ON pf.flagged_by = e.employee_id
+                WHERE pf.patient_id = ?
+                ORDER BY pf.created_at DESC
+                LIMIT 5
+            ");
+            $flags_stmt->bind_param("i", $patient_id);
+            $flags_stmt->execute();
+            $flags_result = $flags_stmt->get_result();
+            $flags = $flags_result->fetch_all(MYSQLI_ASSOC);
+            $flags_stmt->close();
+            
+            // Get recent visit history
+            $visits_stmt = $this->conn->prepare("
+                SELECT 
+                    v.visit_date,
+                    v.visit_status,
+                    f.name as facility_name
+                FROM visits v
+                LEFT JOIN facilities f ON v.facility_id = f.facility_id
+                WHERE v.patient_id = ?
+                ORDER BY v.visit_date DESC
+                LIMIT 3
+            ");
+            $visits_stmt->bind_param("i", $patient_id);
+            $visits_stmt->execute();
+            $visits_result = $visits_stmt->get_result();
+            $visits = $visits_result->fetch_all(MYSQLI_ASSOC);
+            $visits_stmt->close();
+            
+            return [
+                'success' => true,
+                'data' => [
+                    'patient' => $patient,
+                    'appointment' => $appointment,
+                    'flags' => $flags,
+                    'recent_visits' => $visits
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Get patient check-in details failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to retrieve patient details: ' . $e->getMessage()
+            ];
+        }
+    }
 }
 
 ?>
