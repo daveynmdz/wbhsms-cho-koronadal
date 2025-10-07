@@ -1,16 +1,4 @@
 <?php
-// Comprehensive cache prevention to ensure fresh JavaScript loading
-header("Cache-Control: no-cache, no-store, must-revalidate, max-age=0, private");
-header("Pragma: no-cache");
-header("Expires: Thu, 01 Jan 1970 00:00:00 GMT");
-header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
-header("ETag: \"" . md5(microtime()) . "\"");
-header("Vary: *");
-
-// Suppress PHP errors in production to prevent JavaScript interference
-error_reporting(E_ERROR | E_PARSE);
-ini_set('display_errors', '0');
-
 // Include patient session configuration FIRST - before any output
 $root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/patient_session.php';
@@ -48,10 +36,8 @@ try {
     error_log("Failed to run automatic status updates: " . $e->getMessage());
 }
 
-// Initialize patient info to prevent undefined variable issues
-$patient_info = [];
-
 // Fetch patient information
+$patient_info = null;
 try {
     $stmt = $conn->prepare("
         SELECT p.*, b.barangay_name
@@ -75,10 +61,8 @@ try {
     $error = "Failed to fetch patient information: " . $e->getMessage();
 }
 
-// Initialize appointments array to prevent undefined variable issues
-$appointments = [];
-
 // Fetch appointments with queue information (limit to recent 20 for performance)
+$appointments = [];
 try {
     $stmt = $conn->prepare("
         SELECT a.*, 
@@ -108,24 +92,13 @@ try {
 
 
 ?>
-<?php
-// Force no cache to prevent JavaScript issues
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
-?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0, private" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <meta name="cache-control" content="no-cache" />
-    <meta name="expires" content="-1" />
-    <title>My Appointments - CHO Koronadal (v<?php echo time() . '-' . date('Y-m-d-H-i-s'); ?>)</title>
+    <title>My Appointments - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../../assets/css/sidebar.css">
@@ -704,11 +677,6 @@ header("Expires: 0");
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-}
-
-/* Notification Modal - Higher z-index to appear above other modals */
-#notificationModal {
-    z-index: 2000 !important;
 }
 
 .modal-content {
@@ -1346,9 +1314,8 @@ header("Expires: 0");
                                 $is_cancelled = ($current_status && in_array(strtolower(trim($current_status)), ['cancelled', 'completed', 'no-show']));
                                 
                                 if (!$is_cancelled):
-                                    $safe_appointment_id = intval($appointment['appointment_id']);
                                 ?>
-                                    <button class="btn btn-sm btn-outline btn-outline-danger" onclick="showCancelModal(<?php echo $safe_appointment_id; ?>)">
+                                    <button class="btn btn-sm btn-outline btn-outline-danger" onclick="showCancelModal(<?php echo $appointment['appointment_id']; ?>, '<?php echo $appointment_id; ?>')">
                                         <i class="fas fa-times"></i> Cancel
                                     </button>
                                 <?php endif; ?>
@@ -1363,7 +1330,7 @@ header("Expires: 0");
     </section>
 
     <!-- Notification Modal -->
-    <div id="notificationModal" class="modal" style="display: none; z-index: 2000;">
+    <div id="notificationModal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 450px; margin: 15% auto;">
             <div class="modal-header" id="notification-header">
                 <h3 id="notification-title">
@@ -1462,128 +1429,8 @@ header("Expires: 0");
     </div>
 
     <script>
-        // Cache buster and debug info: <?php echo time() . '-' . microtime(true) . '-' . date("Y-m-d H:i:s"); ?>
-        console.log('🚀 Appointments JavaScript loading at <?php echo date("Y-m-d H:i:s"); ?> (cache-bust: <?php echo time(); ?>)...');
-        
-        // Global variable for current appointment being cancelled
-        let currentCancelAppointmentId = null;
-
-        // FUNCTION DEFINITIONS (Hoisted for immediate availability)
-        // Ensure functions are available immediately for onclick handlers
-        
-        // Define functions in global scope to ensure availability for onclick handlers
-        window.showCancelModal = function(appointmentId) {
-            console.log('📞 showCancelModal called:', { appointmentId, type: typeof appointmentId });
-            
-            // Validate inputs with comprehensive checking
-            if (!appointmentId || appointmentId === '' || appointmentId === null || appointmentId === undefined) {
-                console.error('❌ Invalid appointment data:', { 
-                    appointmentId, 
-                    type: typeof appointmentId,
-                    isNull: appointmentId === null,
-                    isUndefined: appointmentId === undefined 
-                });
-                alert('Invalid appointment data. Please refresh the page and try again.');
-                return false;
-            }
-            
-            // Additional validation for numeric appointment ID
-            const numericId = parseInt(appointmentId);
-            if (isNaN(numericId) || numericId <= 0) {
-                console.error('❌ Non-numeric or invalid appointment ID:', { appointmentId, numericId });
-                alert('Invalid appointment ID format. Please refresh the page and try again.');
-                return false;
-            }
-            
-            // Generate appointment number from ID for display
-            const appointmentNumber = 'APT-' + String(appointmentId).padStart(8, '0');
-            
-            currentCancelAppointmentId = appointmentId;
-
-            // Update appointment info in modal
-            const appointmentInfo = document.getElementById('cancel-appointment-info');
-            if (appointmentInfo) {
-                appointmentInfo.innerHTML = `
-                    <h4><i class="fas fa-calendar-check"></i> Appointment Details</h4>
-                    <div class="info-text"><strong>Appointment ID:</strong> ${appointmentNumber}</div>
-                    <div class="info-text"><strong>Database ID:</strong> ${appointmentId}</div>
-                `;
-                console.log('✅ Appointment info updated in modal');
-            } else {
-                console.warn('⚠️ cancel-appointment-info element not found');
-            }
-
-            // Reset form elements safely
-            const reasonSelect = document.getElementById('cancellation-reason');
-            const otherReason = document.getElementById('other-reason');
-            const otherGroup = document.getElementById('other-reason-group');
-            
-            if (reasonSelect) {
-                reasonSelect.value = '';
-                console.log('✅ Reason select reset');
-            }
-            if (otherReason) {
-                otherReason.value = '';
-                console.log('✅ Other reason field reset');
-            }
-            if (otherGroup) {
-                otherGroup.style.display = 'none';
-                console.log('✅ Other reason group hidden');
-            }
-
-            // Show modal with error handling
-            const modal = document.getElementById('cancelModal');
-            if (modal) {
-                modal.style.display = 'block';
-                console.log('✅ Cancel modal displayed successfully');
-                return true;
-            } else {
-                console.error('❌ cancelModal element not found');
-                alert('Cancel modal not found. Please refresh the page and try again.');
-                return false;
-            }
-        }
-
-        // Define closeCancelModal function with enhanced error handling
-        window.closeCancelModal = function() {
-            console.log('🔒 closeCancelModal called');
-            
-            try {
-                const modal = document.getElementById('cancelModal');
-                if (modal) {
-                    modal.style.display = 'none';
-                    console.log('✅ Cancel modal closed successfully');
-                    
-                    // Reset form state safely
-                    const reasonSelect = document.getElementById('cancellation-reason');
-                    const otherReason = document.getElementById('other-reason');
-                    const otherGroup = document.getElementById('other-reason-group');
-                    
-                    if (reasonSelect) reasonSelect.value = '';
-                    if (otherReason) otherReason.value = '';
-                    if (otherGroup) otherGroup.style.display = 'none';
-                    
-                    console.log('✅ Modal form state reset');
-                } else {
-                    console.warn('⚠️ cancelModal element not found during close');
-                }
-                
-                // Clear current appointment ID safely
-                if (typeof currentCancelAppointmentId !== 'undefined') {
-                    currentCancelAppointmentId = null;
-                    console.log('🧹 Current appointment ID cleared');
-                }
-            } catch (error) {
-                console.error('❌ Error closing cancel modal:', error);
-            }
-        }
-        
-        // Functions are being defined below...
-
-        // ========== UTILITY FUNCTIONS ==========
-
         // Filter functionality for appointments
-        window.filterAppointments = function(status, clickedElement) {
+        function filterAppointments(status, clickedElement) {
             // Remove active class from all appointment filter tabs
             const appointmentTabs = document.querySelectorAll('.section-container .filter-tab');
             appointmentTabs.forEach(tab => {
@@ -1635,7 +1482,7 @@ header("Expires: 0");
         }
 
         // Handle Enter key press in search fields
-        window.handleSearchKeyPress = function(event, type) {
+        function handleSearchKeyPress(event, type) {
             if (event.key === 'Enter') {
                 if (type === 'appointment') {
                     filterAppointmentsBySearch();
@@ -1644,7 +1491,7 @@ header("Expires: 0");
         }
 
         // Advanced filter functionality for appointments
-        window.filterAppointmentsBySearch = function() {
+        function filterAppointmentsBySearch() {
             const searchTerm = document.getElementById('appointment-search').value.toLowerCase();
             const dateFrom = document.getElementById('appointment-date-from').value;
             const dateTo = document.getElementById('appointment-date-to').value;
@@ -1756,10 +1603,7 @@ header("Expires: 0");
         // View appointment details
         function viewAppointmentDetails(appointmentId) {
             // Find appointment data
-            const appointments = <?php 
-                $safe_appointments = is_array($appointments) ? $appointments : [];
-                echo json_encode($safe_appointments, JSON_HEX_QUOT | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_TAG);
-            ?>;
+            const appointments = <?php echo json_encode($appointments); ?>;
             const appointment = appointments.find(app => app.appointment_id == appointmentId);
 
             if (!appointment) {
@@ -1780,10 +1624,7 @@ header("Expires: 0");
             const appointmentTime = new Date('1970-01-01T' + appointment.scheduled_time);
             const createdDate = new Date(appointment.created_at);
             const appointmentId = 'APT-' + String(appointment.appointment_id).padStart(8, '0');
-            const patientInfo = <?php 
-                $safe_patient_info = is_array($patient_info) ? $patient_info : [];
-                echo json_encode($safe_patient_info, JSON_HEX_QUOT | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_TAG);
-            ?>;
+            const patientInfo = <?php echo json_encode($patient_info); ?>;
             
             // Determine status styling
             const statusClass = {
@@ -1914,7 +1755,7 @@ header("Expires: 0");
                             <div class="info-item">
                                 <label>Priority Level</label>
                                 <span style="color: ${appointment.queue_priority === 'priority' ? '#dc3545' : '#28a745'}; font-weight: 600;">
-                                    ${appointment.queue_priority === 'priority' ? 'Priority' : 'Regular'}
+                                    ${appointment.queue_priority === 'priority' ? '⭐ Priority' : '👤 Regular'}
                                 </span>
                             </div>
                             ` : ''}
@@ -2027,10 +1868,35 @@ header("Expires: 0");
             }, 100);
         }
 
-        // closeCancelModal function already defined above
+        // Cancel appointment functionality
+        let currentCancelAppointmentId = null;
+
+        function showCancelModal(appointmentId, appointmentNumber) {
+            currentCancelAppointmentId = appointmentId;
+
+            // Update appointment info in modal
+            const appointmentInfo = document.getElementById('cancel-appointment-info');
+            appointmentInfo.innerHTML = `
+                <h4><i class="fas fa-calendar-check"></i> Appointment Details</h4>
+                <div class="info-text"><strong>Appointment ID:</strong> ${appointmentNumber}</div>
+            `;
+
+            // Reset form
+            document.getElementById('cancellation-reason').value = '';
+            document.getElementById('other-reason').value = '';
+            document.getElementById('other-reason-group').style.display = 'none';
+
+            // Show modal
+            document.getElementById('cancelModal').style.display = 'block';
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelModal').style.display = 'none';
+            currentCancelAppointmentId = null;
+        }
 
         // Notification Modal Functions
-        window.showNotificationModal = function(type, title, message, callback = null) {
+        function showNotificationModal(type, title, message, callback = null) {
             const modal = document.getElementById('notificationModal');
             const header = document.getElementById('notification-header');
             const icon = document.getElementById('notification-icon');
@@ -2070,7 +1936,7 @@ header("Expires: 0");
             modal.style.display = 'block';
         }
 
-        window.closeNotificationModal = function() {
+        function closeNotificationModal() {
             const modal = document.getElementById('notificationModal');
             modal.style.display = 'none';
             
@@ -2081,7 +1947,7 @@ header("Expires: 0");
             }
         }
 
-        window.confirmCancellation = function() {
+        function confirmCancellation() {
             const reason = document.getElementById('cancellation-reason').value;
             const otherReason = document.getElementById('other-reason').value;
 
@@ -2104,16 +1970,10 @@ header("Expires: 0");
 
             // Send cancellation request
             console.log('Sending cancellation request for appointment:', currentCancelAppointmentId);
-            console.log('Request payload:', {
-                appointment_id: currentCancelAppointmentId,
-                cancellation_reason: finalReason
-            });
-            
-            fetch('./cancel_appointment.php', {
+            fetch('cancel_appointment.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({
                         appointment_id: currentCancelAppointmentId,
@@ -2121,9 +1981,6 @@ header("Expires: 0");
                     })
                 })
                 .then(response => {
-                    console.log('Response status:', response.status);
-                    console.log('Response headers:', response.headers);
-                    
                     // Check if the response is ok (status 200-299)
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -2131,14 +1988,11 @@ header("Expires: 0");
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Response data:', data);
-                    
                     if (data.success) {
                         showNotificationModal('success', 'Cancellation Successful', 'Your appointment has been cancelled successfully.', () => {
                             location.reload(); // Refresh the page to show updated status
                         });
                     } else {
-                        console.error('Cancellation failed:', data);
                         showNotificationModal('error', 'Cancellation Failed', 'Error: ' + (data.message || 'Failed to cancel appointment'));
                     }
                 })
@@ -2165,7 +2019,7 @@ header("Expires: 0");
 
         // Legacy function for backward compatibility
         function cancelAppointment(appointmentId) {
-            showCancelModal(appointmentId);
+            showCancelModal(appointmentId, 'APT-' + appointmentId.toString().padStart(8, '0'));
         }
 
         // View referral details
@@ -2240,25 +2094,8 @@ header("Expires: 0");
             alert('Download appointment history functionality will be implemented here.');
         }
 
-        // Initialize page with comprehensive DOM checks
+        // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔧 DOM Content Loaded - Initializing page...');
-            
-            // Verify critical modal elements exist
-            const cancelModal = document.getElementById('cancelModal');
-            const viewModal = document.getElementById('viewModal');
-            const notificationModal = document.getElementById('notificationModal');
-            
-            console.log('🔍 Modal element check:', {
-                cancelModal: !!cancelModal,
-                viewModal: !!viewModal,
-                notificationModal: !!notificationModal
-            });
-            
-            if (!cancelModal) {
-                console.error('❌ Critical: cancelModal element not found in DOM');
-            }
-            
             // Set default active filter for appointments - find first section
             const sectionContainers = document.querySelectorAll('.section-container');
             if (sectionContainers.length > 0) {
@@ -2301,48 +2138,7 @@ header("Expires: 0");
             document.querySelectorAll('.appointment-card, .referral-card').forEach(card => {
                 card.style.transition = 'all 0.3s ease';
             });
-            
-            console.log('🎉 Page initialization complete');
         });
-        
-        // ========== GLOBAL INITIALIZATION ==========
-        
-        // Global error handler for JavaScript errors
-        window.addEventListener('error', function(e) {
-            console.error('🚨 JavaScript Error:', {
-                message: e.message,
-                filename: e.filename,
-                lineno: e.lineno,
-                colno: e.colno,
-                error: e.error
-            });
-        });
-        
-        // Functions are already defined directly on window object above
-        // This ensures they're available immediately for onclick handlers
-        console.log('🔍 Verifying all critical functions are globally accessible...');
-        
-        // Verify essential functions are available
-        const essentialFunctions = ['showCancelModal', 'closeCancelModal', 'confirmCancellation', 'filterAppointments'];
-        essentialFunctions.forEach(funcName => {
-            if (typeof window[funcName] === 'function') {
-                console.log(`✅ ${funcName} is globally accessible`);
-            } else {
-                console.error(`❌ ${funcName} is NOT accessible - onclick handlers will fail`);
-            }
-        });
-        
-        console.log('✅ All functions exposed globally at script end');
-        
-        // Verify function availability
-        if (typeof showCancelModal === 'function') {
-            console.log('✅ showCancelModal is available for onclick handlers');
-        } else {
-            console.error('❌ showCancelModal is NOT available - this will cause onclick errors');
-        }
-        
-        // Final confirmation that script loaded without syntax errors
-        console.log('✅ JavaScript loaded successfully - no syntax errors detected');
     </script>
 
     <!-- Alert Styles -->

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 07, 2025 at 06:33 AM
+-- Generation Time: Oct 06, 2025 at 02:04 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -59,33 +59,26 @@ CREATE TABLE `appointments` (
   `status` enum('confirmed','completed','cancelled','checked_in') DEFAULT 'confirmed',
   `cancellation_reason` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `qr_code_path` longblob DEFAULT NULL COMMENT 'QR code image data stored as binary BLOB'
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `referral_id`, `service_id`, `scheduled_date`, `scheduled_time`, `status`, `cancellation_reason`, `created_at`, `updated_at`, `qr_code_path`) VALUES
-(1, 7, 4, NULL, 1, '2025-09-30', '12:00:00', 'cancelled', 'Schedule Conflict', '2025-09-29 12:56:32', '2025-09-30 05:44:21', NULL),
-(2, 8, 12, NULL, 1, '2025-09-30', '16:00:00', 'cancelled', 'Personal Emergency', '2025-09-30 03:33:30', '2025-09-30 03:54:04', NULL),
-(3, 8, 12, NULL, 1, '2025-09-30', '15:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 03:54:35', '2025-10-02 04:16:26', NULL),
-(4, 7, 1, 2, 1, '2025-09-30', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 07:44:51', '2025-10-02 04:16:26', NULL),
-(5, 7, 4, NULL, 1, '2025-10-01', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:08:22', '2025-10-02 04:16:26', NULL),
-(6, 37, 22, NULL, 1, '2025-10-01', '09:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:34:29', '2025-10-02 04:16:26', NULL),
-(7, 37, 1, 8, 1, '2025-10-02', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:42:00', '2025-10-02 04:31:57', NULL),
-(8, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Schedule Conflict', '2025-10-02 06:15:58', '2025-10-02 07:25:45', NULL),
-(9, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-10-02 07:34:44', '2025-10-02 15:54:42', NULL),
-(22, 7, 1, 12, 1, '2025-10-06', '13:00:00', 'cancelled', 'Personal Emergency', '2025-10-05 23:29:52', '2025-10-05 23:57:52', NULL),
-(23, 7, 1, 12, 1, '2025-10-07', '13:00:00', 'cancelled', 'Schedule Conflict', '2025-10-05 23:44:50', '2025-10-07 02:32:59', NULL),
-(24, 7, 4, NULL, 1, '2025-10-06', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-10-06 01:09:50', '2025-10-06 18:49:08', NULL),
-(25, 7, 4, NULL, 1, '2025-10-07', '12:00:00', 'cancelled', 'Feeling Better', '2025-10-07 02:35:00', '2025-10-07 03:10:35', NULL),
-(26, 7, 4, NULL, 1, '2025-10-15', '09:00:00', 'cancelled', 'Schedule Conflict', '2025-10-07 03:38:39', '2025-10-07 03:46:01', NULL),
-(27, 7, 4, NULL, 1, '2025-10-07', '14:00:00', 'cancelled', 'Feeling Better', '2025-10-07 03:46:20', '2025-10-07 03:47:02', NULL),
-(28, 7, 4, NULL, 1, '2025-10-07', '14:00:00', 'cancelled', 'Schedule Conflict', '2025-10-07 03:47:15', '2025-10-07 03:59:29', NULL),
-(29, 7, 4, NULL, 1, '2025-10-07', '15:00:00', 'cancelled', 'Transportation Issues', '2025-10-07 03:59:42', '2025-10-07 04:09:11', NULL),
-(30, 7, 4, NULL, 1, '2025-10-07', '15:00:00', 'confirmed', NULL, '2025-10-07 04:09:24', '2025-10-07 04:31:21', NULL);
+INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `referral_id`, `service_id`, `scheduled_date`, `scheduled_time`, `status`, `cancellation_reason`, `created_at`, `updated_at`) VALUES
+(1, 7, 4, NULL, 1, '2025-09-30', '12:00:00', 'cancelled', 'Schedule Conflict', '2025-09-29 12:56:32', '2025-09-30 05:44:21'),
+(2, 8, 12, NULL, 1, '2025-09-30', '16:00:00', 'cancelled', 'Personal Emergency', '2025-09-30 03:33:30', '2025-09-30 03:54:04'),
+(3, 8, 12, NULL, 1, '2025-09-30', '15:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 03:54:35', '2025-10-02 04:16:26'),
+(4, 7, 1, 2, 1, '2025-09-30', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 07:44:51', '2025-10-02 04:16:26'),
+(5, 7, 4, NULL, 1, '2025-10-01', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:08:22', '2025-10-02 04:16:26'),
+(6, 37, 22, NULL, 1, '2025-10-01', '09:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:34:29', '2025-10-02 04:16:26'),
+(7, 37, 1, 8, 1, '2025-10-02', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:42:00', '2025-10-02 04:31:57'),
+(8, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Schedule Conflict', '2025-10-02 06:15:58', '2025-10-02 07:25:45'),
+(9, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-10-02 07:34:44', '2025-10-02 15:54:42'),
+(22, 7, 1, 12, 1, '2025-10-06', '13:00:00', 'cancelled', 'Personal Emergency', '2025-10-05 23:29:52', '2025-10-05 23:57:52'),
+(23, 7, 1, 12, 1, '2025-10-07', '13:00:00', 'confirmed', NULL, '2025-10-05 23:44:50', '2025-10-05 23:44:50'),
+(24, 7, 4, NULL, 1, '2025-10-06', '16:00:00', 'confirmed', NULL, '2025-10-06 01:09:50', '2025-10-06 01:09:50');
 
 -- --------------------------------------------------------
 
@@ -121,14 +114,7 @@ INSERT INTO `appointment_logs` (`log_id`, `appointment_id`, `patient_id`, `actio
 (1, 22, 7, 'created', NULL, 'confirmed', NULL, '2025-10-06', NULL, '13:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-05 23:29:52'),
 (2, 23, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '13:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-05 23:44:50'),
 (3, 22, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Personal Emergency', NULL, 'patient', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-05 23:57:52'),
-(4, 24, 7, 'created', NULL, 'confirmed', NULL, '2025-10-06', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-06 01:09:50'),
-(5, 23, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Schedule Conflict', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 02:32:59'),
-(6, 25, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '12:00:00', 'Appointment created', NULL, '', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 02:35:00'),
-(7, 25, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Feeling Better', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:10:35'),
-(8, 26, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Schedule Conflict', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:46:01'),
-(9, 27, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Feeling Better', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:47:02'),
-(10, 28, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Schedule Conflict', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:59:29'),
-(11, 29, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Transportation Issues', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 04:09:11');
+(4, 24, 7, 'created', NULL, 'confirmed', NULL, '2025-10-06', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-06 01:09:50');
 
 -- --------------------------------------------------------
 
@@ -960,9 +946,8 @@ CREATE TABLE `queue_entries` (
 
 INSERT INTO `queue_entries` (`queue_entry_id`, `visit_id`, `appointment_id`, `patient_id`, `service_id`, `queue_type`, `station_id`, `queue_number`, `queue_code`, `priority_level`, `status`, `time_in`, `time_started`, `time_completed`, `waiting_time`, `turnaround_time`, `remarks`, `created_at`, `updated_at`) VALUES
 (1, 1, 22, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'cancelled', '2025-10-06 07:29:52', NULL, '2025-10-06 07:57:52', NULL, 28, 'Personal Emergency', '2025-10-05 23:29:52', '2025-10-05 23:57:52'),
-(2, 2, 23, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'cancelled', '2025-10-06 07:44:50', NULL, '2025-10-07 10:32:59', NULL, 1608, 'Schedule Conflict', '2025-10-05 23:44:50', '2025-10-07 02:32:59'),
-(3, 3, 24, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'cancelled', '2025-10-06 09:09:50', NULL, NULL, NULL, NULL, NULL, '2025-10-06 01:09:50', '2025-10-07 02:33:44'),
-(4, 4, 25, 7, 1, 'consultation', 5, NULL, NULL, 'normal', 'cancelled', '2025-10-07 10:35:00', NULL, '2025-10-07 11:10:35', NULL, 35, 'Feeling Better', '2025-10-07 02:35:00', '2025-10-07 03:10:35');
+(2, 2, 23, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'waiting', '2025-10-06 07:44:50', NULL, NULL, NULL, NULL, NULL, '2025-10-05 23:44:50', '2025-10-05 23:44:50'),
+(3, 3, 24, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'waiting', '2025-10-06 09:09:50', NULL, NULL, NULL, NULL, NULL, '2025-10-06 01:09:50', '2025-10-06 01:09:50');
 
 -- --------------------------------------------------------
 
@@ -989,10 +974,7 @@ INSERT INTO `queue_logs` (`queue_log_id`, `queue_entry_id`, `action`, `old_statu
 (1, 1, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-05 23:29:52'),
 (2, 2, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-05 23:44:50'),
 (3, 1, 'cancelled', 'waiting', 'cancelled', 'Personal Emergency', NULL, '2025-10-05 23:57:52'),
-(4, 3, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-06 01:09:50'),
-(5, 2, 'cancelled', 'waiting', 'cancelled', 'Schedule Conflict', NULL, '2025-10-07 02:32:59'),
-(6, 4, 'created', NULL, 'waiting', 'Queue entry created for non-CHO appointment', NULL, '2025-10-07 02:35:00'),
-(7, 4, 'cancelled', 'waiting', 'cancelled', 'Feeling Better', NULL, '2025-10-07 03:10:35');
+(4, 3, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-06 01:09:50');
 
 -- --------------------------------------------------------
 
@@ -1051,7 +1033,7 @@ INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring
 (8, 'REF-20250930-0002', 37, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s consultation', 1, '2025-09-30 16:41:14', 'accepted', '2025-09-30 08:42:00'),
 (9, 'REF-20251002-0001', 13, 1, 2, '', NULL, 1, 'district_office', 'Doctor\'s Check-up', 1, '2025-10-02 16:10:06', 'cancelled', '2025-10-04 11:39:55'),
 (10, 'REF-20251004-0001', 38, 1, 1, '', NULL, 1, 'city_office', 'Hypoglycemic', 1, '2025-10-04 13:04:30', 'cancelled', '2025-10-04 05:09:25'),
-(11, 'REF-20251004-0002', 38, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s Consultation', 1, '2025-10-04 13:11:14', 'cancelled', '2025-10-06 15:05:12'),
+(11, 'REF-20251004-0002', 38, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s Consultation', 1, '2025-10-04 13:11:14', 'active', '2025-10-04 05:11:14'),
 (12, 'REF-20251004-0003', 7, 1, 1, '', NULL, 1, 'city_office', 'Check Up', 1, '2025-10-04 21:59:22', 'accepted', '2025-10-05 23:52:13');
 
 -- --------------------------------------------------------
@@ -1209,7 +1191,7 @@ CREATE TABLE `stations` (
 --
 
 INSERT INTO `stations` (`station_id`, `station_name`, `service_id`, `station_type`, `station_number`, `is_active`, `is_open`, `created_at`, `updated_at`) VALUES
-(1, 'Triage 1', 1, 'triage', 1, 1, 0, '2025-10-04 04:26:36', '2025-10-06 16:26:37'),
+(1, 'Triage 1', 1, 'triage', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:38'),
 (2, 'Triage 2', 1, 'triage', 2, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:40'),
 (3, 'Triage 3', 1, 'triage', 3, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:42'),
 (4, 'Billing', 9, 'billing', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:52'),
@@ -1224,7 +1206,7 @@ INSERT INTO `stations` (`station_id`, `station_name`, `service_id`, `station_typ
 (13, 'Laboratory', 8, 'lab', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
 (14, 'Dispensing 1', 1, 'pharmacy', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
 (15, 'Dispensing 2', 1, 'pharmacy', 2, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(16, 'Check-In Counter', 10, 'checkin', 1, 1, 1, '2025-10-04 04:57:03', '2025-10-06 16:26:15');
+(16, 'Check-In Counter', 10, 'checkin', 1, 1, 1, '2025-10-04 04:57:03', '2025-10-04 13:15:35');
 
 -- --------------------------------------------------------
 
@@ -1279,8 +1261,7 @@ CREATE TABLE `visits` (
 INSERT INTO `visits` (`visit_id`, `patient_id`, `facility_id`, `appointment_id`, `vitals_id`, `visit_date`, `time_in`, `time_out`, `attending_employee_id`, `remarks`, `visit_status`, `attendance_status`, `created_at`, `updated_at`) VALUES
 (1, 7, 1, 22, NULL, '2025-10-06', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-05 23:29:52', '2025-10-05 23:29:52'),
 (2, 7, 1, 23, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-05 23:44:50', '2025-10-05 23:44:50'),
-(3, 7, 4, 24, NULL, '2025-10-06', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-06 01:09:50', '2025-10-06 01:09:50'),
-(4, 7, 4, 25, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 02:35:00', '2025-10-07 02:35:00');
+(3, 7, 4, 24, NULL, '2025-10-06', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-06 01:09:50', '2025-10-06 01:09:50');
 
 -- --------------------------------------------------------
 
@@ -1342,8 +1323,7 @@ ALTER TABLE `appointments`
   ADD KEY `idx_appointments_patient_status` (`patient_id`,`status`),
   ADD KEY `idx_scheduled_slot` (`scheduled_date`,`scheduled_time`,`service_id`),
   ADD KEY `idx_appointments_status_date` (`status`,`scheduled_date`),
-  ADD KEY `idx_appointments_facility_date` (`facility_id`,`scheduled_date`),
-  ADD KEY `idx_appointments_qr_path` (`qr_code_path`(3072));
+  ADD KEY `idx_appointments_facility_date` (`facility_id`,`scheduled_date`);
 
 --
 -- Indexes for table `appointment_logs`
@@ -1705,13 +1685,13 @@ ALTER TABLE `allergies`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `appointment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `appointment_logs`
 --
 ALTER TABLE `appointment_logs`
-  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `assignment_logs`
@@ -1867,13 +1847,13 @@ ALTER TABLE `prescriptions`
 -- AUTO_INCREMENT for table `queue_entries`
 --
 ALTER TABLE `queue_entries`
-  MODIFY `queue_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `queue_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `queue_logs`
 --
 ALTER TABLE `queue_logs`
-  MODIFY `queue_log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `queue_log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `receipts`
@@ -1927,7 +1907,7 @@ ALTER TABLE `surgical_history`
 -- AUTO_INCREMENT for table `visits`
 --
 ALTER TABLE `visits`
-  MODIFY `visit_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `visit_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `vitals`

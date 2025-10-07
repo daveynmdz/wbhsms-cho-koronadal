@@ -1357,7 +1357,7 @@ try {
                     return selectedFacility !== null;
                 case 2:
                     if (selectedFacility === 'bhc') {
-                        selectedService = 'Primary Care'; // Using correct database service name
+                        selectedService = 'Primary Care';
                         return true;
                     } else {
                         return selectedReferral !== null;
@@ -1407,7 +1407,7 @@ try {
             if (selectedFacility === 'bhc') {
                 document.getElementById('bhc-service').classList.remove('hidden');
                 document.getElementById('referral-selection').classList.add('hidden');
-                selectedService = 'Primary Care'; // Using correct database service name
+                selectedService = 'Primary Care';
                 
                 // Auto-fill date with today's date for same-day booking
                 autoFillAppointmentDate();
@@ -1986,7 +1986,6 @@ try {
 
             // Prepare appointment data
             const appointmentData = {
-                patient_id: patientInfo.patient_id, // Add patient_id explicitly
                 facility_type: selectedFacility,
                 referral_id: selectedReferral,
                 service: selectedService,
@@ -1996,31 +1995,6 @@ try {
                 priority_description: patientInfo.priority_description,
                 priority_reasons: patientInfo.priority_reasons
             };
-
-            // Debug logging
-            console.log('🔍 Submitting appointment data:', appointmentData);
-            console.log('📊 Data validation:');
-            console.log('  - Patient ID:', appointmentData.patient_id || '❌ MISSING');
-            console.log('  - Facility Type:', appointmentData.facility_type || '❌ MISSING');
-            console.log('  - Service:', appointmentData.service || '❌ MISSING'); 
-            console.log('  - Date:', appointmentData.appointment_date || '❌ MISSING');
-            console.log('  - Time:', appointmentData.appointment_time || '❌ MISSING');
-
-            // Validate required fields before submission
-            const missingFields = [];
-            if (!appointmentData.patient_id) missingFields.push('Patient ID');
-            if (!appointmentData.facility_type) missingFields.push('Facility Type');
-            if (!appointmentData.service) missingFields.push('Service');
-            if (!appointmentData.appointment_date) missingFields.push('Date');
-            if (!appointmentData.appointment_time) missingFields.push('Time');
-
-            if (missingFields.length > 0) {
-                console.error('❌ Missing required fields:', missingFields);
-                showWarningModal('Validation Error', 'Missing required fields: ' + missingFields.join(', '), 'error');
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Book Appointment';
-                return;
-            }
 
             // Submit the appointment
             fetch('submit_appointment.php', {
@@ -2164,54 +2138,6 @@ try {
                             ${emailStatusHtml}
                         </div>
                     </div>
-                    
-                    <!-- QR Code Section -->
-                    ${data.qr_generated ? `
-                        <div class="summary-section">
-                            <div class="summary-title">
-                                <i class="fas fa-qrcode"></i>
-                                QR Code for Check-in
-                            </div>
-                            <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px; margin-top: 1rem;">
-                                <div id="qr-code-container" style="margin-bottom: 1rem;">
-                                    <img src="/wbhsms-cho-koronadal/qr_image.php?appointment_id=${data.appointment_id}" 
-                                         alt="Appointment QR Code" 
-                                         style="width: 180px; height: 180px; border: 2px solid #0077b6; border-radius: 8px;"
-                                         onerror="this.style.display='none'; document.getElementById('qr-error').style.display='block';">
-                                </div>
-                                <div id="qr-error" style="display: none; color: #dc3545; font-size: 0.9rem;">
-                                    <i class="fas fa-exclamation-triangle"></i> QR Code not available
-                                </div>
-                                <p style="margin: 0.5rem 0; font-size: 0.9rem; color: #6c757d;">
-                                    Present this QR code at check-in for faster service
-                                </p>
-                                <small style="color: #6c757d;">Alternative: Use Appointment ID <strong>${data.appointment_num || data.appointment_id}</strong></small>
-                            </div>
-                            ${data.facility_type === 'bhc' || data.facility_type === 'dho' ? `
-                                <div class="alert alert-info" style="margin: 1rem 0 0 0; font-size: 0.9rem;">
-                                    <i class="fas fa-info-circle"></i>
-                                    <strong>Note:</strong> ${data.facility_type === 'bhc' ? 'Barangay Health Centers' : 'District Health Offices'} do not use queue numbers. 
-                                    Simply present your QR code or Appointment ID for direct check-in to visits table.
-                                </div>
-                            ` : ''}
-                        </div>
-                    ` : `
-                        <div class="summary-section">
-                            <div class="summary-title">
-                                <i class="fas fa-id-card"></i>
-                                Check-in Information
-                            </div>
-                            <div class="alert alert-info" style="margin: 1rem 0 0 0;">
-                                <i class="fas fa-info-circle"></i>
-                                <strong>Manual Check-in:</strong> Please present your Appointment ID <strong>${data.appointment_num || data.appointment_id}</strong> at the facility reception.
-                                ${data.facility_type === 'bhc' || data.facility_type === 'dho' ? `
-                                    <br><br><strong>Note:</strong> ${data.facility_type === 'bhc' ? 'Barangay Health Centers' : 'District Health Offices'} do not use queue numbers. 
-                                    You will be checked in directly to the visits table.
-                                ` : ''}
-                            </div>
-                        </div>
-                    `}
-                    
                     ${queueInfoHtml}
                 </div>
 
@@ -2423,22 +2349,16 @@ try {
             height: 100%;
             background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
-            overflow-y: auto;
-            padding: 20px 0;
         }
 
         .modal-content {
             background: white;
-            margin: 0 auto;
+            margin: 5% auto;
             padding: 0;
             border-radius: 15px;
-            width: 95%;
-            max-width: 900px;
-            min-height: 400px;
-            max-height: calc(100vh - 40px);
+            max-width: 600px;
             position: relative;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            overflow-y: auto;
         }
 
         .modal-header {
@@ -2460,8 +2380,6 @@ try {
 
         .modal-body {
             padding: 1.5rem;
-            max-height: calc(100vh - 200px);
-            overflow-y: auto;
         }
 
         .modal-footer {
@@ -2471,10 +2389,6 @@ try {
             justify-content: flex-end;
             gap: 0.5rem;
             border-radius: 0 0 15px 15px;
-            position: sticky;
-            bottom: 0;
-            background: white;
-            z-index: 10;
         }
 
         .close {
@@ -2818,61 +2732,6 @@ try {
 
             .card-content {
                 padding: 1rem;
-            }
-
-            /* Mobile Modal Styles */
-            .modal {
-                padding: 10px;
-            }
-
-            .modal-content {
-                width: 98%;
-                max-width: none;
-                margin: 0 auto;
-                border-radius: 10px;
-                max-height: calc(100vh - 20px);
-            }
-
-            .modal-header {
-                padding: 1rem;
-                border-radius: 10px 10px 0 0;
-            }
-
-            .modal-header h3 {
-                font-size: 1.3rem;
-            }
-
-            .modal-body {
-                padding: 1rem;
-                max-height: calc(100vh - 150px);
-            }
-
-            .modal-footer {
-                padding: 0.75rem 1rem;
-            }
-
-            .summary-section {
-                margin-bottom: 1rem;
-            }
-
-            .summary-grid {
-                grid-template-columns: 1fr;
-                gap: 0.75rem;
-            }
-
-            .summary-item {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 0.75rem;
-            }
-
-            .summary-label {
-                font-size: 0.9rem;
-                margin-bottom: 0.25rem;
-            }
-
-            .summary-value {
-                font-size: 1rem;
             }
         }
     </style>

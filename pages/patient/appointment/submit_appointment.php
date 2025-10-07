@@ -1,125 +1,201 @@
 <?php
-session_start();
-require_once '../../../config/db.php';
-require_once '../../../config/env.php';
-require_once '../../../utils/appointment_qr_generator.php';
-require_once '../../../utils/queue_management_service.php';
+// submit_appointment.php - API endpoint for submitting appointment bookings
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-    exit;
+header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+// Include patient session configuration
+$root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/patient_session.php';
+
+// If user is not logged in, return error
+if (!isset($_SESSION['patient_id'])) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit();
 }
 
-try {
-    // Handle both JSON and form data input
-    $input_data = [];
-    
-    // Check if data is sent as JSON
-    $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
-    if (strpos($content_type, 'application/json') !== false) {
-        $json_input = file_get_contents('php://input');
-        $input_data = json_decode($json_input, true) ?? [];
-        
-        // Add patient_id from session if not provided
-        if (!isset($input_data['patient_id']) && isset($_SESSION['patient_id'])) {
-            $input_data['patient_id'] = $_SESSION['patient_id'];
-        }
-    } else {
-        // Traditional form data
-        $input_data = $_POST;
-    }
-    
-    // Debug logging
-    error_log("Appointment submission - Input data: " . json_encode($input_data));
-    error_log("Session data: " . json_encode($_SESSION ?? []));
-    
-    // Collect and validate appointment data
-    $patient_id = $input_data['patient_id'] ?? $_SESSION['patient_id'] ?? null;
-    $service = $input_data['service'] ?? '';
-    $facility_type = $input_data['facility_type'] ?? '';
-    $appointment_date = $input_data['appointment_date'] ?? '';
-    $appointment_time = $input_data['appointment_time'] ?? '';
-    $referral_id = $input_data['referral_id'] ?? null;
+// Database connection
+require_once $root_path . '/config/db.php';
 
-    // Validation with detailed error information
+// Include queue management service
+require_once $root_path . '/utils/queue_management_service.php';
+
+// Include appointment logger
+require_once $root_path . '/utils/appointment_logger.php';
+
+// Check database connection
+if (!isset($conn) || $conn->connect_error) {
+    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+    exit();
+}
+
+// Get POST data
+$input = json_decode(file_get_contents('php://input'), true);
+
+if (!$input) {
+    error_log("submit_appointment.php: Invalid input data received");
+    echo json_encode(['success' => false, 'message' => 'Invalid input data received']);
+    exit();
+}
+
+$patient_id = $_SESSION['patient_id'];
+$facility_type = $input['facility_type'] ?? '';
+$referral_id = $input['referral_id'] ?? null;
+$service = $input['service'] ?? '';
+$appointment_date = $input['appointment_date'] ?? '';
+$appointment_time = $input['appointment_time'] ?? '';
+
+// Validate required fields
+if (empty($facility_type) || empty($service) || empty($appointment_date) || empty($appointment_time)) {
     $missing_fields = [];
-    if (!$patient_id) $missing_fields[] = 'patient_id';
-    if (!$service) $missing_fields[] = 'service';
-    if (!$facility_type) $missing_fields[] = 'facility_type';
-    if (!$appointment_date) $missing_fields[] = 'appointment_date';
-    if (!$appointment_time) $missing_fields[] = 'appointment_time';
+    if (empty($facility_type)) $missing_fields[] = 'facility_type';
+    if (empty($service)) $missing_fields[] = 'service';
+    if (empty($appointment_date)) $missing_fields[] = 'appointment_date';
+    if (empty($appointment_time)) $missing_fields[] = 'appointment_time';
     
-    if (!empty($missing_fields)) {
-        $error_message = 'Missing required fields: ' . implode(', ', $missing_fields);
-        error_log("Appointment validation failed: $error_message");
-        error_log("Received values - patient_id: $patient_id, service: $service, facility_type: $facility_type, appointment_date: $appointment_date, appointment_time: $appointment_time");
-        throw new Exception($error_message);
+    error_log("submit_appointment.php: Missing required fields: " . implode(', ', $missing_fields));
+    echo json_encode(['success' => false, 'message' => 'Missing required fields: ' . implode(', ', $missing_fields)]);
+    exit();
+}
+
+// Validate facility type
+if (!in_array($facility_type, ['bhc', 'dho', 'cho'])) {
+    echo json_encode(['success' => false, 'message' => 'Invalid facility type']);
+    exit();
+}
+
+// Validate that referral is provided for DHO/CHO
+if (($facility_type === 'dho' || $facility_type === 'cho') && empty($referral_id)) {
+    echo json_encode(['success' => false, 'message' => 'Referral is required for DHO/CHO appointments']);
+    exit();
+}
+
+// Validate date and time format
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $appointment_date)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid date format']);
+    exit();
+}
+
+if (!preg_match('/^\d{2}:\d{2}$/', $appointment_time)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid time format']);
+    exit();
+}
+
+// Check if date is not in the past (allow same-day booking)
+$today = date('Y-m-d');
+if ($appointment_date < $today) {
+    echo json_encode(['success' => false, 'message' => 'Cannot book appointments for past dates']);
+    exit();
+}
+
+// For same-day appointments, check if it's past 4 PM
+if ($appointment_date === $today) {
+    $current_hour = (int)date('H');
+    if ($current_hour >= 16) {
+        echo json_encode(['success' => false, 'message' => 'Same-day appointments are only available until 4:00 PM']);
+        exit();
     }
-
-    // Validate date format and future date
-    $date_obj = DateTime::createFromFormat('Y-m-d', $appointment_date);
-    if (!$date_obj || $date_obj->format('Y-m-d') !== $appointment_date) {
-        throw new Exception('Invalid appointment date format');
+    
+    // Also check if the selected time slot has already passed
+    $current_time = date('H:i');
+    if ($appointment_time <= $current_time) {
+        echo json_encode(['success' => false, 'message' => 'Selected time slot has already passed. Please choose a later time.']);
+        exit();
     }
+}
 
-    if ($date_obj < new DateTime('today')) {
-        throw new Exception('Appointment date cannot be in the past');
+// Validate time slot (8 AM to 4 PM)
+$hour = (int)explode(':', $appointment_time)[0];
+if ($hour < 8 || $hour > 16) {
+    echo json_encode(['success' => false, 'message' => 'Invalid appointment time. Please select between 8 AM and 4 PM']);
+    exit();
+}
+
+$conn->begin_transaction();
+
+try {
+    // Map frontend facility types to database facility types
+    $facility_type_map = [
+        'bhc' => 'Barangay Health Center',
+        'dho' => 'District Health Office', 
+        'cho' => 'City Health Office'
+    ];
+    
+    $db_facility_type = $facility_type_map[$facility_type] ?? '';
+    if (empty($db_facility_type)) {
+        throw new Exception('Invalid facility type selected');
     }
-
-    // Validate time format
-    if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $appointment_time)) {
-        throw new Exception('Invalid appointment time format');
-    }
-
-    $conn->begin_transaction();
-
-    // Check for existing appointments on the same date/time
+    
+    // Check slot availability (double-check to prevent overbooking)
     $stmt = $conn->prepare("
-        SELECT COUNT(*) as count 
+        SELECT COUNT(*) as booking_count
+        FROM appointments a
+        LEFT JOIN services s ON a.service_id = s.service_id
+        LEFT JOIN facilities f ON a.facility_id = f.facility_id
+        WHERE a.scheduled_date = ? 
+        AND a.scheduled_time = ? 
+        AND s.name = ? 
+        AND f.type = ?
+        AND a.status = 'confirmed'
+        FOR UPDATE
+    ");
+    
+    $stmt->bind_param("ssss", $appointment_date, $appointment_time, $service, $db_facility_type);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $current_bookings = (int)$row['booking_count'];
+    $stmt->close();
+    
+    if ($current_bookings >= 20) {
+        throw new Exception('This time slot is fully booked. Please select another time.');
+    }
+    
+    // Check for duplicate appointments
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as existing_count
         FROM appointments 
         WHERE patient_id = ? 
         AND scheduled_date = ? 
-        AND scheduled_time = ? 
-        AND status NOT IN ('cancelled', 'completed')
+        AND status = 'confirmed'
     ");
-    $stmt->bind_param("iss", $patient_id, $appointment_date, $appointment_time);
+    
+    $stmt->bind_param("is", $patient_id, $appointment_date);
     $stmt->execute();
     $result = $stmt->get_result();
-    $existing = $result->fetch_assoc();
+    $row = $result->fetch_assoc();
+    $existing_appointments = (int)$row['existing_count'];
     $stmt->close();
-
-    if ($existing['count'] > 0) {
-        throw new Exception('You already have an appointment scheduled for this date and time');
+    
+    if ($existing_appointments > 0) {
+        throw new Exception('You already have an appointment on this date. Please select a different date.');
     }
-
-    // Validate and get referral information if provided
-    if ($referral_id && $referral_id !== '' && $referral_id !== 'null') {
-        error_log("Validating referral_id: $referral_id for patient_id: $patient_id");
-        
+    
+    // If referral is provided, validate it belongs to the patient and is active
+    if ($referral_id) {
         $stmt = $conn->prepare("
-            SELECT status, referring_facility_id 
+            SELECT referral_id, status 
             FROM referrals 
             WHERE referral_id = ? AND patient_id = ?
         ");
+        
         $stmt->bind_param("ii", $referral_id, $patient_id);
         $stmt->execute();
         $result = $stmt->get_result();
         $referral = $result->fetch_assoc();
         $stmt->close();
-
+        
         if (!$referral) {
             throw new Exception('Invalid referral selected');
         }
-
+        
         if ($referral['status'] !== 'active') {
             throw new Exception('Selected referral is not active');
         }
-        
-        error_log("Referral validation passed for referral_id: $referral_id");
-    } else {
-        // No referral provided - set to null for consistency
-        $referral_id = null;
-        error_log("No referral provided, setting referral_id to null");
     }
     
     // Get patient information for appointment creation and email
@@ -144,8 +220,7 @@ try {
     $service_id = null;
     $facility_id = null;
     
-    // Get service_id with better error handling
-    error_log("Looking up service: '$service'");
+    // Get service_id
     $stmt = $conn->prepare("SELECT service_id FROM services WHERE name = ?");
     $stmt->bind_param("s", $service);
     $stmt->execute();
@@ -154,21 +229,9 @@ try {
     $stmt->close();
     
     if (!$service_row) {
-        // Log available services for debugging
-        $stmt = $conn->prepare("SELECT name FROM services LIMIT 10");
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $available_services = [];
-        while ($row = $result->fetch_assoc()) {
-            $available_services[] = $row['name'];
-        }
-        $stmt->close();
-        
-        error_log("Service '$service' not found. Available services: " . implode(', ', $available_services));
-        throw new Exception("Invalid service selected: '$service'. Available services: " . implode(', ', $available_services));
+        throw new Exception('Invalid service selected');
     }
     $service_id = $service_row['service_id'];
-    error_log("Service '$service' found with ID: $service_id");
     
     // Get facility_id based on facility_type and patient's barangay
     if ($facility_type === 'bhc') {
@@ -181,7 +244,7 @@ try {
         ");
         $stmt->bind_param("i", $patient_info['barangay_id']);
     } else if ($facility_type === 'dho') {
-        // For DHO, find the district health office for the patient's barangay
+        // For DHO, find the district health office for the patient's district
         $stmt = $conn->prepare("
             SELECT f.facility_id, f.name
             FROM facilities f
@@ -190,40 +253,38 @@ try {
             LIMIT 1
         ");
         $stmt->bind_param("i", $patient_info['barangay_id']);
-    } else {
-        // Default to City Health Office (CHO)
+    } else { // cho
+        // For CHO, get the main city health office
         $stmt = $conn->prepare("
             SELECT facility_id, name
             FROM facilities 
-            WHERE type = 'City Health Office' AND name LIKE '%Main%'
+            WHERE type = 'City Health Office' AND is_main = 1
             LIMIT 1
         ");
     }
     
     $stmt->execute();
     $result = $stmt->get_result();
-    $facility_info = $result->fetch_assoc();
+    $facility_row = $result->fetch_assoc();
     $stmt->close();
     
-    if (!$facility_info) {
-        throw new Exception('No suitable healthcare facility found for your location');
+    if (!$facility_row) {
+        throw new Exception('No suitable facility found for your location and selected facility type');
     }
+    $facility_id = $facility_row['facility_id'];
+    $facility_name = $facility_row['name'];
     
-    $facility_id = $facility_info['facility_id'];
-    $facility_name = $facility_info['name'];
-
-    // Insert appointment record (appointment_num will be generated based on appointment_id)
+    // Insert appointment with confirmed status (auto-confirm for better UX)
     $stmt = $conn->prepare("
         INSERT INTO appointments (
-            patient_id, service_id, facility_id, 
-            scheduled_date, scheduled_time, status, referral_id, 
-            created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, 'confirmed', ?, NOW(), NOW())
+            patient_id, facility_id, referral_id, service_id, 
+            scheduled_date, scheduled_time, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'confirmed', NOW())
     ");
     
-    $stmt->bind_param("iiissi", 
-        $patient_id, $service_id, $facility_id, 
-        $appointment_date, $appointment_time, $referral_id
+    $stmt->bind_param("iiiiss", 
+        $patient_id, $facility_id, $referral_id, $service_id,
+        $appointment_date, $appointment_time
     );
     
     if (!$stmt->execute()) {
@@ -233,208 +294,161 @@ try {
     $appointment_id = $conn->insert_id;
     $stmt->close();
     
-    // Generate appointment number based on appointment_id
-    $appointment_num = 'APT-' . date('Ymd') . '-' . str_pad($appointment_id, 5, '0', STR_PAD_LEFT);
-
-    // Generate QR code for ALL appointments (CHO, BHC, and DHO)
-    $qr_result = null;
-    error_log("Starting QR generation process for appointment {$appointment_id}");
-    try {
-        error_log("Loading AppointmentQRGenerator class...");
-        require_once dirname(dirname(dirname(__DIR__))) . '/utils/appointment_qr_generator.php';
-        
-        if (!class_exists('AppointmentQRGenerator')) {
-            error_log("CRITICAL: AppointmentQRGenerator class not found after include");
-            throw new Exception('AppointmentQRGenerator class not found');
-        }
-        
-        $qr_generator = new AppointmentQRGenerator();
-        error_log("QR Generator instance created successfully");
-        error_log("QR Generation - Calling with parameters: appointment_id={$appointment_id}, patient_id={$patient_id}, referral_id={$referral_id}, facility_id={$facility_id}, facility_type={$facility_type}");
-        
-        $qr_result = $qr_generator->generateAppointmentQR(
-            $appointment_id,
-            $patient_id,
-            $referral_id,
-            $facility_id,
-            $facility_type
-        );
-        
-        error_log("QR Generation Result: " . ($qr_result['success'] ? 'SUCCESS' : 'FAILED - ' . $qr_result['message']));
-        if ($qr_result['success']) {
-            error_log("QR File created: " . $qr_result['qr_filepath']);
-            error_log("QR File size: " . $qr_result['file_size'] . " bytes");
-        }
-        
-        if ($qr_result['success']) {
-            // Update appointment record with QR code BLOB data
-            $qr_update_success = $qr_generator->updateAppointmentQRBlob($conn, $appointment_id, $qr_result['qr_filepath']);
-            if ($qr_update_success) {
-                error_log("QR BLOB data stored successfully for appointment {$appointment_id}");
-            } else {
-                error_log("Failed to store QR BLOB data for appointment {$appointment_id}");
-            }
-        }
-    } catch (Exception $e) {
-        error_log("QR generation failed for appointment {$appointment_id}: " . $e->getMessage());
-        // Continue without QR code - don't fail the appointment
+    // Log appointment creation using appointment logger
+    $appointment_logger = new AppointmentLogger($conn);
+    $log_success = $appointment_logger->logAppointmentCreation(
+        $appointment_id, 
+        $patient_id, 
+        $appointment_date, 
+        $appointment_time, 
+        'patient', 
+        $patient_id
+    );
+    
+    if (!$log_success) {
+        throw new Exception("Failed to log appointment creation. Transaction cancelled for data integrity.");
     }
-
-    // Handle queue creation - ONLY for CHO facilities (facility_id = 1)
+    
+    // Create queue entry for ALL appointments (BHC, DHO, CHO)
     $queue_result = null;
-    $is_cho_facility = ($facility_id == 1); // City Health Office Main District
+    $queue_service = new QueueManagementService($conn);
     
-    if ($is_cho_facility) {
-        try {
-            $queueService = new QueueManagementService($conn);
-            
-            // Determine priority level
-            $priority_level = ($patient_info['isSenior'] || $patient_info['isPWD']) ? 'priority' : 'normal';
-            
-            $queue_result = $queueService->createQueueEntry(
-                $appointment_id,
-                $patient_id,
-                $service_id,
-                'consultation',
-                $priority_level,
-                1  // Default employee_id for system-generated entries
-            );
-            
-            if (!$queue_result['success']) {
-                error_log("Queue creation failed for CHO appointment {$appointment_id}: " . ($queue_result['error'] ?? 'Unknown error'));
-                // Continue without queue - appointment is still valid
-            }
-        } catch (Exception $e) {
-            error_log("Queue service error for CHO appointment {$appointment_id}: " . $e->getMessage());
-            // Continue without queue - appointment is still valid
+    // Determine priority level based on patient information
+    $priority_level = 'normal';
+    if ($patient_info['isPWD'] || $patient_info['isSenior']) {
+        $priority_level = 'priority';
+    }
+    
+    // Determine queue type based on facility type
+    $queue_type_map = [
+        'bhc' => 'consultation',     // Barangay Health Center - general consultation
+        'dho' => 'consultation',     // District Health Office - consultation with referral
+        'cho' => 'consultation'      // City Health Office - specialized consultation
+    ];
+    $queue_type = $queue_type_map[$facility_type] ?? 'consultation';
+    
+    // Create queue entry for all appointment types
+    $queue_result = $queue_service->createQueueEntry(
+        $appointment_id, 
+        $patient_id, 
+        $service_id, 
+        $queue_type, 
+        $priority_level, 
+        null // Patient-initiated, so performed_by is null
+    );
+    
+    if (!$queue_result['success']) {
+        // If queue creation fails due to slot being full, still allow appointment
+        if (strpos($queue_result['error'], 'Time slot is full') !== false) {
+            error_log("Queue creation failed for appointment $appointment_id: Time slot full");
+            $queue_result = [
+                'success' => false,
+                'error' => 'Time slot full - appointment created but no queue number assigned',
+                'queue_number' => null
+            ];
+        } else {
+            throw new Exception('Failed to create queue entry: ' . $queue_result['error']);
         }
     }
-
+    
+    // Update referral status based on business rules
+    if ($referral_id) {
+        // Update referral status to 'accepted' (used for appointment)
+        $stmt = $conn->prepare("
+            UPDATE referrals 
+            SET status = 'accepted', 
+                updated_at = NOW(),
+                notes = CONCAT(COALESCE(notes, ''), 'Used for appointment #', ?)
+            WHERE referral_id = ?
+        ");
+        $appointment_reference = 'APT-' . str_pad($appointment_id, 8, '0', STR_PAD_LEFT);
+        $stmt->bind_param("si", $appointment_reference, $referral_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+    
+    // Commit transaction
     $conn->commit();
-
-    // Prepare success response
-    $success_message = "Appointment scheduled successfully!";
-    $facility_message = "";
     
-    if ($is_cho_facility) {
-        if ($queue_result && $queue_result['success']) {
-            $facility_message = "Queue number assigned: #{$queue_result['queue_number']}. Please arrive 15 minutes early.";
-        } else {
-            $facility_message = "Please arrive 15 minutes early for check-in at the City Health Office.";
-        }
-    } else {
-        $facility_message = "Please arrive 15 minutes early for your appointment at {$facility_name}.";
-    }
-
-    // Send appointment confirmation email
-    $email_result = null;
+    // Send email notification
+    $email_result = ['success' => false, 'message' => 'Email not configured'];
+    $appointment_reference = 'APT-' . str_pad($appointment_id, 8, '0', STR_PAD_LEFT);
+    
     try {
-        if (!empty($patient_info['email'])) {
-            $email_result = sendAppointmentConfirmationEmail(
-                $patient_info,
-                $appointment_num,
-                $facility_name,
-                $service,
-                $appointment_date,
-                $appointment_time,
-                $referral_id,
-                $queue_result,
-                $qr_result
-            );
-            
-            if (!$email_result['success']) {
-                error_log("Email sending failed for appointment {$appointment_id}: " . $email_result['message']);
-            } else {
-                error_log("Email sent successfully for appointment {$appointment_id}");
-            }
+        // Check if patient has a valid email address
+        if (empty($patient_info['email']) || !filter_var($patient_info['email'], FILTER_VALIDATE_EMAIL)) {
+            error_log("Patient email invalid or missing: " . ($patient_info['email'] ?? 'null'));
+            $email_result = ['success' => false, 'message' => 'Patient email address not available'];
         } else {
-            $email_result = ['success' => false, 'message' => 'No email address provided'];
-            error_log("No email address provided for appointment {$appointment_id}");
+            // Send email using the same pattern as OTP emails
+            $email_result = sendAppointmentConfirmationEmail(
+                $patient_info, 
+                $appointment_reference, 
+                $facility_name, 
+                $service, 
+                $appointment_date, 
+                $appointment_time, 
+                $referral_id,
+                $queue_result  // Pass queue information to email function
+            );
         }
     } catch (Exception $e) {
-        $email_result = ['success' => false, 'message' => $e->getMessage()];
+        // Log email error but don't fail the appointment creation
         error_log("Failed to send appointment confirmation email: " . $e->getMessage());
-        // Continue - appointment creation succeeded
+        $email_result = ['success' => false, 'message' => 'Email sending failed: ' . $e->getMessage()];
     }
-
+    
     // Return success response
-    echo json_encode([
+    $response = [
         'success' => true,
-        'message' => $success_message,
-        'facility_message' => $facility_message,
-        'appointment_id' => $appointment_id,
-        'appointment_num' => $appointment_num,
-        'facility_name' => $facility_name,
+        'message' => 'Appointment booked successfully',
+        'appointment_id' => 'APT-' . str_pad($appointment_id, 8, '0', STR_PAD_LEFT),
+        'appointment_db_id' => $appointment_id,
         'facility_type' => $facility_type,
-        'is_cho_facility' => $is_cho_facility,
-        'has_queue' => $queue_result && $queue_result['success'],
-        'queue_number' => $queue_result['queue_number'] ?? null,
-        'qr_generated' => $qr_result && $qr_result['success'],
-        'email_sent' => $email_result && $email_result['success'],
-        'email_message' => $email_result ? $email_result['message'] : 'No email attempted'
-    ]);
-
+        'email_sent' => $email_result['success'],
+        'email_message' => $email_result['message'],
+        'patient_email' => $patient_info['email']
+    ];
+    
+    // Add queue information for all appointments
+    if ($queue_result && $queue_result['success']) {
+        $response['queue_number'] = $queue_result['queue_number'];
+        $response['queue_type'] = $queue_result['queue_type'];
+        $response['priority_level'] = $queue_result['priority_level'];
+        $response['visit_id'] = $queue_result['visit_id'] ?? null;
+        $response['has_queue'] = true;
+        $response['queue_message'] = 'Queue number assigned successfully';
+    } else {
+        $response['has_queue'] = false;
+        if ($queue_result) {
+            $response['queue_message'] = $queue_result['error'] ?? 'Failed to assign queue number';
+            $response['queue_number'] = null;
+        } else {
+            $response['queue_message'] = 'Queue system not available';
+            $response['queue_number'] = null;
+        }
+    }
+    
+    echo json_encode($response);
+    
 } catch (Exception $e) {
     $conn->rollback();
-    error_log("Appointment creation error: " . $e->getMessage());
+    error_log("submit_appointment.php: Exception caught: " . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => $e->getMessage(),
+        'debug' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]
     ]);
 }
 
 $conn->close();
 
-// Helper function to extract appointment ID from appointment number (APT-YYYYMMDD-XXXXX format)
-function extractAppointmentIdFromNum($appointment_num) {
-    // Extract the last part after the last dash (the padded ID)
-    $parts = explode('-', $appointment_num);
-    if (count($parts) >= 3) {
-        $padded_id = end($parts);
-        $appointment_id = intval($padded_id); // Convert back to integer
-        error_log("Extracting appointment ID from '$appointment_num': parts=" . json_encode($parts) . ", padded_id='$padded_id', appointment_id=$appointment_id");
-        return $appointment_id;
-    }
-    error_log("Failed to extract appointment ID from '$appointment_num': parts=" . json_encode($parts));
-    return null;
-}
-
-// Helper function to get QR BLOB data from database
-function getQRBlobFromDatabase($appointment_id) {
-    global $conn;
-    try {
-        error_log("Looking for QR BLOB data for appointment_id: $appointment_id");
-        
-        $stmt = $conn->prepare("SELECT qr_code_path, LENGTH(qr_code_path) as blob_size FROM appointments WHERE appointment_id = ?");
-        $stmt->bind_param("i", $appointment_id);
-        $stmt->execute();
-        
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-        $stmt->close();
-        
-        if ($row) {
-            error_log("Found appointment record - BLOB size: " . ($row['blob_size'] ?? 0));
-            if ($row['qr_code_path'] && $row['blob_size'] > 0) {
-                error_log("Returning QR BLOB data of size: " . $row['blob_size']);
-                return $row['qr_code_path']; // This is now BLOB data
-            } else {
-                error_log("No QR BLOB data found (NULL or empty)");
-            }
-        } else {
-            error_log("No appointment found with appointment_id: $appointment_id");
-        }
-        
-        return null;
-        
-    } catch (Exception $e) {
-        error_log("Failed to get QR BLOB from database: " . $e->getMessage());
-        return null;
-    }
-}
-
-// Function to send appointment confirmation email with QR code
-function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $facility_name, $service, $appointment_date, $appointment_time, $referral_id = null, $queue_result = null, $qr_result = null) {
+// Function to send appointment confirmation email using the same pattern as OTP emails
+function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $facility_name, $service, $appointment_date, $appointment_time, $referral_id = null, $queue_result = null) {
     try {
         // Get referral information if available
         $referral_num = '';
@@ -525,80 +539,9 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
         $mail->setFrom($fromEmail, $fromName);
         $mail->addAddress($patient_info['email'], $patient_name);
 
-        // QR Code handling - Get QR data from database BLOB
-        $qr_embedded = false;
-        $qr_base64_inline = '';
-        $qr_image_tag = '';
-        
-        error_log("Email QR Check - QR Result exists: " . ($qr_result ? 'YES' : 'NO'));
-        if ($qr_result && $qr_result['success']) {
-            error_log("Email QR Check - QR Success: YES, fetching from database...");
-            
-            try {
-                // Get QR BLOB data from database using the appointment number
-                $appointment_id_for_qr = extractAppointmentIdFromNum($appointment_num);
-                $qr_blob_data = getQRBlobFromDatabase($appointment_id_for_qr);
-                
-                if ($qr_blob_data) {
-                    // Method 1: Create inline base64 image (best compatibility)
-                    $qr_base64_inline = base64_encode($qr_blob_data);
-                    $qr_image_tag = '<img src="data:image/png;base64,' . $qr_base64_inline . '" alt="Appointment QR Code" style="width:200px;height:200px;border:2px solid #0077b6;border-radius:10px;display:block;margin:0 auto;" />';
-                    
-                    // Method 2: Add embedded image (CID) as fallback
-                    $qr_filename = 'QR-' . $appointment_num . '.png';
-                    $mail->addStringEmbeddedImage($qr_blob_data, 'appointment_qr_code', $qr_filename, 'base64', 'image/png');
-                    
-                    // Method 3: Also attach the QR image for saving/redundancy
-                    $mail->addStringAttachment($qr_blob_data, $qr_filename, 'base64', 'image/png');
-                    
-                    $qr_embedded = true;
-                    
-                    error_log("QR Code prepared for email from database - Base64 size: " . strlen($qr_base64_inline) . " bytes");
-                } else {
-                    error_log("No QR BLOB data found in database for appointment: " . $appointment_num);
-                }
-                
-            } catch (Exception $e) {
-                error_log("Failed to prepare QR code for email from database: " . $e->getMessage());
-            }
-        }
-        
-        if (!$qr_embedded) {
-            // Fallback to no QR code display
-            $qr_image_tag = '<p style="color: #dc3545; font-size: 14px; text-align: center; padding: 15px; background: #f8d7da; border-radius: 5px;">QR Code temporarily unavailable. Please use your Appointment ID for check-in.</p>';
-        }
-
         $mail->isHTML(true);
-        $mail->Subject = 'Your Appointment Confirmation – City Health Office of Koronadal [' . $appointment_num . ']';
+        $mail->Subject = 'Appointment Confirmation - CHO Koronadal [' . $appointment_num . ']';
         
-        // Build QR code section for email
-        $qr_section = '';
-        if ($qr_embedded && !empty($qr_image_tag)) {
-            $qr_section = '
-                <div style="background: #f8f9fa; border-radius: 15px; padding: 25px; margin: 25px 0; text-align: center; border: 2px solid #0077b6;">
-                    <h3 style="margin: 0 0 15px 0; color: #0077b6; font-size: 20px;">📱 Your Appointment QR Code</h3>
-                    <p style="margin: 0 0 15px 0; color: #6c757d; font-size: 14px;">
-                        Present this QR code at the check-in counter for fast service
-                    </p>
-                    <div style="margin: 15px 0;">
-                        ' . $qr_image_tag . '
-                    </div>
-                    <p style="margin: 15px 0 5px 0; color: #6c757d; font-size: 12px;">
-                        <strong>Alternative check-in:</strong> Present your Appointment ID: <strong>' . htmlspecialchars($appointment_num, ENT_QUOTES, 'UTF-8') . '</strong>
-                    </p>
-                    <p style="margin: 5px 0 0 0; color: #28a745; font-size: 11px;">
-                        💡 <em>QR code also attached as a separate file for saving to your device</em>
-                    </p>
-                </div>';
-        } else {
-            $qr_section = '
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 10px; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0; color: #856404; font-size: 14px;">
-                        <strong>📋 Manual Check-in:</strong> Please present your Appointment ID <strong>' . htmlspecialchars($appointment_num, ENT_QUOTES, 'UTF-8') . '</strong> at the facility.
-                    </p>
-                </div>';
-        }
-
         // Create HTML email body
         $mail->Body = '
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
@@ -624,8 +567,6 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
                 <div style="background: #28a745; color: white; padding: 10px 15px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; margin-bottom: 20px; margin-left: 10px;">
                     🎫 Queue Number: #' . htmlspecialchars($queue_result['queue_number'], ENT_QUOTES, 'UTF-8') . '
                 </div>' : '') . '
-                
-                ' . $qr_section . '
                 
                 <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0; border-left: 5px solid #0077b6;">
                     <h3 style="margin: 0 0 15px 0; color: #0077b6; font-size: 20px;">Appointment Details</h3>
@@ -717,23 +658,13 @@ Appointment Time: {$formatted_time}" .
 $queue_info_text .
 (!empty($referral_num) ? "\nReferral Number: #{$referral_num}" : "") . "
 
-" . ($qr_embedded ? "QR CODE INCLUDED:
-Your appointment QR code is displayed inline in this email and attached as a file for saving to your device.
-Present the QR code at check-in for fastest service.
-
-" : "") . "IMPORTANT REMINDERS:
+IMPORTANT REMINDERS:
 • Please arrive 15 minutes before your appointment time
 • Bring a valid government-issued ID
 • Bring this appointment confirmation" .
-($qr_embedded ? "\n• Present your QR code (inline or attached file) for fast check-in" : "") .
 ($queue_result && $queue_result['success'] ? "\n• Present your queue number: #{$queue_result['queue_number']}" : "") . "
 • Present your referral document (if applicable)
 • Bring your PhilHealth card (if applicable)
-
-CHECK-IN OPTIONS:
-" . ($qr_embedded ? "• Scan your inline QR code at the check-in counter (recommended)
-• Save and use the attached QR code file
-• Or present your Appointment ID: {$appointment_num}" : "• Present your Appointment ID: {$appointment_num}") . "
 
 CONTACT INFORMATION:
 Phone: (083) 228-8042
