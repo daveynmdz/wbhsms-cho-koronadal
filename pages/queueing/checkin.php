@@ -328,20 +328,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <style>
-        /* CSS Variables for consistent styling */
-        :root {
-            --primary: #0077b6;
-            --primary-dark: #03045e;
-            --success: #28a745;
-            --secondary: #6c757d;
-            --dark: #212529;
-            --border: #e0e0e0;
-            --border-radius: 8px;
-            --shadow: 0 2px 4px rgba(0,0,0,0.1);
-            --shadow-lg: 0 4px 8px rgba(0,0,0,0.15);
-            --transition: all 0.3s ease;
-        }
-        
         /* CHO Dashboard Framework - Matching dashboard.php styling */
         .checkin-container {
             /* CHO Theme Variables */
@@ -707,31 +693,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         /* QR Scanner Section - matching dashboard card style */
         .checkin-container .qr-scanner-section {
             background: white;
-            border-radius: 8px;
+            border-radius: var(--border-radius);
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            text-align: center;
         }
 
-        .checkin-container .qr-reader-container {
-            width: 100%;
-            max-width: 400px;
-            margin: 0 auto;
-            border: 2px solid #3498db;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #000;
-            min-height: 300px;
+        .checkin-container .qr-scanner-box {
+            width: 200px;
+            height: 200px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 12px;
+            margin: 0 auto 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-direction: column;
+            color: #6c757d;
+            transition: var(--transition);
         }
 
-        .checkin-container .qr-reader-container video {
-            width: 100%;
-            height: auto;
-            display: block;
+        .checkin-container .qr-scanner-box:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         /* Results Table - matching dashboard table */
@@ -1487,6 +1474,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
                 
+                <!-- QR Scanner Section (Beta) -->
+                <div class="card-container">
+                    <div class="section-header">
+                        <h4><i class="fas fa-qrcode"></i> QR Code Scanner (Beta)</h4>
+                    </div>
+                    <div class="qr-scanner-section">
+                        <div class="qr-scanner-box">
+                            <i class="fas fa-camera fa-3x"></i>
+                            <p>Scanner Area</p>
+                        </div>
+                        <p><strong>Scanner integration pending.</strong> Use manual search for now.</p>
+                        <button type="button" class="btn btn-secondary" onclick="simulateQRScan()">
+                            <i class="fas fa-qrcode"></i> Simulate Scan
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- Search & Filter Section -->
                 <div class="card-container">
                     <div class="section-header">
@@ -1540,44 +1544,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <button type="button" class="btn btn-secondary" onclick="clearFilters()">
                         <i class="fas fa-times"></i> Clear Filter
                     </button>
-                    <button type="button" class="btn btn-info" id="qr-scanner-toggle">
-                        <i class="fas fa-qrcode"></i> Start QR Scanner
-                    </button>
                 </div>
             </form>
-            
-            <!-- QR Code Scanner Section -->
-            <div id="qr-scanner-container" class="qr-scanner-section card-container">
-                <div class="qr-scanner-header">
-                    <h5><i class="fas fa-qrcode"></i> QR Code Scanner</h5>
-                    <p class="qr-scanner-desc">Point your camera at the patient's QR code to automatically check them in</p>
-                </div>
-                
-                <div class="qr-scanner-controls">
-                    <div class="qr-scanner-buttons">
-                        <button type="button" class="btn btn-success" id="start-scanner-btn">
-                            <i class="fas fa-camera"></i> Start Camera
-                        </button>
-                        <button type="button" class="btn btn-danger" id="stop-scanner-btn" style="display: none;">
-                            <i class="fas fa-stop"></i> Stop Camera
-                        </button>
-                        <select id="camera-select" class="form-control" style="display: none;">
-                            <option value="">Select Camera...</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="qr-scanner-preview">
-                    <div id="qr-reader" class="qr-reader-container"></div>
-                    <div id="qr-scanner-result" class="qr-scanner-result"></div>
-                </div>
-                
-                <div class="qr-scanner-status">
-                    <div id="qr-status-message" class="status-message">
-                        <i class="fas fa-info-circle"></i> Click "Start Camera" to begin scanning
-                    </div>
-                </div>
-            </div>
             
             <!-- Search Results -->
             <?php if (!empty($search_results)): ?>
@@ -1762,914 +1730,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <!-- jQuery and SweetAlert2 Libraries -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Html5-QrCode Library -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    
     <script>
-        // ==========================================
-        // PATIENT CHECK-IN MANAGEMENT SYSTEM
-        // jQuery-based AJAX functionality for CHO
-        // ==========================================
-        
-        // Current employee ID from session
-        const currentEmployeeId = <?php echo $_SESSION['employee_id']; ?>;
-        
-        // Initialize when DOM is ready
-        $(document).ready(function() {
-            console.log('Patient Check-In System initialized');
-            
-            // Load initial summary data
-            refreshSummaryCards();
-            
-            // Bind search functionality to existing search button
-            $('.search-form').on('submit', function(e) {
-                e.preventDefault();
-                searchAppointments();
-            });
-            
-            // Initialize QR Scanner
-            initializeQRScanner();
-            
-            // Auto-refresh summary every 30 seconds
-            setInterval(refreshSummaryCards, 30000);
-        });
-
-        // ==========================================
-        // APPOINTMENT SEARCH FUNCTIONALITY
-        // ==========================================
-        
-        function searchAppointments() {
-            const form = $('.search-form');
-            const filters = {
-                appointment_id: $('input[name="appointment_id"]').val(),
-                patient_id: $('input[name="patient_id"]').val(),
-                last_name: $('input[name="last_name"]').val(),
-                barangay: $('select[name="barangay"]').val(),
-                appointment_date: $('input[name="appointment_date"]').val()
-            };
-            
-            // Validate that at least one search criteria is provided
-            if (!filters.appointment_id && !filters.patient_id && !filters.last_name && 
-                !filters.barangay && !filters.appointment_date) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Search Required',
-                    text: 'Please enter at least one search criteria'
-                });
-                return;
-            }
-            
-            // Show loading indicator
-            showLoadingOverlay('Searching appointments...');
-            
-            $.post('checkin_actions.php', {
-                action: 'search_appointments',
-                ...filters
-            })
-            .done(function(response) {
-                hideLoadingOverlay();
-                
-                if (response.success) {
-                    populateAppointmentsTable(response.data);
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Search Failed',
-                        text: response.message || 'Failed to search appointments'
-                    });
-                }
-            })
-            .fail(function(xhr, status, error) {
-                hideLoadingOverlay();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: 'Failed to connect to server: ' + error
-                });
-            });
-        }
-
-        function populateAppointmentsTable(appointments) {
-            const tbody = $('.appointments-table tbody');
-            tbody.empty();
-            
-            if (!appointments || appointments.length === 0) {
-                tbody.html(`
-                    <tr>
-                        <td colspan="8" class="no-results">
-                            <i class="fas fa-search"></i>
-                            <p>No appointments found matching your search criteria</p>
-                        </td>
-                    </tr>
-                `);
-                return;
-            }
-            
-            appointments.forEach(function(appt) {
-                const statusClass = getStatusClass(appt.status);
-                const statusIcon = getStatusIcon(appt.status);
-                
-                const row = $(`
-                    <tr data-appointment-id="${appt.appointment_id}">
-                        <td>${appt.appointment_id}</td>
-                        <td>${appt.patient_name}</td>
-                        <td>${appt.contact_number || 'N/A'}</td>
-                        <td>${appt.barangay || 'N/A'}</td>
-                        <td>${appt.service_name || 'General'}</td>
-                        <td>${formatDate(appt.scheduled_date)}</td>
-                        <td>${formatTime(appt.scheduled_time)}</td>
-                        <td>
-                            <span class="status-badge ${statusClass}">
-                                <i class="${statusIcon}"></i> ${appt.status}
-                            </span>
-                        </td>
-                        <td class="actions">
-                            <button type="button" class="btn btn-sm btn-primary" 
-                                    onclick="showPatientDetails(${appt.appointment_id}, ${appt.patient_id})">
-                                <i class="fas fa-eye"></i> View
-                            </button>
-                            ${appt.status === 'confirmed' ? `
-                                <button type="button" class="btn btn-sm btn-success" 
-                                        onclick="checkinPatient(${appt.appointment_id})">
-                                    <i class="fas fa-user-check"></i> Check-In
-                                </button>
-                            ` : ''}
-                            <button type="button" class="btn btn-sm btn-warning" 
-                                    onclick="flagPatient(${appt.patient_id}, ${appt.appointment_id})">
-                                <i class="fas fa-flag"></i> Flag
-                            </button>
-                            ${appt.status !== 'cancelled' && appt.status !== 'completed' ? `
-                                <button type="button" class="btn btn-sm btn-danger" 
-                                        onclick="cancelAppointment(${appt.appointment_id})">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
-                            ` : ''}
-                        </td>
-                    </tr>
-                `);
-                
-                tbody.append(row);
-            });
-        }
-
-        // ==========================================
-        // PATIENT CHECK-IN OPERATIONS
-        // ==========================================
-        
-        function checkinPatient(appointmentId) {
-            Swal.fire({
-                title: 'Check-In Patient',
-                text: 'Are you sure you want to check in this patient? They will be added to the triage queue.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-user-check"></i> Yes, Check-In',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    performCheckin(appointmentId);
-                }
-            });
-        }
-
-        function performCheckin(appointmentId) {
-            showLoadingOverlay('Checking in patient...');
-            
-            $.post('checkin_actions.php', {
-                action: 'checkin_patient',
-                appointment_id: appointmentId,
-                employee_id: currentEmployeeId
-            })
-            .done(function(response) {
-                hideLoadingOverlay();
-                
-                if (response.success) {
-                    // Success notification with queue details
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Patient Checked In Successfully!',
-                        html: `
-                            <div style="text-align: left; margin-top: 1rem;">
-                                <p><strong>Queue Number:</strong> ${response.data.queue_code}</p>
-                                <p><strong>Station:</strong> ${response.data.station_name}</p>
-                                <p><strong>Patient:</strong> ${response.data.patient_name}</p>
-                                <p><strong>Priority:</strong> ${response.data.priority}</p>
-                            </div>
-                        `,
-                        showConfirmButton: true,
-                        timer: 5000
-                    });
-                    
-                    // Remove the row from table
-                    $(`tr[data-appointment-id="${appointmentId}"]`).fadeOut(500, function() {
-                        $(this).remove();
-                    });
-                    
-                    // Refresh summary cards
-                    refreshSummaryCards();
-                    
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Check-In Failed',
-                        text: response.message || 'Unable to check in patient'
-                    });
-                }
-            })
-            .fail(function(xhr, status, error) {
-                hideLoadingOverlay();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: 'Failed to check in patient: ' + error
-                });
-            });
-        }
-
-        // ==========================================
-        // PATIENT FLAGGING OPERATIONS
-        // ==========================================
-        
-        function flagPatient(patientId, appointmentId = null) {
-            Swal.fire({
-                title: 'Flag Patient',
-                html: `
-                    <div style="text-align: left;">
-                        <label for="flag-type" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Flag Type:</label>
-                        <select id="flag-type" class="swal2-select" style="width: 100%; margin-bottom: 1rem;">
-                            <option value="">Select flag type...</option>
-                            <option value="false_senior">False Senior Citizen Claim</option>
-                            <option value="false_philhealth">False PhilHealth Coverage</option>
-                            <option value="false_patient_booked">False Patient Booking</option>
-                            <option value="incomplete_documents">Incomplete Documents</option>
-                            <option value="behavioral_issue">Behavioral Issue</option>
-                            <option value="medical_alert">Medical Alert</option>
-                            <option value="other">Other</option>
-                        </select>
-                        
-                        <label for="flag-remarks" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Remarks:</label>
-                        <textarea id="flag-remarks" class="swal2-textarea" 
-                                placeholder="Please provide detailed remarks about this flag..." 
-                                style="width: 100%; height: 100px; resize: vertical;"></textarea>
-                    </div>
-                `,
-                showCancelButton: true,
-                confirmButtonColor: '#ffc107',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-flag"></i> Flag Patient',
-                cancelButtonText: 'Cancel',
-                preConfirm: () => {
-                    const flagType = $('#flag-type').val();
-                    const remarks = $('#flag-remarks').val().trim();
-                    
-                    if (!flagType) {
-                        Swal.showValidationMessage('Please select a flag type');
-                        return false;
-                    }
-                    
-                    if (!remarks) {
-                        Swal.showValidationMessage('Please provide remarks');
-                        return false;
-                    }
-                    
-                    if (remarks.length < 10) {
-                        Swal.showValidationMessage('Remarks must be at least 10 characters long');
-                        return false;
-                    }
-                    
-                    return { flagType, remarks };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    performPatientFlag(patientId, result.value.flagType, result.value.remarks, appointmentId);
-                }
-            });
-        }
-
-        function performPatientFlag(patientId, flagType, remarks, appointmentId = null) {
-            showLoadingOverlay('Flagging patient...');
-            
-            const data = {
-                action: 'flag_patient',
-                patient_id: patientId,
-                flag_type: flagType,
-                remarks: remarks,
-                employee_id: currentEmployeeId
-            };
-            
-            if (appointmentId) {
-                data.appointment_id = appointmentId;
-            }
-            
-            $.post('checkin_actions.php', data)
-            .done(function(response) {
-                hideLoadingOverlay();
-                
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Patient Flagged Successfully',
-                        text: response.message,
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                    
-                    // If this was a "false patient booking", remove from table
-                    if (flagType === 'false_patient_booked' && appointmentId) {
-                        $(`tr[data-appointment-id="${appointmentId}"]`).fadeOut(500, function() {
-                            $(this).remove();
-                        });
-                        refreshSummaryCards();
-                    }
-                    
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Flagging Failed',
-                        text: response.message || 'Unable to flag patient'
-                    });
-                }
-            })
-            .fail(function(xhr, status, error) {
-                hideLoadingOverlay();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: 'Failed to flag patient: ' + error
-                });
-            });
-        }
-
-        // ==========================================
-        // APPOINTMENT CANCELLATION
-        // ==========================================
-        
-        function cancelAppointment(appointmentId) {
-            Swal.fire({
-                title: 'Cancel Appointment',
-                input: 'textarea',
-                inputLabel: 'Cancellation Reason',
-                inputPlaceholder: 'Please provide a reason for cancelling this appointment...',
-                inputAttributes: {
-                    'aria-label': 'Cancellation reason',
-                    'style': 'height: 100px; resize: vertical;'
-                },
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-times"></i> Cancel Appointment',
-                cancelButtonText: 'Keep Appointment',
-                inputValidator: (value) => {
-                    if (!value) {
-                        return 'Please provide a cancellation reason';
-                    }
-                    if (value.trim().length < 5) {
-                        return 'Reason must be at least 5 characters long';
-                    }
-                    if (value.length > 500) {
-                        return 'Reason must not exceed 500 characters';
-                    }
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    performAppointmentCancellation(appointmentId, result.value);
-                }
-            });
-        }
-
-        function performAppointmentCancellation(appointmentId, reason) {
-            showLoadingOverlay('Cancelling appointment...');
-            
-            $.post('checkin_actions.php', {
-                action: 'cancel_appointment',
-                appointment_id: appointmentId,
-                reason: reason,
-                employee_id: currentEmployeeId
-            })
-            .done(function(response) {
-                hideLoadingOverlay();
-                
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Appointment Cancelled',
-                        html: `
-                            <div style="text-align: left;">
-                                <p><strong>Patient:</strong> ${response.data.patient_name}</p>
-                                <p><strong>Reason:</strong> ${response.data.reason}</p>
-                            </div>
-                        `,
-                        timer: 4000,
-                        showConfirmButton: false
-                    });
-                    
-                    // Remove the row from table
-                    $(`tr[data-appointment-id="${appointmentId}"]`).fadeOut(500, function() {
-                        $(this).remove();
-                    });
-                    
-                    // Refresh summary cards
-                    refreshSummaryCards();
-                    
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Cancellation Failed',
-                        text: response.message || 'Unable to cancel appointment'
-                    });
-                }
-            })
-            .fail(function(xhr, status, error) {
-                hideLoadingOverlay();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: 'Failed to cancel appointment: ' + error
-                });
-            });
-        }
-
-        // ==========================================
-        // PATIENT DETAILS MODAL
-        // ==========================================
-        
-        function showPatientDetails(appointmentId, patientId) {
-            showLoadingOverlay('Loading patient details...');
-            
-            $.post('checkin_actions.php', {
-                action: 'get_patient_details',
-                patient_id: patientId,
-                appointment_id: appointmentId
-            })
-            .done(function(response) {
-                hideLoadingOverlay();
-                
-                if (response.success) {
-                    displayPatientModal(response.data, appointmentId);
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Failed to Load Details',
-                        text: response.message || 'Unable to load patient details'
-                    });
-                }
-            })
-            .fail(function(xhr, status, error) {
-                hideLoadingOverlay();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: 'Failed to load patient details: ' + error
-                });
-            });
-        }
-
-        function displayPatientModal(data, appointmentId) {
-            const patient = data.patient;
-            const appointment = data.appointment;
-            const flags = data.flags || [];
-            const visits = data.recent_visits || [];
-            
-            let flagsHtml = '';
-            if (flags.length > 0) {
-                flagsHtml = `
-                    <div class="flags-section" style="margin-top: 1rem;">
-                        <h4 style="color: #dc3545;"><i class="fas fa-flag"></i> Recent Flags</h4>
-                        ${flags.map(flag => `
-                            <div class="flag-item" style="background: #f8d7da; padding: 0.5rem; margin: 0.25rem 0; border-radius: 4px;">
-                                <strong>${flag.flag_type.replace(/_/g, ' ').toUpperCase()}:</strong> ${flag.remarks}
-                                <br><small>By: ${flag.flagged_by_name} on ${formatDateTime(flag.created_at)}</small>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-            
-            Swal.fire({
-                title: `<i class="fas fa-user"></i> ${patient.first_name} ${patient.last_name}`,
-                html: `
-                    <div style="text-align: left; max-height: 500px; overflow-y: auto;">
-                        <div class="patient-info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div><strong>Age:</strong> ${patient.age || 'N/A'} years</div>
-                            <div><strong>Sex:</strong> ${patient.sex || 'N/A'}</div>
-                            <div><strong>Contact:</strong> ${patient.contact_number || 'N/A'}</div>
-                            <div><strong>Barangay:</strong> ${patient.barangay || 'N/A'}</div>
-                            <div><strong>PhilHealth:</strong> ${patient.philhealth_id || 'None'}</div>
-                            <div><strong>Status:</strong> 
-                                ${patient.isSenior ? '<span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;">SENIOR</span>' : ''}
-                                ${patient.isPWD ? '<span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;">PWD</span>' : ''}
-                            </div>
-                        </div>
-                        
-                        ${appointment ? `
-                            <div class="appointment-info" style="background: #e9ecef; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                                <h4><i class="fas fa-calendar"></i> Appointment Details</h4>
-                                <p><strong>Date:</strong> ${appointment.formatted_date || formatDate(appointment.scheduled_date)}</p>
-                                <p><strong>Time:</strong> ${appointment.formatted_time || formatTime(appointment.scheduled_time)}</p>
-                                <p><strong>Service:</strong> ${appointment.service_name || 'General Consultation'}</p>
-                                <p><strong>Status:</strong> <span class="status-badge ${getStatusClass(appointment.status)}">${appointment.status}</span></p>
-                            </div>
-                        ` : ''}
-                        
-                        ${flagsHtml}
-                    </div>
-                `,
-                width: '600px',
-                showCancelButton: true,
-                showConfirmButton: false,
-                cancelButtonText: 'Close',
-                showCloseButton: true,
-                footer: `
-                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                        ${appointment && appointment.status === 'confirmed' ? `
-                            <button type="button" class="swal2-confirm swal2-styled" 
-                                    onclick="Swal.close(); checkinPatient(${appointmentId});" 
-                                    style="background-color: #28a745;">
-                                <i class="fas fa-user-check"></i> Check-In
-                            </button>
-                        ` : ''}
-                        <button type="button" class="swal2-confirm swal2-styled" 
-                                onclick="Swal.close(); flagPatient(${patient.patient_id}, ${appointmentId || 'null'});" 
-                                style="background-color: #ffc107;">
-                            <i class="fas fa-flag"></i> Flag Patient
-                        </button>
-                        ${appointment && appointment.status !== 'cancelled' && appointment.status !== 'completed' ? `
-                            <button type="button" class="swal2-confirm swal2-styled" 
-                                    onclick="Swal.close(); cancelAppointment(${appointmentId});" 
-                                    style="background-color: #dc3545;">
-                                <i class="fas fa-times"></i> Cancel Appointment
-                            </button>
-                        ` : ''}
-                    </div>
-                `
-            });
-        }
-
-        // ==========================================
-        // QR CODE SCANNER INTEGRATION
-        // ==========================================
-        
-        let html5QrCode = null;
-        let qrScannerActive = false;
-        
-        function initializeQRScanner() {
-            // Load camera options immediately since scanner is visible
-            loadCameraOptions();
-            
-            // Update toggle button text since scanner is visible by default
-            $('#qr-scanner-toggle').html('<i class="fas fa-qrcode"></i> Hide QR Scanner');
-            
-            // Toggle QR scanner visibility
-            $('#qr-scanner-toggle').on('click', function() {
-                const container = $('#qr-scanner-container');
-                const button = $(this);
-                
-                if (container.is(':visible')) {
-                    // Hide scanner
-                    container.slideUp();
-                    button.html('<i class="fas fa-qrcode"></i> Show QR Scanner');
-                    stopQRScanner();
-                } else {
-                    // Show scanner
-                    container.slideDown();
-                    button.html('<i class="fas fa-qrcode"></i> Hide QR Scanner');
-                    loadCameraOptions();
-                }
-            });
-            
-            // Start scanner button
-            $('#start-scanner-btn').on('click', startQRScanner);
-            
-            // Stop scanner button
-            $('#stop-scanner-btn').on('click', stopQRScanner);
-            
-            // Camera selection change
-            $('#camera-select').on('change', function() {
-                if (qrScannerActive) {
-                    stopQRScanner();
-                    setTimeout(startQRScanner, 500);
-                }
-            });
-        }
-        
-        function loadCameraOptions() {
-            Html5Qrcode.getCameras().then(devices => {
-                const cameraSelect = $('#camera-select');
-                cameraSelect.empty().append('<option value="">Select Camera...</option>');
-                
-                if (devices && devices.length > 0) {
-                    devices.forEach((device, index) => {
-                        const label = device.label || `Camera ${index + 1}`;
-                        cameraSelect.append(`<option value="${device.id}">${label}</option>`);
-                    });
-                    
-                    // Auto-select first camera if available
-                    if (devices.length === 1) {
-                        cameraSelect.val(devices[0].id);
-                    }
-                    
-                    cameraSelect.show();
-                    updateStatus('info', 'Camera options loaded. Select a camera and click "Start Camera".');
-                } else {
-                    updateStatus('warning', 'No cameras found. Please check camera permissions.');
-                }
-            }).catch(err => {
-                console.error('Error getting cameras:', err);
-                updateStatus('error', 'Failed to access camera devices. Please check permissions.');
-            });
-        }
-        
-        function startQRScanner() {
-            const selectedCamera = $('#camera-select').val();
-            
-            if (!selectedCamera) {
-                updateStatus('warning', 'Please select a camera first.');
-                return;
-            }
-            
-            if (qrScannerActive) {
-                updateStatus('warning', 'Scanner is already active.');
-                return;
-            }
-            
-            try {
-                html5QrCode = new Html5Qrcode('qr-reader');
-                
-                const qrConfig = {
-                    fps: 10,
-                    qrbox: {
-                        width: 300,
-                        height: 300
-                    },
-                    aspectRatio: 1.0,
-                    disableFlip: false
-                };
-                
-                html5QrCode.start(
-                    selectedCamera,
-                    qrConfig,
-                    onQRScanSuccess,
-                    onQRScanError
-                ).then(() => {
-                    qrScannerActive = true;
-                    $('#start-scanner-btn').hide();
-                    $('#stop-scanner-btn').show();
-                    $('#camera-select').prop('disabled', true);
-                    updateStatus('success', 'Camera started. Point at QR code to scan.');
-                }).catch(err => {
-                    console.error('Error starting scanner:', err);
-                    updateStatus('error', 'Failed to start camera: ' + err.message);
-                });
-                
-            } catch (err) {
-                console.error('QR Scanner initialization error:', err);
-                updateStatus('error', 'Scanner initialization failed. Please try again.');
-            }
-        }
-        
-        function stopQRScanner() {
-            if (html5QrCode && qrScannerActive) {
-                html5QrCode.stop().then(() => {
-                    qrScannerActive = false;
-                    html5QrCode = null;
-                    $('#start-scanner-btn').show();
-                    $('#stop-scanner-btn').hide();
-                    $('#camera-select').prop('disabled', false);
-                    updateStatus('info', 'Camera stopped. Click "Start Camera" to scan again.');
-                }).catch(err => {
-                    console.error('Error stopping scanner:', err);
-                    qrScannerActive = false;
-                    html5QrCode = null;
-                    $('#start-scanner-btn').show();
-                    $('#stop-scanner-btn').hide();
-                    $('#camera-select').prop('disabled', false);
-                    updateStatus('info', 'Scanner stopped.');
-                });
-            }
-        }
-        
-        function onQRScanSuccess(decodedText, decodedResult) {
-            console.log('QR Code detected:', decodedText);
-            
-            // Stop scanner immediately to prevent multiple scans
-            stopQRScanner();
-            
-            updateStatus('success', 'QR Code detected! Processing...');
-            
-            // Process the QR code
-            processQRCode(decodedText);
-        }
-        
-        function onQRScanError(errorMessage) {
-            // Don't log every scan attempt error to avoid console spam
-            // Only log significant errors
-        }
-        
-        function processQRCode(qrData) {
-            showLoadingOverlay('Processing QR Code...');
-            
-            $.post('checkin_lookup.php', {
-                qr_data: qrData
-            })
-            .done(function(response) {
-                hideLoadingOverlay();
-                
-                if (response.success) {
-                    updateStatus('success', 'QR Code processed successfully!');
-                    
-                    // Show check-in confirmation with patient details
-                    showQRCheckInModal(response.data);
-                    
-                } else {
-                    updateStatus('error', response.message || 'QR Code processing failed.');
-                }
-            })
-            .fail(function(xhr, status, error) {
-                hideLoadingOverlay();
-                updateStatus('error', 'Network error: Failed to process QR code.');
-                console.error('QR Lookup failed:', error);
-            });
-        }
-        
-        function showQRCheckInModal(data) {
-            const patient = data.patient;
-            const appointment = data.appointment;
-            
-            Swal.fire({
-                title: `<i class="fas fa-qrcode"></i> QR Check-In Confirmation`,
-                html: `
-                    <div style="text-align: left; margin: 1rem 0;">
-                        <h4 style="color: #2c3e50; margin-bottom: 1rem;">Patient Information</h4>
-                        <div style="background: #f8f9fa; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
-                            <p><strong>Name:</strong> ${patient.full_name}</p>
-                            <p><strong>Patient ID:</strong> ${patient.patient_id}</p>
-                            <p><strong>Age:</strong> ${patient.age} years</p>
-                            <p><strong>Contact:</strong> ${patient.contact_number}</p>
-                            <p><strong>Barangay:</strong> ${patient.barangay}</p>
-                            ${patient.isSenior ? '<p><span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;">SENIOR CITIZEN</span></p>' : ''}
-                            ${patient.isPWD ? '<p><span style="background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8em;">PWD</span></p>' : ''}
-                        </div>
-                        
-                        <h4 style="color: #2c3e50; margin-bottom: 1rem;">Appointment Details</h4>
-                        <div style="background: #e9ecef; padding: 1rem; border-radius: 4px;">
-                            <p><strong>Appointment ID:</strong> APT-${String(appointment.appointment_id).padStart(8, '0')}</p>
-                            <p><strong>Date:</strong> ${appointment.formatted_date}</p>
-                            <p><strong>Time:</strong> ${appointment.formatted_time}</p>
-                            <p><strong>Service:</strong> ${appointment.service_name}</p>
-                            <p><strong>Status:</strong> ${appointment.status}</p>
-                        </div>
-                    </div>
-                `,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="fas fa-user-check"></i> Check-In Patient',
-                cancelButtonText: 'Cancel',
-                width: '600px'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    performCheckin(appointment.appointment_id);
-                } else {
-                    updateStatus('info', 'Check-in cancelled. Ready for next scan.');
-                }
-            });
-        }
-        
-        function updateStatus(type, message) {
-            const statusElement = $('#qr-status-message');
-            const iconMap = {
-                'info': 'fas fa-info-circle',
-                'success': 'fas fa-check-circle',
-                'error': 'fas fa-exclamation-circle',
-                'warning': 'fas fa-exclamation-triangle'
-            };
-            
-            statusElement
-                .removeClass('info success error warning')
-                .addClass(type)
-                .html(`<i class="${iconMap[type]}"></i> ${message}`);
-        }
-
-        // ==========================================
-        // SUMMARY CARDS REFRESH
-        // ==========================================
-        
-        function refreshSummaryCards() {
-            $.get('checkin_summary.php')
-            .done(function(data) {
-                if (data && typeof data === 'object') {
-                    $('#summary-today').text(data.today || '0');
-                    $('#summary-checkedin').text(data.checkedIn || '0');
-                    $('#summary-completed').text(data.completed || '0');
-                }
-            })
-            .fail(function() {
-                console.warn('Failed to refresh summary cards');
-            });
-        }
-
-        // ==========================================
-        // UTILITY FUNCTIONS
-        // ==========================================
-        
-        function showLoadingOverlay(message = 'Loading...') {
-            Swal.fire({
-                title: message,
-                html: '<div class="spinner-border" role="status"><span class="sr-only">Loading...</span></div>',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                willOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-        }
-
-        function hideLoadingOverlay() {
-            Swal.close();
-        }
-
-        function getStatusClass(status) {
-            const statusClasses = {
-                'confirmed': 'status-confirmed',
-                'checked_in': 'status-checked-in',
-                'completed': 'status-completed',
-                'cancelled': 'status-cancelled',
-                'pending': 'status-pending'
-            };
-            return statusClasses[status] || 'status-default';
-        }
-
-        function getStatusIcon(status) {
-            const statusIcons = {
-                'confirmed': 'fas fa-check-circle',
-                'checked_in': 'fas fa-user-check',
-                'completed': 'fas fa-check-double',
-                'cancelled': 'fas fa-times-circle',
-                'pending': 'fas fa-clock'
-            };
-            return statusIcons[status] || 'fas fa-circle';
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            });
-        }
-
-        function formatTime(timeString) {
-            if (!timeString) return 'N/A';
-            const time = new Date('1970-01-01T' + timeString + 'Z');
-            return time.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-            });
-        }
-
-        function formatDateTime(dateTimeString) {
-            if (!dateTimeString) return 'N/A';
-            const date = new Date(dateTimeString);
-            return date.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-        }
-
-        // ==========================================
-        // LEGACY COMPATIBILITY FUNCTIONS
-        // ==========================================
-
-        // Clear filters
-        function clearFilters() {
-            const form = document.querySelector('.search-form');
-            form.reset();
-            document.querySelector('input[name="appointment_date"]').value = '<?php echo $today; ?>';
-        }
-        
-        // Simulate QR scan (legacy function)
-        function simulateQRScan() {
-            activateQRScanner();
-        }
-        
-        // View patient details (legacy function)
-        function viewPatient(appointmentId, patientId) {
-            showPatientDetails(appointmentId, patientId);
-        }
-
-        // Modal functions for backward compatibility
+        // Modal functions
         function showModal(modalId) {
             document.getElementById(modalId).classList.add('show');
         }
@@ -2677,15 +1739,143 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('show');
         }
-
+        
+        // Clear filters
+        function clearFilters() {
+            const form = document.querySelector('.search-form');
+            form.reset();
+            document.querySelector('input[name="appointment_date"]').value = '<?php echo $today; ?>';
+        }
+        
+        // Simulate QR scan
+        function simulateQRScan() {
+            const appointmentId = prompt('Enter Appointment ID to simulate QR scan:');
+            if (appointmentId) {
+                document.querySelector('input[name="appointment_id"]').value = appointmentId;
+                document.querySelector('.search-form').submit();
+            }
+        }
+        
+        // View patient details
+        function viewPatient(appointmentId, patientId) {
+            fetch(`get_patient_details.php?appointment_id=${appointmentId}&patient_id=${patientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const patient = data.patient;
+                        const appointment = data.appointment;
+                        
+                        const modalBody = document.getElementById('patientModalBody');
+                        modalBody.innerHTML = `
+                            <div class="patient-info">
+                                <div class="info-item">
+                                    <span class="info-label">Full Name</span>
+                                    <span class="info-value">${patient.first_name} ${patient.last_name}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Age</span>
+                                    <span class="info-value">${patient.age || 'N/A'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Sex</span>
+                                    <span class="info-value">${patient.sex || 'N/A'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Barangay</span>
+                                    <span class="info-value">${patient.barangay}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">PhilHealth No.</span>
+                                    <span class="info-value">${patient.philhealth_id || 'None'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Service Type</span>
+                                    <span class="info-value">${appointment.service_type || 'General Consultation'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Appointment Date</span>
+                                    <span class="info-value">${appointment.appointment_date}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Appointment Time</span>
+                                    <span class="info-value">${appointment.appointment_time}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="priority-section">
+                                <h4>Priority Status</h4>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    ${patient.isSenior ? '<span class="priority-badge priority-senior"><i class="fas fa-user"></i> Senior Citizen</span>' : ''}
+                                    ${patient.isPWD ? '<span class="priority-badge priority-pwd"><i class="fas fa-wheelchair"></i> PWD</span>' : ''}
+                                    ${!patient.isSenior && !patient.isPWD ? '<span class="priority-badge">Normal Priority</span>' : ''}
+                                </div>
+                            </div>
+                            
+                            <div class="modal-actions" style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                                ${appointment.status === 'confirmed' ? `
+                                    <button type="button" class="btn btn-success" onclick="checkinPatient(${appointmentId}, ${patientId})">
+                                        <i class="fas fa-user-check"></i> Check-In Patient
+                                    </button>
+                                ` : ''}
+                                <button type="button" class="btn btn-warning" onclick="flagPatient(${appointmentId}, ${patientId})">
+                                    <i class="fas fa-flag"></i> Flag Patient
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="cancelAppointment(${appointmentId}, ${patientId})">
+                                    <i class="fas fa-times"></i> Cancel Appointment
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('patientModal')">
+                                    <i class="fas fa-arrow-left"></i> Close
+                                </button>
+                            </div>
+                        `;
+                        
+                        showModal('patientModal');
+                    } else {
+                        alert('Error loading patient details: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error loading patient details: ' + error.message);
+                });
+        }
+        
+        // Check-in patient
+        function checkinPatient(appointmentId, patientId) {
+            if (confirm('Are you sure you want to check in this patient?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="checkin">
+                    <input type="hidden" name="appointment_id" value="${appointmentId}">
+                    <input type="hidden" name="patient_id" value="${patientId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Flag patient
+        function flagPatient(appointmentId, patientId) {
+            document.getElementById('flagAppointmentId').value = appointmentId;
+            document.getElementById('flagPatientId').value = patientId;
+            closeModal('patientModal');
+            showModal('flagModal');
+        }
+        
+        // Cancel appointment
+        function cancelAppointment(appointmentId, patientId) {
+            document.getElementById('cancelAppointmentId').value = appointmentId;
+            document.getElementById('cancelPatientId').value = patientId;
+            closeModal('patientModal');
+            showModal('cancelModal');
+        }
+        
         // Close modals when clicking outside
         window.onclick = function(event) {
             if (event.target.classList.contains('modal')) {
                 event.target.classList.remove('show');
             }
-        };
-
-        console.log('✅ Patient Check-In System fully initialized with AJAX functionality');
+        }
     </script>
     </div>
 </body>
