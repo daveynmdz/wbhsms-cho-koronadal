@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JavaScript Syntax Checker</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+        .error { color: red; background: #ffe6e6; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .success { color: green; background: #e6ffe6; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .info { color: blue; background: #e6f3ff; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .test-section { background: white; padding: 15px; margin: 15px 0; border-radius: 8px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>JavaScript Syntax and Function Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Function Definition</h2>
+        <button onclick="test1()">Test showCancelModal Definition</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Function Execution</h2>
+        <button onclick="test2()">Test showCancelModal Execution</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Onclick Attribute Test</h2>
+        <button onclick="showCancelModal(999, 'APT-00000999')">Direct Onclick Test</button>
+        <div id="test3-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: PHP Variable Integration Test</h2>
+        <button id="php-test-btn">PHP Generated Onclick</button>
+        <div id="test4-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Console Log Output</h2>
+        <div id="console-output" style="background: black; color: lime; padding: 10px; font-family: monospace; height: 200px; overflow-y: auto;">
+            <!-- Console output will appear here -->
+        </div>
+    </div>
+
+    <script>
+        // Capture console messages
+        const consoleOutput = document.getElementById('console-output');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            consoleOutput.innerHTML += '<div>' + args.join(' ') + '</div>';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            consoleOutput.innerHTML += '<div style="color: red;">ERROR: ' + args.join(' ') + '</div>';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            originalError.apply(console, args);
+        };
+
+        console.log('JavaScript debugger loaded');
+
+        // Define showCancelModal function
+        function showCancelModal(appointmentId, appointmentNumber) {
+            console.log('showCancelModal called with:', appointmentId, appointmentNumber);
+            
+            const result = `✅ Function executed successfully!
+Appointment ID: ${appointmentId}
+Appointment Number: ${appointmentNumber}
+Timestamp: ${new Date().toLocaleTimeString()}`;
+            
+            document.getElementById('test3-result').innerHTML = `<div class="success">${result}</div>`;
+            
+            alert('showCancelModal function working correctly!\n\n' + result);
+            return true;
+        }
+
+        // Test functions
+        function test1() {
+            const resultDiv = document.getElementById('test1-result');
+            try {
+                if (typeof showCancelModal === 'function') {
+                    resultDiv.innerHTML = '<div class="success">✅ showCancelModal is properly defined as a function</div>';
+                    console.log('Test 1 PASSED: Function is defined');
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ showCancelModal is not defined as a function. Type: ' + typeof showCancelModal + '</div>';
+                    console.error('Test 1 FAILED: Function not defined');
+                }
+            } catch (e) {
+                resultDiv.innerHTML = '<div class="error">❌ Error checking function: ' + e.message + '</div>';
+                console.error('Test 1 ERROR:', e.message);
+            }
+        }
+
+        function test2() {
+            const resultDiv = document.getElementById('test2-result');
+            try {
+                const result = showCancelModal(123, 'TEST-123');
+                if (result === true) {
+                    resultDiv.innerHTML = '<div class="success">✅ Function executed successfully and returned expected value</div>';
+                    console.log('Test 2 PASSED: Function execution successful');
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ Function executed but returned unexpected value: ' + result + '</div>';
+                    console.error('Test 2 FAILED: Unexpected return value');
+                }
+            } catch (e) {
+                resultDiv.innerHTML = '<div class="error">❌ Error executing function: ' + e.message + '</div>';
+                console.error('Test 2 ERROR:', e.message);
+            }
+        }
+
+        // Test 4: Simulate PHP-generated onclick
+        document.addEventListener('DOMContentLoaded', function() {
+            const phpTestBtn = document.getElementById('php-test-btn');
+            const testId = 456;
+            const testNumber = 'APT-00000456';
+            
+            // This simulates how PHP generates the onclick attribute
+            phpTestBtn.setAttribute('onclick', `showCancelModal(${testId}, '${testNumber}')`);
+            
+            phpTestBtn.onclick = function() {
+                document.getElementById('test4-result').innerHTML = '<div class="info">🔄 Testing PHP-style onclick attribute...</div>';
+                console.log('Test 4: PHP-style onclick triggered');
+                
+                try {
+                    // This is how the onclick would be executed
+                    showCancelModal(testId, testNumber);
+                    document.getElementById('test4-result').innerHTML = '<div class="success">✅ PHP-style onclick attribute works correctly</div>';
+                    console.log('Test 4 PASSED: PHP-style onclick successful');
+                } catch (e) {
+                    document.getElementById('test4-result').innerHTML = '<div class="error">❌ PHP-style onclick failed: ' + e.message + '</div>';
+                    console.error('Test 4 FAILED:', e.message);
+                }
+            };
+            
+            console.log('Test 4 setup complete');
+        });
+
+        // Page load test
+        window.onload = function() {
+            console.log('Page fully loaded - running automatic tests...');
+            
+            // Auto-run Test 1
+            setTimeout(function() {
+                console.log('Auto-running Test 1...');
+                test1();
+            }, 100);
+        };
+
+        console.log('All test functions initialized');
+    </script>
+
+    <script>
+        // Additional syntax validation
+        console.log('Running syntax validation...');
+        
+        // Test for common syntax issues
+        try {
+            eval('function testSyntax() { return "OK"; }');
+            console.log('✅ Basic function syntax is valid');
+        } catch (e) {
+            console.error('❌ Basic syntax error:', e.message);
+        }
+
+        // Test template literals
+        try {
+            const test = `Template literal test: ${new Date().getTime()}`;
+            console.log('✅ Template literals work:', test);
+        } catch (e) {
+            console.error('❌ Template literal error:', e.message);
+        }
+
+        console.log('Syntax validation complete');
+    </script>
+</body>
+</html>

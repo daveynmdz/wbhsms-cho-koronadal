@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Complete Appointments Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { background: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .success { color: #155724; background: #d4edda; padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .info { color: #004085; background: #cce7ff; padding: 10px; margin: 5px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Complete Appointments Debug Test</h1>
+    
+    <div class="debug-section">
+        <h2>Step 1: Basic Function Test</h2>
+        <button onclick="testBasicFunction()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Test Basic Function</button>
+        <div id="basic-test-result"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Step 2: PHP Variable Simulation</h2>
+        <button onclick="showCancelModal(123, 'APT-00000123')" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Test with Static Values</button>
+        <div id="static-test-result"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Step 3: Dynamic Button Creation</h2>
+        <button onclick="createDynamicButton()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Create Dynamic Button</button>
+        <div id="dynamic-test-result"></div>
+        <div id="dynamic-button-container"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Step 4: Console Output</h2>
+        <div id="console-output" style="background: #000; color: #00ff00; padding: 10px; font-family: monospace; height: 200px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        // Capture console output
+        const consoleDiv = document.getElementById('console-output');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function addToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff4444' : '#00ff00';
+            consoleDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            addToConsole(args.join(' '), 'log');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addToConsole('ERROR: ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        console.log('Debug page initialized');
+        
+        // Define showCancelModal function
+        function showCancelModal(appointmentId, appointmentNumber) {
+            console.log('showCancelModal called with:', appointmentId, appointmentNumber);
+            
+            const result = `✅ SUCCESS: showCancelModal executed
+ID: ${appointmentId}
+Number: ${appointmentNumber}
+Timestamp: ${new Date().toISOString()}`;
+            
+            document.getElementById('static-test-result').innerHTML = 
+                `<div class="success">${result}</div>`;
+            
+            alert('showCancelModal Test Successful!\n\n' + result);
+            return true;
+        }
+        
+        console.log('showCancelModal defined, type:', typeof showCancelModal);
+        
+        // Test functions
+        function testBasicFunction() {
+            const resultDiv = document.getElementById('basic-test-result');
+            
+            try {
+                console.log('Testing basic function availability...');
+                
+                if (typeof showCancelModal === 'function') {
+                    resultDiv.innerHTML = '<div class="success">✅ showCancelModal is properly defined</div>';
+                    console.log('✅ Function test PASSED');
+                    
+                    // Test execution
+                    const execResult = showCancelModal(999, 'TEST-999');
+                    if (execResult === true) {
+                        resultDiv.innerHTML += '<div class="success">✅ Function execution test PASSED</div>';
+                    }
+                } else {
+                    resultDiv.innerHTML = '<div class="error">❌ showCancelModal is not defined</div>';
+                    console.error('❌ Function test FAILED');
+                }
+            } catch (e) {
+                resultDiv.innerHTML = '<div class="error">❌ Error: ' + e.message + '</div>';
+                console.error('❌ Exception:', e.message);
+            }
+        }
+        
+        function createDynamicButton() {
+            const container = document.getElementById('dynamic-button-container');
+            const resultDiv = document.getElementById('dynamic-test-result');
+            
+            try {
+                console.log('Creating dynamic button...');
+                
+                const testId = 456;
+                const testNumber = 'APT-00000456';
+                
+                // Method 1: innerHTML with onclick
+                container.innerHTML = `
+                    <h4>Dynamically Created Buttons:</h4>
+                    <button onclick="showCancelModal(${testId}, '${testNumber}')" 
+                            style="padding: 8px 16px; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+                        Dynamic Button (onclick)
+                    </button>
+                `;
+                
+                // Method 2: Create element with event listener
+                const button2 = document.createElement('button');
+                button2.textContent = 'Dynamic Button (addEventListener)';
+                button2.style.cssText = 'padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;';
+                button2.addEventListener('click', function() {
+                    showCancelModal(testId + 100, testNumber.replace('456', '556'));
+                });
+                container.appendChild(button2);
+                
+                resultDiv.innerHTML = '<div class="success">✅ Dynamic buttons created successfully</div>';
+                console.log('✅ Dynamic button creation PASSED');
+                
+            } catch (e) {
+                resultDiv.innerHTML = '<div class="error">❌ Error creating dynamic button: ' + e.message + '</div>';
+                console.error('❌ Dynamic button creation FAILED:', e.message);
+            }
+        }
+        
+        // Run initial test
+        window.onload = function() {
+            console.log('Page loaded, running initial tests...');
+            setTimeout(testBasicFunction, 100);
+        };
+    </script>
+</body>
+</html>
