@@ -35,8 +35,9 @@ class QueueManagementService {
                 FROM appointments a 
                 WHERE a.appointment_id = ?
             ");
-            $stmt->execute([$appointment_id]);
-            $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $stmt->execute(); appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->close();
             
             if (!$appointment) {
                 throw new Exception("Appointment not found: $appointment_id");
@@ -55,12 +56,16 @@ class QueueManagementService {
                     visit_status, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, 'ongoing', NOW(), NOW())
             ");
+            $stmt->bind_param("iiis", 
+                $patient_id, $facility_id, $appointment_id, $appointment['scheduled_date']
+            );
             
-            if (!$stmt->execute([$patient_id, $facility_id, $appointment_id, $appointment['scheduled_date']])) {
-                throw new Exception("Failed to create visit record");
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to create visit record: " . $stmt->error);
             }
             
-            $visit_id = $this->conn->lastInsertId();
+            $visit_id = $this->conn->insert_id;
+            $stmt->close();
             
             // Generate structured queue code (CHO appointments only)
             $queue_data = $this->generateQueueCode($appointment_id);
@@ -89,14 +94,17 @@ class QueueManagementService {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting', NOW(), NOW(), NOW())
             ");
             
-            if (!$stmt->execute([
+            $stmt->bind_param("iiiiisiss", 
                 $visit_id, $appointment_id, $patient_id, $service_id, $station_id,
                 $queue_type, $queue_number, $queue_code, $priority_level
-            ])) {
-                throw new Exception("Failed to create queue entry");
+            );
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to create queue entry: " . $stmt->error);
             }
             
-            $queue_entry_id = $this->conn->lastInsertId();
+            $queue_entry_id = $this->conn->insert_id;
+            $stmt->close();
             
             // Log the queue creation with queue code in remarks
             $remarks = $queue_code ? "Queue created with code: {$queue_code}" : 'Queue entry created for non-CHO appointment';
@@ -122,7 +130,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -171,12 +179,14 @@ class QueueManagementService {
             
             $sql = "UPDATE queue_entries SET " . implode(', ', $update_fields) . " WHERE queue_entry_id = ?";
             $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param($types, ...$params);
             
-            if (!$stmt->execute($params)) {
-                throw new Exception("Failed to update queue entry");
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to update queue entry: " . $stmt->error);
             }
             
-            $affected_rows = $stmt->rowCount();
+            $affected_rows = $stmt->affected_rows;
+            $stmt->close();
             
             if ($affected_rows === 0) {
                 throw new Exception("Queue entry not found or no changes made");
@@ -193,7 +203,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -219,8 +229,9 @@ class QueueManagementService {
                 FROM queue_entries 
                 WHERE appointment_id = ? AND status NOT IN ('done', 'cancelled')
             ");
-            $stmt->execute([$appointment_id]);
-            $queue_entry = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $stmt->execute(); queue_entry = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->close();
             
             if (!$queue_entry) {
                 throw new Exception("No active queue entry found for this appointment");
@@ -239,10 +250,12 @@ class QueueManagementService {
                     updated_at = NOW()
                 WHERE queue_entry_id = ?
             ");
+            $stmt->bind_param("si", $cancellation_reason, $queue_entry_id);
             
-            if (!$stmt->execute([$cancellation_reason, $queue_entry_id])) {
-                throw new Exception("Failed to cancel queue entry");
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to cancel queue entry: " . $stmt->error);
             }
+            $stmt->close();
             
             // Log the cancellation
             $this->logQueueAction($queue_entry_id, 'cancelled', $old_status, 'cancelled', $cancellation_reason, $performed_by);
@@ -255,7 +268,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -283,8 +296,9 @@ class QueueManagementService {
                 JOIN patients p ON qe.patient_id = p.patient_id
                 WHERE qe.queue_entry_id = ?
             ");
-            $stmt->execute([$queue_entry_id]);
-            $queue_entry = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $stmt->execute(); queue_entry = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->close();
             
             if (!$queue_entry) {
                 throw new Exception("Queue entry not found");
@@ -303,10 +317,12 @@ class QueueManagementService {
                 SET time_in = NOW(), updated_at = NOW()
                 WHERE visit_id = ?
             ");
+            $stmt->bind_param("i", $visit_id);
             
-            if (!$stmt->execute([$visit_id])) {
-                throw new Exception("Failed to update visit time_in");
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to update visit time_in: " . $stmt->error);
             }
+            $stmt->close();
             
             // Update queue_entries status to 'arrived'
             $update_fields = ['status = ?', 'updated_at = NOW()'];
@@ -324,12 +340,14 @@ class QueueManagementService {
             
             $sql = "UPDATE queue_entries SET " . implode(', ', $update_fields) . " WHERE queue_entry_id = ?";
             $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param($types, ...$params);
             
-            if (!$stmt->execute($params)) {
-                throw new Exception("Failed to update queue entry status");
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to update queue entry status: " . $stmt->error);
             }
             
-            $affected_rows = $stmt->rowCount();
+            $affected_rows = $stmt->affected_rows;
+            $stmt->close();
             
             if ($affected_rows === 0) {
                 throw new Exception("Queue entry not found or no changes made");
@@ -357,7 +375,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -379,8 +397,9 @@ class QueueManagementService {
             
             // Get current status
             $stmt = $this->conn->prepare("SELECT status FROM queue_entries WHERE queue_entry_id = ?");
-            $stmt->execute([$queue_entry_id]);
-            $queue_entry = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $stmt->execute(); queue_entry = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->close();
             
             if (!$queue_entry) {
                 throw new Exception("Queue entry not found");
@@ -402,10 +421,12 @@ class QueueManagementService {
                     updated_at = NOW()
                 WHERE queue_entry_id = ?
             ");
+            $stmt->bind_param("si", $remarks, $queue_entry_id);
             
-            if (!$stmt->execute([$remarks, $queue_entry_id])) {
-                throw new Exception("Failed to reinstate queue entry");
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to reinstate queue entry: " . $stmt->error);
             }
+            $stmt->close();
             
             // Log the reinstatement
             $this->logQueueAction($queue_entry_id, 'reinstated', $old_status, 'waiting', $remarks, $performed_by);
@@ -418,7 +439,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -446,8 +467,9 @@ class QueueManagementService {
                 JOIN services s ON qe.service_id = s.service_id
                 WHERE qe.appointment_id = ?
             ");
-            $stmt->execute([$appointment_id]);
-            $queue_info = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $stmt->execute(); queue_info = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->close();
             
             return [
                 'success' => true,
@@ -487,8 +509,10 @@ class QueueManagementService {
                 AND DATE(qe.created_at) = ?
                 ORDER BY qe.priority_level DESC, qe.queue_number ASC
             ");
-            $stmt->execute([$queue_type, $date]);
-            $queue_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $queue_list = $result->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
             
             return [
                 'success' => true,
@@ -521,8 +545,9 @@ class QueueManagementService {
             FROM appointments
             WHERE appointment_id = ?
         ");
-        $stmt->execute([$appointment_id]);
-        $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        $stmt->execute(); appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->close();
         
         if (!$appointment) {
             throw new Exception("Appointment not found");
@@ -551,8 +576,9 @@ class QueueManagementService {
             AND qe.status NOT IN ('cancelled')
         ");
         $slot_pattern = "%-{$slot_code}-%";
-        $stmt->execute([$scheduled_date, $slot_pattern]);
-        $seq_data = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        $stmt->execute(); seq_data = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->close();
         
         $seq_num = (int)$seq_data['seq_num'];
         
@@ -628,10 +654,8 @@ class QueueManagementService {
                     remarks, performed_by, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, NOW())
             ");
-            $stmt->execute([
-                $queue_entry_id, $final_action, $old_status, $new_status, 
-                $remarks, $performed_by
-            ]);
+            $stmt->execute();
+            $stmt->close();
             
             // Enhanced logging for debugging
             error_log("Queue action logged: entry_id=$queue_entry_id, action=$final_action, $old_status->$new_status, by=$performed_by");
@@ -669,8 +693,10 @@ class QueueManagementService {
                 WHERE DATE(created_at) = ?
                 GROUP BY queue_type
             ");
-            $stmt->execute([$date]);
-            $statistics = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $statistics = $result->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
             
             return [
                 'success' => true,
@@ -725,9 +751,10 @@ class QueueManagementService {
             LIMIT 1
         ");
         
-        $stmt->execute([$employee_id, $date, $date]);
+        $stmt->execute();
+        $result = $stmt->get_result();
         
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result->fetch_assoc();
     }
 
     /**
@@ -803,11 +830,12 @@ class QueueManagementService {
                 WHERE employee_id = ? AND station_id = ? AND start_date = ?
             ";
             $existing_stmt = $this->conn->prepare($existing_check);
-            $existing_stmt->execute([$employee_id, $station_id, $start_date]);
-            $existing_result = $existing_stmt->fetchAll(PDO::FETCH_ASSOC);
+            $existing_stmt->bind_param("iis", $employee_id, $station_id, $start_date);
+            $existing_stmt->execute();
+            $existing_result = $existing_stmt->get_result();
             
-            if (count($existing_result) > 0) {
-                $existing = $existing_result[0];
+            if ($existing_result->num_rows > 0) {
+                $existing = $existing_result->fetch_assoc();
                 
                 // If there's an inactive assignment, reactivate it instead of creating new
                 if ($existing['is_active'] == 0) {
@@ -817,12 +845,12 @@ class QueueManagementService {
                             shift_start_time = ?, shift_end_time = ?, assigned_by = ?, assigned_at = NOW()
                         WHERE schedule_id = ?
                     ");
-                    $reactivate_stmt->execute([
+                    $reactivate_stmt->bind_param("ssssii", 
                         $final_end_date, $assignment_type, $shift_start, $shift_end, $assigned_by, $existing['schedule_id']
-                    ]);
+                    );
                     
-                    if ($reactivate_stmt->rowCount() === 0) {
-                        throw new Exception("Failed to reactivate assignment");
+                    if (!$reactivate_stmt->execute()) {
+                        throw new Exception("Failed to reactivate assignment: " . $reactivate_stmt->error);
                     }
                     
                     $this->conn->commit();
@@ -832,7 +860,7 @@ class QueueManagementService {
                         'message' => "Employee assignment reactivated successfully"
                     ];
                 } else {
-                    $this->conn->rollback();
+                    $this->conn->rollBack();
                     return [
                         'success' => false,
                         'error' => 'Employee is already assigned to this station on this date'
@@ -851,11 +879,11 @@ class QueueManagementService {
             ";
             $check_stmt = $this->conn->prepare($station_overlap_check);
             $check_end_date = $end_date ?: $start_date;
-            $check_stmt->execute([$station_id, $employee_id, $check_end_date, $start_date]);
-            $check_result = $check_stmt->fetchAll(PDO::FETCH_ASSOC);
+            $check_stmt->bind_param("iiss", $station_id, $employee_id, $check_end_date, $start_date);
+            $check_stmt->execute();
             
-            if (count($check_result) > 0) {
-                $this->conn->rollback();
+            if ($check_stmt->get_result()->num_rows > 0) {
+                $this->conn->rollBack();
                 return [
                     'success' => false,
                     'error' => 'Station already has an overlapping assignment for this period'
@@ -887,15 +915,16 @@ class QueueManagementService {
                 )
             ";
             $emp_check_stmt = $this->conn->prepare($employee_overlap_check);
-            $emp_check_stmt->execute([
+            $emp_check_stmt->bind_param("iissssssss", 
                 $employee_id, $station_id, $check_end_date, $start_date,
                 $shift_start, $shift_start, $shift_end, $shift_end, $shift_start, $shift_end
-            ]);
-            $emp_result = $emp_check_stmt->fetchAll(PDO::FETCH_ASSOC);
+            );
+            $emp_check_stmt->execute();
+            $emp_result = $emp_check_stmt->get_result();
             
-            if (count($emp_result) > 0) {
-                $conflict = $emp_result[0];
-                $this->conn->rollback();
+            if ($emp_result->num_rows > 0) {
+                $conflict = $emp_result->fetch_assoc();
+                $this->conn->rollBack();
                 return [
                     'success' => false,
                     'error' => "Employee is already assigned to '{$conflict['station_name']}' during overlapping time period ({$conflict['start_date']} to " . 
@@ -912,17 +941,17 @@ class QueueManagementService {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
-            $stmt->execute([
+            $stmt->bind_param("iisssssi", 
                 $employee_id, $station_id, $start_date, $final_end_date, 
                 $shift_start, $shift_end, $assignment_type, $assigned_by
-            ]);
+            );
             
-            if ($stmt->rowCount() === 0) {
-                throw new Exception("Failed to insert assignment");
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to insert assignment: " . $stmt->error);
             }
             
-            $schedule_id = $this->conn->lastInsertId();
-            $affected_rows = $stmt->rowCount();
+            $schedule_id = $this->conn->insert_id;
+            $affected_rows = $stmt->affected_rows;
             
             if ($affected_rows === 0) {
                 throw new Exception("No rows were inserted during assignment creation");
@@ -939,7 +968,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             error_log("Assignment failed with exception: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
             return [
@@ -965,11 +994,12 @@ class QueueManagementService {
                 AND start_date <= ?
                 AND (end_date IS NULL OR end_date >= ?)
             ");
-            $current_stmt->execute([$station_id, $reassign_date, $reassign_date]);
-            $current_assignment = $current_stmt->fetch(PDO::FETCH_ASSOC);
+            $current_stmt->bind_param("iss", $station_id, $reassign_date, $reassign_date);
+            $current_stmt->execute();
+            $current_assignment = $current_stmt->get_result()->fetch_assoc();
             
             if (!$current_assignment) {
-                $this->conn->rollback();
+                $this->conn->rollBack();
                 return ['success' => false, 'error' => 'No active assignment found for this station and date'];
             }
             
@@ -980,27 +1010,29 @@ class QueueManagementService {
                 SET end_date = ? 
                 WHERE schedule_id = ?
             ");
-            $update_stmt->execute([$end_current_date, $current_assignment['schedule_id']]);
+            $update_stmt->bind_param("si", $end_current_date, $current_assignment['schedule_id']);
+            $update_stmt->execute();
             
             // Create new assignment starting from reassign_date
             $insert_stmt = $this->conn->prepare("
                 INSERT INTO assignment_schedules 
-                (employee_id, station_id, start_date, end_date, shift_start_time, shift_end_time, assignment_type, assigned_by)
+                (employee_id, station_id, start_date, end_date, shift_start_time, shift_end_time, assignment_type, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             // Keep the same shift times and assignment type
-            $insert_stmt->execute([
+            $insert_stmt->bind_param("iissssi", 
                 $new_employee_id, $station_id, $reassign_date, $current_assignment['end_date'],
                 $current_assignment['shift_start_time'], $current_assignment['shift_end_time'], 
                 $current_assignment['assignment_type'], $assigned_by
-            ]);
+            );
+            $insert_stmt->execute();
             
             $this->conn->commit();
             return ['success' => true, 'message' => 'Station reassigned successfully'];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -1010,8 +1042,8 @@ class QueueManagementService {
      */
     public function toggleStationStatus($station_id, $is_active) {
         $stmt = $this->conn->prepare("UPDATE stations SET is_active = ? WHERE station_id = ?");
-        $stmt->execute([$is_active, $station_id]);
-        return $stmt->rowCount() > 0;
+        $stmt->bind_param("ii", $is_active, $station_id);
+        return $stmt->execute();
     }
 
     /**
@@ -1068,9 +1100,9 @@ class QueueManagementService {
         }
         
         $stmt = $this->conn->prepare($base_query);
-        $stmt->execute($params);
+        $stmt->execute();
         
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     /**
@@ -1091,9 +1123,10 @@ class QueueManagementService {
                 LIMIT 1
             ");
             
-            $stmt->execute([$station_id]);
+            $stmt->execute();
+            $result = $stmt->get_result();
             
-            if ($next_patient = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if ($next_patient = $result->fetch_assoc()) {
                 // Update the next patient to in_progress
                 $update_result = $this->updateQueueStatus(
                     $next_patient['queue_entry_id'], 
@@ -1140,9 +1173,9 @@ class QueueManagementService {
             WHERE qe.station_id = ? AND DATE(qe.created_at) = ?
         ");
         
-        $stmt->execute([$station_id, $date]);
+        $stmt->execute();
         
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->get_result()->fetch_assoc();
     }
 
     /**
@@ -1154,8 +1187,9 @@ class QueueManagementService {
     private function getFacilityIdFromAppointment($appointment_id) {
         try {
             $stmt = $this->conn->prepare("SELECT facility_id FROM appointments WHERE appointment_id = ?");
-            $stmt->execute([$appointment_id]);
-            $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $stmt->execute(); appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->close();
             
             return $appointment ? (int)$appointment['facility_id'] : null;
         } catch (Exception $e) {
@@ -1177,9 +1211,10 @@ class QueueManagementService {
                 ORDER BY station_number ASC 
                 LIMIT 1
             ");
-            $stmt->execute([$service_id]);
+            $stmt->execute();
+            $result = $stmt->get_result();
             
-            if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if ($row = $result->fetch_assoc()) {
                 return $row['station_id'];
             }
             
@@ -1224,7 +1259,8 @@ class QueueManagementService {
             ");
             
             $stmt->execute();
-            $affected_rows = $stmt->rowCount();
+            $affected_rows = $stmt->affected_rows;
+            $stmt->close();
             
             return [
                 'success' => true,
@@ -1290,8 +1326,9 @@ class QueueManagementService {
             ORDER BY start_date DESC, schedule_id DESC
             LIMIT 1
         ");
-        $stmt->execute([$station_id, $before_date]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
     }
     
     /**
@@ -1310,10 +1347,11 @@ class QueueManagementService {
                 FROM assignment_schedules 
                 WHERE start_date = ? AND is_active = 1
             ");
-            $stmt->execute([$source_date]);
+            $stmt->execute();
+            $result = $stmt->get_result();
             
             $copied_count = 0;
-            while ($assignment = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            while ($assignment = $result->fetch_assoc()) {
                 // Insert into target date
                 $insert_stmt = $this->conn->prepare("
                     INSERT INTO assignment_schedules 
@@ -1339,7 +1377,7 @@ class QueueManagementService {
             return $copied_count > 0;
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return false;
         }
     }
@@ -1356,7 +1394,8 @@ class QueueManagementService {
                 AND start_date <= ?
                 AND (end_date IS NULL OR end_date >= ?)
             ");
-            return $stmt->execute([$target_date, $target_date]);
+            $stmt->bind_param("ss", $target_date, $target_date);
+            return $stmt->execute();
         } catch (Exception $e) {
             return false;
         }
@@ -1380,8 +1419,8 @@ class QueueManagementService {
             ORDER BY asch.start_date DESC, asch.created_at DESC
             LIMIT ?
         ");
-        $stmt->execute([$station_id, $limit]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
     
     /**
@@ -1401,8 +1440,8 @@ class QueueManagementService {
             ORDER BY asch.start_date DESC, asch.created_at DESC
             LIMIT ?
         ");
-        $stmt->execute([$employee_id, $limit]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
     
     /**
@@ -1444,8 +1483,9 @@ class QueueManagementService {
         ");
         
         $check_end = $end_date ?: $start_date;
-        $employee_conflict->execute([$employee_id, $station_id, $check_end, $start_date]);
-        $employee_conflicts = $employee_conflict->fetchAll(PDO::FETCH_ASSOC);
+        $employee_conflict->bind_param("iiss", $employee_id, $station_id, $check_end, $start_date);
+        $employee_conflict->execute();
+        $employee_conflicts = $employee_conflict->get_result()->fetch_all(MYSQLI_ASSOC);
         
         // Check station conflicts (station assigned to multiple employees)
         $station_conflict = $this->conn->prepare("
@@ -1463,8 +1503,9 @@ class QueueManagementService {
             AND (asch.end_date IS NULL OR asch.end_date >= ?)
         ");
         
-        $station_conflict->execute([$station_id, $employee_id, $check_end, $start_date]);
-        $station_conflicts = $station_conflict->fetchAll(PDO::FETCH_ASSOC);
+        $station_conflict->bind_param("iiss", $station_id, $employee_id, $check_end, $start_date);
+        $station_conflict->execute();
+        $station_conflicts = $station_conflict->get_result()->fetch_all(MYSQLI_ASSOC);
         
         return [
             'has_conflicts' => !empty($employee_conflicts) || !empty($station_conflicts),
@@ -1506,7 +1547,7 @@ class QueueManagementService {
             $current_assignment = $current_stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$current_assignment) {
-                $this->conn->rollback();
+                $this->conn->rollBack();
                 return [
                     'success' => false, 
                     'error' => 'No active assignment found for this station on the specified date'
@@ -1518,7 +1559,7 @@ class QueueManagementService {
             
             // Validate removal date
             if ($removal_date < $current_assignment['start_date']) {
-                $this->conn->rollback();
+                $this->conn->rollBack();
                 return [
                     'success' => false,
                     'error' => "Cannot remove assignment before it started ({$current_assignment['start_date']})"
@@ -1533,7 +1574,7 @@ class QueueManagementService {
                         assigned_at = NOW()
                     WHERE schedule_id = ?
                 ");
-                $update_stmt->execute([$current_assignment['schedule_id']]);
+                $result = $update_stmt->execute([$current_assignment['schedule_id']]);
                 
                 $message = "Assignment deactivated successfully. {$employee_name} has been temporarily removed from {$station_name}. The assignment record is preserved and can be reactivated later.";
                 
@@ -1552,7 +1593,7 @@ class QueueManagementService {
                         assigned_at = NOW()
                     WHERE schedule_id = ?
                 ");
-                $update_stmt->execute([$end_date, $current_assignment['schedule_id']]);
+                $result = $update_stmt->execute([$end_date, $current_assignment['schedule_id']]);
                 
                 $message = "Assignment ended successfully. {$employee_name}'s assignment to {$station_name} has been ended as of {$end_date}.";
             }
@@ -1560,7 +1601,7 @@ class QueueManagementService {
             $affected_rows = $update_stmt->rowCount();
             
             if ($affected_rows === 0) {
-                $this->conn->rollback();
+                $this->conn->rollBack();
                 return [
                     'success' => false,
                     'error' => 'Failed to update assignment record'
@@ -1581,20 +1622,18 @@ class QueueManagementService {
                     ? 'Assignment temporarily deactivated'
                     : "Assignment ended on {$removal_date}";
                 
+                $log_stmt->bind_param("iiiisis", 
+                    $current_assignment['schedule_id'],
+                    $current_assignment['employee_id'],
+                    $station_id,
+                    $action_type,
+                    $removal_date,
+                    $performed_by,
+                    $notes
+                );
+                
                 // Don't fail if logging fails
-                try {
-                    $log_stmt->execute([
-                        $current_assignment['schedule_id'],
-                        $current_assignment['employee_id'],
-                        $station_id,
-                        $action_type,
-                        $removal_date,
-                        $performed_by,
-                        $notes
-                    ]);
-                } catch (Exception $e) {
-                    // Ignore logging errors
-                }
+                @$log_stmt->execute();
             }
             
             $this->conn->commit();
@@ -1612,7 +1651,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             return [
                 'success' => false, 
                 'error' => 'Database error: ' . $e->getMessage()
@@ -1653,8 +1692,9 @@ class QueueManagementService {
                 JOIN patients p ON a.patient_id = p.patient_id
                 WHERE a.appointment_id = ? AND a.status NOT IN ('cancelled', 'completed')
             ");
-            $stmt->execute([$appointment_id]);
-            $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute();
+            $stmt->execute(); appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->close();
             
             if (!$appointment) {
                 throw new Exception("Appointment not found or already cancelled/completed");
@@ -1782,7 +1822,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             error_log("Check-in failed: " . $e->getMessage());
             return [
                 'success' => false,
@@ -1863,7 +1903,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             error_log("Patient flag failed: " . $e->getMessage());
             return [
                 'success' => false,
@@ -1961,7 +2001,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             error_log("Appointment cancellation failed: " . $e->getMessage());
             return [
                 'success' => false,
@@ -2235,7 +2275,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             error_log("Patient routing failed: " . $e->getMessage());
             return [
                 'success' => false,
@@ -2342,7 +2382,7 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            $this->conn->rollBack();
             error_log("Visit completion failed: " . $e->getMessage());
             return [
                 'success' => false,
@@ -2442,3 +2482,5 @@ class QueueManagementService {
 }
 
 ?>
+
+

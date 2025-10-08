@@ -133,7 +133,7 @@ $nav_base = $base_path . 'pages/';
         </a>
         <a href="<?= $nav_base ?>management/admin/staff-management/staff_assignments.php"
             class="<?= $activePage === 'staff_assignments' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-user-tie"></i> Staff Assignment
+            <i class="fa-solid fa-person-booth"></i> Station Assignment
         </a>
         <!-- These links are placeholders for pages not yet created -->
         <a href="#"

@@ -4,10 +4,10 @@
  * CHO Koronadal Healthcare Management System
  */
 
-// Include configuration (use mock for frontend development)
+// Include configuration
 $root_path = dirname(dirname(dirname(__DIR__)));
+require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/mock/mock_config.php';
-require_once $root_path . '/mock/mock_session.php';
 
 // Check if user is logged in
 if (!is_employee_logged_in()) {

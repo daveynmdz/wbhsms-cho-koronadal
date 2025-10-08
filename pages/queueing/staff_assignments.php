@@ -22,7 +22,7 @@ require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
 
 // Initialize queue management service
-$queueService = new QueueManagementService($conn);
+$queueService = new QueueManagementService($pdo);
 
 $date = $_GET['date'] ?? date('Y-m-d');
 $message = '';
