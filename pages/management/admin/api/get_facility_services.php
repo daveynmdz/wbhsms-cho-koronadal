@@ -5,7 +5,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 // Include database connection
 // Use absolute path resolution
-$root_path = dirname(dirname(dirname(__DIR__)));
+$root_path = dirname(dirname(dirname(dirname(__DIR__))));
 require_once $root_path . '/config/db.php';
 
 // Check if facility_id is provided

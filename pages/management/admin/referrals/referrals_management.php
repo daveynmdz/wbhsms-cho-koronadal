@@ -5,7 +5,7 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 // Include employee session configuration - Use absolute path resolution
-$root_path = dirname(dirname(dirname(__DIR__)));
+$root_path = dirname(dirname(dirname(dirname(__DIR__))));
 require_once $root_path . '/config/session/employee_session.php';
 
 // If user is not logged in, bounce to login

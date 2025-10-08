@@ -18,7 +18,8 @@ if (!in_array($_SESSION['role'], $authorized_roles)) {
     exit();
 }
 
-require_once '../../../config/db.php';
+$root_path = dirname(dirname(dirname(dirname(__DIR__))));
+require_once $root_path . '/config/db.php';
 
 $patient_id = $_GET['patient_id'] ?? '';
 if (empty($patient_id) || !is_numeric($patient_id)) {

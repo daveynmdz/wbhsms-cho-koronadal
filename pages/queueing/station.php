@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_queue && $selected_stat
                 }
                 break;
                 
-            case 'complete_service':
+                            case 'complete_service':
                 $queue_entry_id = intval($_POST['queue_entry_id']);
                 $remarks = $_POST['remarks'] ?? 'Service completed';
                 $result = $queueService->updateQueueStatus($queue_entry_id, 'done', 'in_progress', $employee_id, $remarks);
@@ -162,7 +162,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $can_manage_queue && $selected_stat
                 }
                 break;
                 
-            case 'skip_patient':
+            case 'route_to_lab':
+                $queue_entry_id = intval($_POST['queue_entry_id']);
+                $remarks = $_POST['remarks'] ?? 'Referred to laboratory for tests';
+                $result = $queueService->routePatientToStation($queue_entry_id, 'lab', $employee_id, $remarks);
+                if ($result['success']) {
+                    $message = "Patient successfully routed to Laboratory.";
+                } else {
+                    $error = $result['error'];
+                }
+                break;
+                
+            case 'route_to_pharmacy':
+                $queue_entry_id = intval($_POST['queue_entry_id']);
+                $remarks = $_POST['remarks'] ?? 'Prescription provided - proceed to pharmacy';
+                $result = $queueService->routePatientToStation($queue_entry_id, 'pharmacy', $employee_id, $remarks);
+                if ($result['success']) {
+                    $message = "Patient successfully routed to Pharmacy.";
+                } else {
+                    $error = $result['error'];
+                }
+                break;
+                
+            case 'complete_visit':
+                $queue_entry_id = intval($_POST['queue_entry_id']);
+                $remarks = $_POST['remarks'] ?? 'Visit completed - no further treatment needed';
+                $result = $queueService->completePatientVisit($queue_entry_id, $employee_id, $remarks);
+                if ($result['success']) {
+                    $message = "Patient visit completed successfully.";
+                } else {
+                    $error = $result['error'];
+                }
+                break;
+                
+            case 'return_to_doctor':
+                $queue_entry_id = intval($_POST['queue_entry_id']);
+                $remarks = $_POST['remarks'] ?? 'Tests completed - returning to doctor for consultation';
+                $result = $queueService->routePatientToStation($queue_entry_id, 'consultation', $employee_id, $remarks);
+                if ($result['success']) {
+                    $message = "Patient successfully returned to Doctor.";
+                } else {
+                    $error = $result['error'];
+                }
+                break;            case 'skip_patient':
                 $queue_entry_id = intval($_POST['queue_entry_id']);
                 $remarks = $_POST['remarks'] ?? 'Patient skipped';
                 $result = $queueService->updateQueueStatus($queue_entry_id, 'skipped', 'waiting', $employee_id, $remarks);
@@ -978,10 +1020,43 @@ $activePage = 'queue_station';
                                                     </td>
                                                     <td>
                                                         <?php if ($can_manage_queue): ?>
-                                                            <button type="button" class="action-btn btn-success" 
-                                                                    onclick="completeService(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
-                                                                <i class="fas fa-check"></i> Complete
-                                                            </button>
+                                                            <?php if ($assigned_employee_info['station_type'] === 'consultation'): ?>
+                                                                <!-- Doctor/Consultation Station - Routing Options -->
+                                                                <button type="button" class="action-btn btn-info" 
+                                                                        onclick="routeToLab(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
+                                                                    <i class="fas fa-microscope"></i> Lab
+                                                                </button>
+                                                                <button type="button" class="action-btn btn-warning" 
+                                                                        onclick="routeToPharmacy(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
+                                                                    <i class="fas fa-pills"></i> Pharmacy
+                                                                </button>
+                                                                <button type="button" class="action-btn btn-success" 
+                                                                        onclick="completeVisit(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
+                                                                    <i class="fas fa-check-circle"></i> Complete Visit
+                                                                </button>
+                                                            <?php elseif ($assigned_employee_info['station_type'] === 'lab'): ?>
+                                                                <!-- Laboratory Station - Return to Doctor or Complete -->
+                                                                <button type="button" class="action-btn btn-primary" 
+                                                                        onclick="returnToDoctor(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
+                                                                    <i class="fas fa-user-md"></i> Return to Doctor
+                                                                </button>
+                                                                <button type="button" class="action-btn btn-success" 
+                                                                        onclick="completeVisit(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
+                                                                    <i class="fas fa-check-circle"></i> Complete Visit
+                                                                </button>
+                                                            <?php elseif ($assigned_employee_info['station_type'] === 'pharmacy'): ?>
+                                                                <!-- Pharmacy Station - Complete Visit Only -->
+                                                                <button type="button" class="action-btn btn-success" 
+                                                                        onclick="completeVisit(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
+                                                                    <i class="fas fa-check-circle"></i> Complete Visit
+                                                                </button>
+                                                            <?php else: ?>
+                                                                <!-- Other Stations - Standard Complete -->
+                                                                <button type="button" class="action-btn btn-success" 
+                                                                        onclick="completeService(<?php echo $patient['queue_entry_id']; ?>, '<?php echo htmlspecialchars($patient['patient_name'], ENT_QUOTES); ?>')">
+                                                                    <i class="fas fa-check"></i> Complete
+                                                                </button>
+                                                            <?php endif; ?>
                                                         <?php else: ?>
                                                             <span class="text-muted"><i class="fas fa-eye"></i> View Only</span>
                                                         <?php endif; ?>
@@ -1220,6 +1295,74 @@ $activePage = 'queue_station';
                 `;
                 document.body.appendChild(form);
                 form.submit();
+            }
+        }
+
+        function routeToLab(queueEntryId, patientName) {
+            const remarks = prompt(`Route ${patientName} to Laboratory.\n\nTests needed/reason:`, '');
+            if (remarks !== null && remarks.trim() !== '') {
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="route_to_lab">
+                    <input type="hidden" name="queue_entry_id" value="${queueEntryId}">
+                    <input type="hidden" name="remarks" value="${remarks}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            } else if (remarks !== null) {
+                alert('Please specify the tests needed or reason for laboratory referral.');
+            }
+        }
+
+        function routeToPharmacy(queueEntryId, patientName) {
+            const remarks = prompt(`Route ${patientName} to Pharmacy.\n\nPrescription details:`, '');
+            if (remarks !== null && remarks.trim() !== '') {
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="route_to_pharmacy">
+                    <input type="hidden" name="queue_entry_id" value="${queueEntryId}">
+                    <input type="hidden" name="remarks" value="${remarks}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            } else if (remarks !== null) {
+                alert('Please provide prescription details for pharmacy.');
+            }
+        }
+
+        function completeVisit(queueEntryId, patientName) {
+            const remarks = prompt(`Complete visit for ${patientName}.\n\nFinal notes (optional):`, '');
+            if (remarks !== null) {
+                if (confirm(`Are you sure you want to complete the entire visit for ${patientName}?\n\nThis will mark their appointment as finished.`)) {
+                    const form = document.createElement('form');
+                    form.method = 'post';
+                    form.innerHTML = `
+                        <input type="hidden" name="action" value="complete_visit">
+                        <input type="hidden" name="queue_entry_id" value="${queueEntryId}">
+                        <input type="hidden" name="remarks" value="${remarks}">
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            }
+        }
+
+        function returnToDoctor(queueEntryId, patientName) {
+            const remarks = prompt(`Return ${patientName} to Doctor.\n\nLab results/notes:`, '');
+            if (remarks !== null && remarks.trim() !== '') {
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="return_to_doctor">
+                    <input type="hidden" name="queue_entry_id" value="${queueEntryId}">
+                    <input type="hidden" name="remarks" value="${remarks}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            } else if (remarks !== null) {
+                alert('Please provide lab results or notes for the doctor.');
             }
         }
 

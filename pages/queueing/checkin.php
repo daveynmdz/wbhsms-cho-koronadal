@@ -189,10 +189,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Validate employee station assignment for check-in
                     $employee_id = $_SESSION['employee_id'] ?? $_SESSION['user_id'];
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM assignment_schedules 
-                                          WHERE employee_id = ? AND station_type = 'checkin' 
-                                          AND DATE(?) BETWEEN start_date AND end_date");
-                    $stmt->execute([$employee_id, $today]);
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM assignment_schedules a
+                                          JOIN stations s ON a.station_id = s.station_id
+                                          WHERE a.employee_id = ? AND s.station_type = 'checkin' 
+                                          AND a.is_active = 1
+                                          AND DATE(?) BETWEEN a.start_date AND COALESCE(a.end_date, DATE(?))");
+                    $stmt->execute([$employee_id, $today, $today]);
                     $is_assigned = $stmt->fetchColumn() > 0;
                     
                     if (!$is_assigned && $user_role !== 'admin') {
@@ -205,22 +207,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                           ON DUPLICATE KEY UPDATE time_in = NOW()");
                     $stmt->execute([$patient_id, $appointment_id]);
                     
-                    // Get patient details for queue priority
-                    $stmt = $pdo->prepare("SELECT isSenior, isPWD FROM patients WHERE patient_id = ?");
-                    $stmt->execute([$patient_id]);
-                    $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+                    // Get patient details for queue priority and service info
+                    $stmt = $pdo->prepare("SELECT p.isSenior, p.isPWD, a.service_id FROM patients p 
+                                          JOIN appointments a ON p.patient_id = a.patient_id 
+                                          WHERE p.patient_id = ? AND a.appointment_id = ?");
+                    $stmt->execute([$patient_id, $appointment_id]);
+                    $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
                     
-                    $priority = ($patient['isSenior'] || $patient['isPWD']) ? 'priority' : 'normal';
+                    $priority_level = ($patient_data['isSenior'] || $patient_data['isPWD']) ? 'priority' : 'normal';
+                    $service_id = $patient_data['service_id'] ?? 1; // Default to service ID 1 if not specified
                     
-                    // Generate queue code (format: 08A-001)
+                    // Generate queue code (format: 07A-001)
                     $queue_prefix = date('d') . 'A';
                     $stmt = $pdo->prepare("SELECT COUNT(*) + 1 FROM queue_entries WHERE DATE(created_at) = CURDATE()");
                     $stmt->execute();
-                    $queue_number = str_pad($stmt->fetchColumn(), 3, '0', STR_PAD_LEFT);
-                    $queue_code = $queue_prefix . '-' . $queue_number;
+                    $queue_number = $stmt->fetchColumn();
+                    $queue_code = $queue_prefix . '-' . str_pad($queue_number, 3, '0', STR_PAD_LEFT);
                     
                     // Find first open triage station
-                    $stmt = $pdo->prepare("SELECT station_id FROM stations WHERE station_type = 'triage' AND is_open = 1 LIMIT 1");
+                    $stmt = $pdo->prepare("SELECT station_id FROM stations WHERE station_type = 'triage' AND is_active = 1 AND is_open = 1 LIMIT 1");
                     $stmt->execute();
                     $station_id = $stmt->fetchColumn();
                     
@@ -228,17 +233,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception("No open triage stations available.");
                     }
                     
+                    // Get the visit ID from the visits table
+                    $stmt = $pdo->prepare("SELECT visit_id FROM visits WHERE patient_id = ? AND appointment_id = ? ORDER BY visit_date DESC, time_in DESC LIMIT 1");
+                    $stmt->execute([$patient_id, $appointment_id]);
+                    $visit_id = $stmt->fetchColumn();
+                    
+                    if (!$visit_id) {
+                        throw new Exception("Visit record not found. Please try again.");
+                    }
+                    
                     // Insert queue entry
-                    $stmt = $pdo->prepare("INSERT INTO queue_entries (patient_id, station_id, queue_code, status, priority, appointment_id, created_at) 
-                                          VALUES (?, ?, ?, 'waiting', ?, ?, NOW())");
-                    $stmt->execute([$patient_id, $station_id, $queue_code, $priority, $appointment_id]);
+                    $stmt = $pdo->prepare("INSERT INTO queue_entries (visit_id, appointment_id, patient_id, service_id, queue_type, station_id, queue_number, queue_code, priority_level, status, time_in) 
+                                          VALUES (?, ?, ?, ?, 'triage', ?, ?, ?, ?, 'waiting', NOW())");
+                    $stmt->execute([$visit_id, $appointment_id, $patient_id, $service_id, $station_id, $queue_number, $queue_code, $priority_level]);
                     
                     // Update appointment status
                     $stmt = $pdo->prepare("UPDATE appointments SET status = 'checked_in' WHERE appointment_id = ?");
                     $stmt->execute([$appointment_id]);
                     
                     $pdo->commit();
-                    $message = "Patient successfully checked in and added to Triage queue ($queue_code).";
+                    $message = "Patient successfully checked in and added to Triage queue with code: <strong>$queue_code</strong>. Priority: " . ucfirst($priority_level) . ".";
                     
                 } catch (Exception $e) {
                     $pdo->rollback();

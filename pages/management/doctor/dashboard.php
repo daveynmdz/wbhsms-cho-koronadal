@@ -50,7 +50,7 @@ $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
 // Enforce staff assignment for today
-$assignment = getStaffAssignment($conn, $employee_id);
+$assignment = getStaffAssignment($employee_id);
 if (!$assignment) {
     // Not assigned today, block access
     error_log('Doctor Dashboard: No active staff assignment for today.');

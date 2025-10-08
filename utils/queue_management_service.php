@@ -2152,6 +2152,370 @@ class QueueManagementService {
             ];
         }
     }
+
+    // ============================================
+    // PATIENT ROUTING METHODS FOR HEALTHCARE WORKFLOW
+    // ============================================
+
+    /**
+     * Route patient to a different station (Lab, Pharmacy, etc.)
+     * Creates a new queue entry at the target station type
+     * 
+     * @param int $queue_entry_id Current queue entry ID
+     * @param string $target_station_type Target station type (lab, pharmacy, consultation)
+     * @param int $employee_id Employee performing the routing
+     * @param string $remarks Routing notes/reason
+     * @return array Result with success status
+     */
+    public function routePatientToStation($queue_entry_id, $target_station_type, $employee_id, $remarks = '') {
+        try {
+            $this->conn->begin_transaction();
+            
+            // 1. Get current queue entry details
+            $current_stmt = $this->conn->prepare("
+                SELECT 
+                    qe.visit_id,
+                    qe.appointment_id,
+                    qe.patient_id,
+                    qe.service_id,
+                    qe.status,
+                    qe.queue_code,
+                    s.station_type as current_station_type,
+                    s.station_name as current_station_name,
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name
+                FROM queue_entries qe
+                JOIN stations s ON qe.station_id = s.station_id
+                JOIN patients p ON qe.patient_id = p.patient_id
+                WHERE qe.queue_entry_id = ?
+            ");
+            $current_stmt->bind_param("i", $queue_entry_id);
+            $current_stmt->execute();
+            $current_result = $current_stmt->get_result();
+            $current_entry = $current_result->fetch_assoc();
+            $current_stmt->close();
+            
+            if (!$current_entry) {
+                throw new Exception("Queue entry not found");
+            }
+            
+            if ($current_entry['status'] !== 'in_progress') {
+                throw new Exception("Can only route patients who are currently in progress");
+            }
+            
+            // 2. Find available station of target type
+            $target_stmt = $this->conn->prepare("
+                SELECT 
+                    s.station_id,
+                    s.station_name,
+                    COUNT(qe.queue_entry_id) as waiting_count
+                FROM stations s
+                LEFT JOIN queue_entries qe ON s.station_id = qe.station_id 
+                    AND qe.status = 'waiting' 
+                    AND DATE(qe.created_at) = CURDATE()
+                WHERE s.station_type = ? 
+                AND s.is_active = 1 
+                AND s.is_open = 1
+                GROUP BY s.station_id
+                ORDER BY waiting_count ASC, s.station_number ASC
+                LIMIT 1
+            ");
+            $target_stmt->bind_param("s", $target_station_type);
+            $target_stmt->execute();
+            $target_result = $target_stmt->get_result();
+            $target_station = $target_result->fetch_assoc();
+            $target_stmt->close();
+            
+            if (!$target_station) {
+                throw new Exception("No open {$target_station_type} stations available");
+            }
+            
+            // 3. Complete current queue entry
+            $complete_stmt = $this->conn->prepare("
+                UPDATE queue_entries 
+                SET status = 'done',
+                    time_completed = NOW(),
+                    turnaround_time = TIMESTAMPDIFF(MINUTE, time_in, NOW()),
+                    remarks = ?
+                WHERE queue_entry_id = ?
+            ");
+            $routing_remarks = "Referred to {$target_station_type}: " . $remarks;
+            $complete_stmt->bind_param("si", $routing_remarks, $queue_entry_id);
+            
+            if (!$complete_stmt->execute()) {
+                throw new Exception("Failed to complete current queue entry");
+            }
+            $complete_stmt->close();
+            
+            // 4. Generate new queue number for target station
+            $queue_num_stmt = $this->conn->prepare("
+                SELECT COUNT(*) + 1 as next_number
+                FROM queue_entries 
+                WHERE station_id = ? AND DATE(created_at) = CURDATE()
+            ");
+            $queue_num_stmt->bind_param("i", $target_station['station_id']);
+            $queue_num_stmt->execute();
+            $queue_num_result = $queue_num_stmt->get_result();
+            $queue_num_data = $queue_num_result->fetch_assoc();
+            $new_queue_number = $queue_num_data['next_number'];
+            $queue_num_stmt->close();
+            
+            // 5. Create new queue entry at target station
+            $new_queue_stmt = $this->conn->prepare("
+                INSERT INTO queue_entries (
+                    visit_id, appointment_id, patient_id, service_id, station_id,
+                    queue_type, queue_number, queue_code, priority_level, status,
+                    time_in, remarks, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'normal', 'waiting', NOW(), ?, NOW(), NOW())
+            ");
+            
+            $new_queue_code = strtoupper(substr($target_station_type, 0, 3)) . '-' . str_pad($new_queue_number, 3, '0', STR_PAD_LEFT);
+            $new_remarks = "Referred from {$current_entry['current_station_name']}: " . $remarks;
+            
+            $new_queue_stmt->bind_param("iiiiisisss",
+                $current_entry['visit_id'],
+                $current_entry['appointment_id'],
+                $current_entry['patient_id'],
+                $current_entry['service_id'],
+                $target_station['station_id'],
+                $target_station_type,
+                $new_queue_number,
+                $new_queue_code,
+                $new_remarks
+            );
+            
+            if (!$new_queue_stmt->execute()) {
+                throw new Exception("Failed to create new queue entry");
+            }
+            
+            $new_queue_entry_id = $this->conn->insert_id;
+            $new_queue_stmt->close();
+            
+            // 6. Log both actions
+            $this->logQueueAction($queue_entry_id, 'completed', 'in_progress', 'done', 
+                "Patient routed to {$target_station_type}", $employee_id);
+            
+            $this->logQueueAction($new_queue_entry_id, 'created', null, 'waiting', 
+                "Patient routed from {$current_entry['current_station_type']} - {$remarks}", $employee_id);
+            
+            $this->conn->commit();
+            
+            return [
+                'success' => true,
+                'message' => "Patient successfully routed to {$target_station['station_name']}",
+                'data' => [
+                    'patient_name' => $current_entry['patient_name'],
+                    'from_station' => $current_entry['current_station_name'],
+                    'to_station' => $target_station['station_name'],
+                    'new_queue_code' => $new_queue_code,
+                    'new_queue_entry_id' => $new_queue_entry_id
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log("Patient routing failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Complete patient visit - marks all queue entries as done and visit as completed
+     * 
+     * @param int $queue_entry_id Current queue entry ID
+     * @param int $employee_id Employee completing the visit
+     * @param string $remarks Completion notes
+     * @return array Result with success status
+     */
+    public function completePatientVisit($queue_entry_id, $employee_id, $remarks = '') {
+        try {
+            $this->conn->begin_transaction();
+            
+            // 1. Get queue entry and visit details
+            $entry_stmt = $this->conn->prepare("
+                SELECT 
+                    qe.visit_id,
+                    qe.appointment_id,
+                    qe.patient_id,
+                    qe.status,
+                    v.visit_status,
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name
+                FROM queue_entries qe
+                JOIN visits v ON qe.visit_id = v.visit_id
+                JOIN patients p ON qe.patient_id = p.patient_id
+                WHERE qe.queue_entry_id = ?
+            ");
+            $entry_stmt->bind_param("i", $queue_entry_id);
+            $entry_stmt->execute();
+            $entry_result = $entry_stmt->get_result();
+            $entry_data = $entry_result->fetch_assoc();
+            $entry_stmt->close();
+            
+            if (!$entry_data) {
+                throw new Exception("Queue entry not found");
+            }
+            
+            // 2. Complete current queue entry
+            $complete_stmt = $this->conn->prepare("
+                UPDATE queue_entries 
+                SET status = 'done',
+                    time_completed = NOW(),
+                    turnaround_time = TIMESTAMPDIFF(MINUTE, time_in, NOW()),
+                    remarks = ?
+                WHERE queue_entry_id = ?
+            ");
+            $final_remarks = "Visit completed: " . $remarks;
+            $complete_stmt->bind_param("si", $final_remarks, $queue_entry_id);
+            
+            if (!$complete_stmt->execute()) {
+                throw new Exception("Failed to complete queue entry");
+            }
+            $complete_stmt->close();
+            
+            // 3. Mark visit as completed
+            $visit_stmt = $this->conn->prepare("
+                UPDATE visits 
+                SET visit_status = 'completed',
+                    time_out = NOW(),
+                    attending_employee_id = ?,
+                    remarks = ?,
+                    updated_at = NOW()
+                WHERE visit_id = ?
+            ");
+            $visit_stmt->bind_param("isi", $employee_id, $final_remarks, $entry_data['visit_id']);
+            
+            if (!$visit_stmt->execute()) {
+                throw new Exception("Failed to complete visit");
+            }
+            $visit_stmt->close();
+            
+            // 4. Mark appointment as completed
+            $appt_stmt = $this->conn->prepare("
+                UPDATE appointments 
+                SET status = 'completed',
+                    updated_at = NOW()
+                WHERE appointment_id = ?
+            ");
+            $appt_stmt->bind_param("i", $entry_data['appointment_id']);
+            $appt_stmt->execute();
+            $appt_stmt->close();
+            
+            // 5. Log the completion
+            $this->logQueueAction($queue_entry_id, 'completed', 'in_progress', 'done', 
+                "Visit completed - no further treatment needed: " . $remarks, $employee_id);
+            
+            $this->conn->commit();
+            
+            return [
+                'success' => true,
+                'message' => "Patient visit completed successfully",
+                'data' => [
+                    'patient_name' => $entry_data['patient_name'],
+                    'visit_id' => $entry_data['visit_id'],
+                    'appointment_id' => $entry_data['appointment_id']
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            error_log("Visit completion failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Get patient's current queue status and routing history
+     * 
+     * @param int $patient_id Patient ID
+     * @param int|null $visit_id Optional specific visit ID
+     * @return array Current queue information and routing history
+     */
+    public function getPatientQueueStatus($patient_id, $visit_id = null) {
+        try {
+            // Get current active queue entries
+            $current_stmt = $this->conn->prepare("
+                SELECT 
+                    qe.queue_entry_id,
+                    qe.queue_code,
+                    qe.status,
+                    qe.priority_level,
+                    qe.time_in,
+                    qe.time_started,
+                    s.station_name,
+                    s.station_type,
+                    v.visit_status
+                FROM queue_entries qe
+                JOIN stations s ON qe.station_id = s.station_id
+                JOIN visits v ON qe.visit_id = v.visit_id
+                WHERE qe.patient_id = ? 
+                " . ($visit_id ? "AND qe.visit_id = ?" : "") . "
+                AND qe.status IN ('waiting', 'in_progress')
+                AND DATE(qe.created_at) = CURDATE()
+                ORDER BY qe.created_at DESC
+            ");
+            
+            if ($visit_id) {
+                $current_stmt->bind_param("ii", $patient_id, $visit_id);
+            } else {
+                $current_stmt->bind_param("i", $patient_id);
+            }
+            
+            $current_stmt->execute();
+            $current_result = $current_stmt->get_result();
+            $current_queues = $current_result->fetch_all(MYSQLI_ASSOC);
+            $current_stmt->close();
+            
+            // Get routing history for today
+            $history_stmt = $this->conn->prepare("
+                SELECT 
+                    qe.queue_code,
+                    qe.status,
+                    qe.time_in,
+                    qe.time_started,
+                    qe.time_completed,
+                    qe.remarks,
+                    s.station_name,
+                    s.station_type
+                FROM queue_entries qe
+                JOIN stations s ON qe.station_id = s.station_id
+                WHERE qe.patient_id = ?
+                " . ($visit_id ? "AND qe.visit_id = ?" : "") . "
+                AND DATE(qe.created_at) = CURDATE()
+                ORDER BY qe.created_at ASC
+            ");
+            
+            if ($visit_id) {
+                $history_stmt->bind_param("ii", $patient_id, $visit_id);
+            } else {
+                $history_stmt->bind_param("i", $patient_id);
+            }
+            
+            $history_stmt->execute();
+            $history_result = $history_stmt->get_result();
+            $routing_history = $history_result->fetch_all(MYSQLI_ASSOC);
+            $history_stmt->close();
+            
+            return [
+                'success' => true,
+                'data' => [
+                    'current_queues' => $current_queues,
+                    'routing_history' => $routing_history
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Get patient queue status failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
 }
 
 ?>
