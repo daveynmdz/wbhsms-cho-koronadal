@@ -13,6 +13,20 @@ This is a **dual-session PHP healthcare management system** with separate patien
 ├── pages/
 │   ├── patient/            # Patient portal (separate session namespace)
 │   └── management/         # Employee portal with role-based dashboards
+│       └── admin/          # Admin-specific pages
+│           ├── dashboard.php
+│           ├── patient-records/
+│           │   └── patient_records_management.php
+│           ├── referrals/
+│           │   └── referrals_management.php
+│           ├── appointments/
+│           │   └── appointments_management.php
+│           ├── user-management/
+│           │   ├── employee_list.php
+│           │   ├── add_employee.php
+│           │   └── edit_employee.php
+│           └── staff-management/
+│               └── staff_assignments.php
 ├── api/                    # REST endpoints + OOP controllers
 ├── utils/                  # Service classes (QueueManagementService)
 ├── includes/               # Role-based sidebars + topbar components
@@ -138,10 +152,56 @@ http://localhost/project/scripts/setup/setup_debug.php
 - **Audit logging**: All actions tracked in `queue_logs`/`appointment_logs`
 - **Future enhancement**: JWT tokens for external integrations
 
-### UI Component Integration
-- **Sidebar inclusion**: Pass `$activePage`, `$employee_id`, `$defaults` array
-- **Topbar usage**: Call `renderTopbar(['title' => 'Page Title', 'back_url' => '...', 'user_type' => 'employee'])` 
-- **CSS assets**: Organized in `assets/css/` with component-specific stylesheets
+### UI Component Integration & Standardized Patterns
+
+#### **CRITICAL: UI Pattern Guidelines (MANDATORY)**
+- **Viewing/List Pages**: Use **SIDEBAR ONLY** - no topbar (except mobile topbar for responsive design)
+  - Pattern: `patient_records_management.php`, `referrals_management.php`, `employee_list.php`
+  - Include: `sidebar_admin.php` or appropriate role sidebar
+  - Layout: `<div class="homepage">` with sidebar navigation
+  - Actions: Modal popups for quick actions (status updates, filters)
+  - **IMPORTANT**: Keep mobile topbar elements in sidebar.css for responsive mobile navigation
+
+- **Create/Edit/Form Pages**: Use **TOPBAR ONLY** - no sidebar  
+  - Pattern: `create_referrals.php`, `add_employee.php`, `edit_employee.php`
+  - Include: `topbar.php` with back button functionality
+  - Layout: `<section class="homepage">` with topbar navigation
+  - CSS: `topbar.css`, `profile-edit.css`, `edit.css`
+
+#### **CSS Framework Standards (NO BOOTSTRAP)**
+- **FORBIDDEN**: Bootstrap, external CSS frameworks
+- **Required**: Use existing custom CSS only
+  - `sidebar.css` - for sidebar-based pages
+  - `topbar.css` - for topbar-based pages  
+  - `dashboard.css` - for dashboard layouts
+  - `profile-edit.css` - for form layouts
+  - `edit.css` - for edit-specific styling
+
+#### **Alert/Notification Standards (NO JAVASCRIPT ALERTS)**
+- **FORBIDDEN**: `alert()`, `confirm()`, localhost popups
+- **Required**: Use custom alert divs with proper styling
+```php
+<div class="alert alert-success">
+    <i class="fas fa-check-circle"></i> Message content
+    <button type="button" class="btn-close" onclick="this.parentElement.remove();">&times;</button>
+</div>
+```
+- Auto-dismiss after 5-8 seconds with fade animation
+- Use existing modal system for confirmations
+
+#### **Component Integration**
+- **Sidebar inclusion**: Pass `$activePage`, include appropriate role sidebar using `<?php include 'path/to/sidebar_admin.php'; ?>`
+- **Path Resolution**: Sidebar uses script depth detection for robust path calculation - no need for manual relative paths
+- **Active Page Values**: Use correct values for sidebar highlighting:
+  - `'dashboard'` - Dashboard page
+  - `'patient_records'` - Patient Records Management
+  - `'referrals'` - Referrals Management  
+  - `'appointments'` - Appointments Management
+  - `'user_management'` - Employee Management
+  - `'staff_assignments'` - Staff Assignment
+- **Topbar usage**: `renderTopbar(['title' => 'Page Title', 'back_url' => '...', 'user_type' => 'employee'])`
+- **Back button**: Always provide clear navigation path in topbar pages
+- **Mobile Support**: Never remove mobile topbar elements from sidebar.css - required for responsive navigation
 
 ## Deployment & Production Patterns
 

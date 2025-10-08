@@ -6,6 +6,9 @@
 $root_path = dirname(dirname(dirname(dirname(__DIR__))));
 require_once $root_path . '/config/session/employee_session.php';
 
+// Set active page for sidebar highlighting
+$activePage = 'staff_assignments';
+
 // If user is not logged in, bounce to login
 if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
     header('Location: ../auth/employee_login.php');
@@ -72,7 +75,8 @@ if (isset($_GET['unassign'])) {
 <head>
     <meta charset="UTF-8">
     <title>Staff Assignments Management</title>
-    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../../assets/css/sidebar.css">
     <style>
         table { border-collapse: collapse; width: 100%; margin-top: 1em; }
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
@@ -81,7 +85,11 @@ if (isset($_GET['unassign'])) {
     </style>
 </head>
 <body>
-    <h2>Staff Assignments for <?php echo htmlspecialchars($date); ?></h2>
+    <!-- Include sidebar -->
+    <?php include '../../../../includes/sidebar_admin.php'; ?>
+    
+    <div class="homepage">
+        <h2>Staff Assignments for <?php echo htmlspecialchars($date); ?></h2>
     
     <?php if (isset($error)): ?>
         <div style="color: red; background: #ffe6e6; padding: 10px; margin: 10px 0; border-radius: 4px;">
@@ -201,5 +209,6 @@ if (isset($_GET['unassign'])) {
             }
         }
     </script>
+    </div>
 </body>
 </html>

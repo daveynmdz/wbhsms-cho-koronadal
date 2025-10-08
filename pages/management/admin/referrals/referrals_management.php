@@ -17,7 +17,7 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 // Check if role is authorized
 $authorized_roles = ['doctor', 'bhw', 'dho', 'records_officer', 'admin'];
 if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
-    header('Location: dashboard.php');
+    header('Location: ../dashboard.php');
     exit();
 }
 
@@ -249,8 +249,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CHO Koronadal — Referrals Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
+    <!-- CSS Files - loaded by sidebar -->
     <style>
         .content-wrapper {
             margin-left: 300px;
@@ -1524,13 +1523,13 @@ try {
 <body>
     <?php
     $activePage = 'referrals';
-    include '../../../includes/sidebar_admin.php';
+    include $root_path . '/includes/sidebar_admin.php';
     ?>
 
     <section class="content-wrapper">
         <!-- Breadcrumb Navigation -->
         <div class="breadcrumb" style="margin-top: 50px;">
-            <a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
             <i class="fas fa-chevron-right"></i>
             <span>Referrals Management</span>
         </div>
@@ -1735,7 +1734,7 @@ try {
                                                 <?php if ($referral['status'] === 'voided'): ?>
                                                     <form method="POST" style="display: inline;">
                                                         <input type="hidden" name="action" value="reactivate">
-                                                        <input type="hidden" name="referral_id" value="<?php echo $referral['id']; ?>">
+                                                        <input type="hidden" name="referral_id" value="<?php echo $referral['referral_id']; ?>">
                                                         <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reactivate this referral?')" title="Reactivate">
                                                             <i class="fas fa-redo"></i>
                                                         </button>
@@ -1819,7 +1818,7 @@ try {
                                         <?php if ($referral['status'] === 'cancelled'): ?>
                                             <form method="POST" style="display: inline;">
                                                 <input type="hidden" name="action" value="reactivate">
-                                                <input type="hidden" name="referral_id" value="<?php echo $referral['id']; ?>">
+                                                <input type="hidden" name="referral_id" value="<?php echo $referral['referral_id']; ?>">
                                                 <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Reactivate this referral?')">
                                                     <i class="fas fa-redo"></i> Reactivate
                                                 </button>

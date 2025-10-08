@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 06, 2025 at 02:04 PM
+-- Generation Time: Oct 08, 2025 at 10:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -59,26 +59,38 @@ CREATE TABLE `appointments` (
   `status` enum('confirmed','completed','cancelled','checked_in') DEFAULT 'confirmed',
   `cancellation_reason` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `qr_code_path` longblob DEFAULT NULL COMMENT 'QR code image data stored as binary BLOB'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `referral_id`, `service_id`, `scheduled_date`, `scheduled_time`, `status`, `cancellation_reason`, `created_at`, `updated_at`) VALUES
-(1, 7, 4, NULL, 1, '2025-09-30', '12:00:00', 'cancelled', 'Schedule Conflict', '2025-09-29 12:56:32', '2025-09-30 05:44:21'),
-(2, 8, 12, NULL, 1, '2025-09-30', '16:00:00', 'cancelled', 'Personal Emergency', '2025-09-30 03:33:30', '2025-09-30 03:54:04'),
-(3, 8, 12, NULL, 1, '2025-09-30', '15:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 03:54:35', '2025-10-02 04:16:26'),
-(4, 7, 1, 2, 1, '2025-09-30', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 07:44:51', '2025-10-02 04:16:26'),
-(5, 7, 4, NULL, 1, '2025-10-01', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:08:22', '2025-10-02 04:16:26'),
-(6, 37, 22, NULL, 1, '2025-10-01', '09:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:34:29', '2025-10-02 04:16:26'),
-(7, 37, 1, 8, 1, '2025-10-02', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:42:00', '2025-10-02 04:31:57'),
-(8, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Schedule Conflict', '2025-10-02 06:15:58', '2025-10-02 07:25:45'),
-(9, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-10-02 07:34:44', '2025-10-02 15:54:42'),
-(22, 7, 1, 12, 1, '2025-10-06', '13:00:00', 'cancelled', 'Personal Emergency', '2025-10-05 23:29:52', '2025-10-05 23:57:52'),
-(23, 7, 1, 12, 1, '2025-10-07', '13:00:00', 'confirmed', NULL, '2025-10-05 23:44:50', '2025-10-05 23:44:50'),
-(24, 7, 4, NULL, 1, '2025-10-06', '16:00:00', 'confirmed', NULL, '2025-10-06 01:09:50', '2025-10-06 01:09:50');
+INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `referral_id`, `service_id`, `scheduled_date`, `scheduled_time`, `status`, `cancellation_reason`, `created_at`, `updated_at`, `qr_code_path`) VALUES
+(1, 7, 4, NULL, 1, '2025-09-30', '12:00:00', 'cancelled', 'Schedule Conflict', '2025-09-29 12:56:32', '2025-09-30 05:44:21', NULL),
+(2, 8, 12, NULL, 1, '2025-09-30', '16:00:00', 'cancelled', 'Personal Emergency', '2025-09-30 03:33:30', '2025-09-30 03:54:04', NULL),
+(3, 8, 12, NULL, 1, '2025-09-30', '15:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 03:54:35', '2025-10-02 04:16:26', NULL),
+(4, 7, 1, 2, 1, '2025-09-30', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 07:44:51', '2025-10-02 04:16:26', NULL),
+(5, 7, 4, NULL, 1, '2025-10-01', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:08:22', '2025-10-02 04:16:26', NULL),
+(6, 37, 22, NULL, 1, '2025-10-01', '09:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:34:29', '2025-10-02 04:16:26', NULL),
+(7, 37, 1, 8, 1, '2025-10-02', '12:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-09-30 08:42:00', '2025-10-02 04:31:57', NULL),
+(8, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Schedule Conflict', '2025-10-02 06:15:58', '2025-10-02 07:25:45', NULL),
+(9, 7, 4, NULL, 1, '2025-10-02', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-10-02 07:34:44', '2025-10-02 15:54:42', NULL),
+(22, 7, 1, 12, 1, '2025-10-06', '13:00:00', 'cancelled', 'Personal Emergency', '2025-10-05 23:29:52', '2025-10-05 23:57:52', NULL),
+(23, 7, 1, 12, 1, '2025-10-07', '13:00:00', 'cancelled', 'Schedule Conflict', '2025-10-05 23:44:50', '2025-10-07 02:32:59', NULL),
+(24, 7, 4, NULL, 1, '2025-10-06', '16:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-10-06 01:09:50', '2025-10-06 18:49:08', NULL),
+(25, 7, 4, NULL, 1, '2025-10-07', '12:00:00', 'cancelled', 'Feeling Better', '2025-10-07 02:35:00', '2025-10-07 03:10:35', NULL),
+(26, 7, 4, NULL, 1, '2025-10-15', '09:00:00', 'cancelled', 'Schedule Conflict', '2025-10-07 03:38:39', '2025-10-07 03:46:01', NULL),
+(27, 7, 4, NULL, 1, '2025-10-07', '14:00:00', 'cancelled', 'Feeling Better', '2025-10-07 03:46:20', '2025-10-07 03:47:02', NULL),
+(28, 7, 4, NULL, 1, '2025-10-07', '14:00:00', 'cancelled', 'Schedule Conflict', '2025-10-07 03:47:15', '2025-10-07 03:59:29', NULL),
+(29, 7, 4, NULL, 1, '2025-10-07', '15:00:00', 'cancelled', 'Transportation Issues', '2025-10-07 03:59:42', '2025-10-07 04:09:11', NULL),
+(30, 7, 4, NULL, 1, '2025-10-07', '15:00:00', 'cancelled', NULL, '2025-10-07 04:09:24', '2025-10-07 06:52:50', NULL),
+(31, 7, 4, NULL, 1, '2025-10-07', '16:00:00', 'cancelled', NULL, '2025-10-07 04:44:24', '2025-10-07 06:52:36', ''),
+(32, 7, 2, NULL, 1, '2025-10-08', '10:00:00', 'cancelled', NULL, '2025-10-07 04:54:26', '2025-10-07 06:52:14', 0x89504e470d0a1a0a0000000d4948445200000128000001280103000000d1c9fe5a00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000112494441546881ed95c11284300843fbff3fcdae9250acd69b33398475a80baf970cc4311c8e4f23328e37148edab563aa5195ff85b35ae7d23795199528192346154ceda801b6a96aea8582aab9ad79c7d4135539db296cdcb7da145b98b9f5878ea94e5544698be7314c11c9b30436b5a1629e3165a5b6a44d716bb99da9e4f904ef98da505925963d7e1d4c5da92e22b71537e77f53e23ea14a69fb842aa5e813aa94a64fa852aa3ea14a69fb842aa5e813aa94a64fa852aa3ea14a69fb842aa5e813aa94a64fa852339a809164db6d534d3f4c1d16b84a184a5317aaf2e26ecca616ea2c40dff1e685a63ac5915bddced48ec257608e273535d52966ece9ea76a6ae14df73f2202f343575a31c8ecfe207ee4606f7364e7c930000000049454e44ae426082),
+(33, 7, 1, 13, 1, '2025-10-07', '16:00:00', 'checked_in', NULL, '2025-10-07 06:54:22', '2025-10-07 07:17:42', 0x89504e470d0a1a0a0000000d4948445200000128000001280103000000d1c9fe5a00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000116494441546881edd4c18ec430080350feffa79969c184246da51e2af960461b45cdcb1e10b1994af56979d47f73fc8e4d6ec789545758dd634debb69c4be5ea8e2f892f4ea47675fe610c6b28a56e543cd1ba2275a7aa8d79a92ecce752b13abe6dbf3c91eaaa0adf3cdb6a97251564c078b152372ae62d584b360775a9493559f70c5d95da544d9ef763436b5dea422de9b6bf5ea9de3ec69c60554d52e504ab7af16aa5a01873825591e604ab6a922a2758d58b572b05c59813ac8a34275855935439c1aa5ebc5a2928c69c2055cb287adfe65da9a646575baaa1c9e35f485533b1b6478b17ebd555a91167396f8f2927b5294c63ee4dea519de7317953da492d2ad7eaed927652b3aae9ebf7aaad528b52a93eab1f2bea6788758f97dc0000000049454e44ae426082),
+(34, 7, 1, 14, 1, '2025-10-07', '16:00:00', 'completed', NULL, '2025-10-07 07:51:36', '2025-10-07 08:02:08', NULL),
+(35, 7, 1, 15, 1, '2025-10-07', '16:00:00', 'checked_in', NULL, '2025-10-07 07:54:53', '2025-10-07 07:55:21', NULL);
 
 -- --------------------------------------------------------
 
@@ -114,7 +126,16 @@ INSERT INTO `appointment_logs` (`log_id`, `appointment_id`, `patient_id`, `actio
 (1, 22, 7, 'created', NULL, 'confirmed', NULL, '2025-10-06', NULL, '13:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-05 23:29:52'),
 (2, 23, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '13:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-05 23:44:50'),
 (3, 22, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Personal Emergency', NULL, 'patient', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-05 23:57:52'),
-(4, 24, 7, 'created', NULL, 'confirmed', NULL, '2025-10-06', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-06 01:09:50');
+(4, 24, 7, 'created', NULL, 'confirmed', NULL, '2025-10-06', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.2', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-06 01:09:50'),
+(5, 23, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Schedule Conflict', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 02:32:59'),
+(6, 25, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '12:00:00', 'Appointment created', NULL, '', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 02:35:00'),
+(7, 25, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Feeling Better', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:10:35'),
+(8, 26, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Schedule Conflict', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:46:01'),
+(9, 27, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Feeling Better', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:47:02'),
+(10, 28, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Schedule Conflict', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 03:59:29'),
+(11, 29, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'Transportation Issues', NULL, 'patient', 7, '192.168.1.3', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 04:09:11'),
+(12, 34, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:51:36'),
+(13, 35, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:54:53');
 
 -- --------------------------------------------------------
 
@@ -345,6 +366,29 @@ INSERT INTO `current_medications` (`id`, `patient_id`, `medication`, `dosage`, `
 -- --------------------------------------------------------
 
 --
+-- Stand-in structure for view `current_station_assignments`
+-- (See below for the actual view)
+--
+CREATE TABLE `current_station_assignments` (
+`assignment_id` int(10) unsigned
+,`employee_id` int(10) unsigned
+,`employee_name` varchar(152)
+,`role_name` varchar(50)
+,`station_id` int(10) unsigned
+,`station_name` varchar(100)
+,`station_type` enum('checkin','triage','billing','consultation','lab','pharmacy','document')
+,`assigned_date` date
+,`end_date` date
+,`assignment_type` enum('permanent','temporary')
+,`shift_start_time` time
+,`shift_end_time` time
+,`status` enum('active','inactive')
+,`created_at` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `districts`
 --
 
@@ -415,71 +459,128 @@ CREATE TABLE `employees` (
   `birth_date` date DEFAULT NULL,
   `gender` enum('male','female','other') DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `last_login` datetime DEFAULT NULL,
+  `failed_login_attempts` int(11) DEFAULT 0,
+  `locked_until` datetime DEFAULT NULL,
+  `password_changed_at` datetime DEFAULT NULL,
+  `must_change_password` tinyint(1) DEFAULT 0,
+  `two_factor_enabled` tinyint(1) DEFAULT 0,
+  `two_factor_secret` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `employees`
 --
 
-INSERT INTO `employees` (`employee_id`, `employee_number`, `first_name`, `middle_name`, `last_name`, `email`, `contact_num`, `role_id`, `facility_id`, `password`, `status`, `license_number`, `birth_date`, `gender`, `created_at`, `updated_at`) VALUES
-(1, 'EMP00001', 'Alice', 'Marie', 'Smith', 'daveynmdz.sti@gmail.com', '09170000001', 1, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1985-02-10', 'female', '2025-09-21 04:42:45', '2025-09-26 10:28:26'),
-(2, 'EMP00002', 'John', 'Michael', 'Doe', 'daveynmdz.sti@gmail.com', '09170000002', 2, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-01-01', 'male', '2025-09-26 10:55:53', '2025-09-26 10:56:21'),
-(3, 'EMP00003', 'Anna', 'Marie', 'Reyes', 'daveynmdz.sti@gmail.com', '09170000003', 3, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-02-02', 'female', '2025-09-26 10:55:53', '2025-09-26 10:56:26'),
-(4, 'EMP00004', 'David', 'Lee', 'Santos', 'daveynmdz.sti@gmail.com', '09170000004', 4, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-03-03', 'male', '2025-09-26 10:55:53', '2025-09-26 10:56:30'),
-(5, 'EMP00005', 'Maria', 'Elena', 'Torres', 'daveynmdz.sti@gmail.com', '09170000005', 7, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1993-04-04', 'female', '2025-09-26 10:55:53', '2025-09-26 10:56:35'),
-(6, 'EMP00006', 'Carlos', 'Andres', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000006', 8, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1994-05-05', 'male', '2025-09-26 10:55:53', '2025-09-26 10:56:40'),
-(7, 'EMP00007', 'Sofia', 'Grace', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000007', 9, 1, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1995-06-06', 'female', '2025-09-26 10:55:53', '2025-09-26 10:56:47'),
-(8, 'EMP00008', 'Miguel', 'Antonio', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000008', 5, 2, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-07-07', 'male', '2025-09-26 10:59:11', '2025-09-26 10:59:21'),
-(9, 'EMP00009', 'Isabella', 'Marie', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000009', 5, 3, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1993-08-08', 'female', '2025-09-26 10:59:11', '2025-09-26 10:59:26'),
-(10, 'EMP00010', 'Daniel', 'Reyes', 'Morales', 'daveynmdz.sti@gmail.com', '09170000010', 6, 4, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-09-09', 'male', '2025-09-26 11:02:18', '2025-09-26 11:02:39'),
-(46, 'EMP00046', 'Lucas', 'Antonio', 'Reyes', 'daveynmdz.sti@gmail.com', '09170000046', 6, 5, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-01-01', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(47, 'EMP00047', 'Sofia', 'Marie', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000047', 6, 6, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-02-02', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(48, 'EMP00048', 'Carlos', 'David', 'Torres', 'daveynmdz.sti@gmail.com', '09170000048', 6, 7, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-03-03', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(49, 'EMP00049', 'Maria', 'Elena', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000049', 6, 8, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-04-04', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(50, 'EMP00050', 'Diego', 'Andres', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000050', 6, 9, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-05-05', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(51, 'EMP00051', 'Elena', 'Grace', 'Santos', 'daveynmdz.sti@gmail.com', '09170000051', 6, 10, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-06-06', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(52, 'EMP00052', 'Mateo', 'Jose', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000052', 6, 11, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-07-07', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(53, 'EMP00053', 'Camila', 'Isabel', 'Flores', 'daveynmdz.sti@gmail.com', '09170000053', 6, 12, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-08-08', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(54, 'EMP00054', 'Javier', 'Luis', 'Mendoza', 'daveynmdz.sti@gmail.com', '09170000054', 6, 13, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-09-09', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(55, 'EMP00055', 'Valeria', 'Anne', 'Diaz', 'daveynmdz.sti@gmail.com', '09170000055', 6, 14, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-10-10', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(56, 'EMP00056', 'Andres', 'Miguel', 'Navarro', 'daveynmdz.sti@gmail.com', '09170000056', 6, 15, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-11-11', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(57, 'EMP00057', 'Lucia', 'Marina', 'Ortiz', 'daveynmdz.sti@gmail.com', '09170000057', 6, 16, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1990-12-12', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(58, 'EMP00058', 'Ricardo', 'Jose', 'Fernandez', 'daveynmdz.sti@gmail.com', '09170000058', 6, 17, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-01-13', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(59, 'EMP00059', 'Gabriela', 'Rosa', 'Martinez', 'daveynmdz.sti@gmail.com', '09170000059', 6, 18, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-02-14', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(60, 'EMP00060', 'Francisco', 'Antonio', 'Castro', 'daveynmdz.sti@gmail.com', '09170000060', 6, 19, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-03-15', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(61, 'EMP00061', 'Natalia', 'Beatriz', 'Gutierrez', 'daveynmdz.sti@gmail.com', '09170000061', 6, 20, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-04-16', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(62, 'EMP00062', 'Rafael', 'Manuel', 'Dominguez', 'daveynmdz.sti@gmail.com', '09170000062', 6, 21, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-05-17', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(63, 'EMP00063', 'Clara', 'Isidora', 'Herrera', 'daveynmdz.sti@gmail.com', '09170000063', 6, 22, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-06-18', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(64, 'EMP00064', 'Fernando', 'Ignacio', 'Silva', 'daveynmdz.sti@gmail.com', '09170000064', 6, 23, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-07-19', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(65, 'EMP00065', 'Daniela', 'Sofia', 'Vargas', 'daveynmdz.sti@gmail.com', '09170000065', 6, 24, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-08-20', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(66, 'EMP00066', 'Hector', 'Julio', 'Jimenez', 'daveynmdz.sti@gmail.com', '09170000066', 6, 25, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-09-21', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(67, 'EMP00067', 'Andrea', 'Lucia', 'Romero', 'daveynmdz.sti@gmail.com', '09170000067', 6, 26, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-10-22', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(68, 'EMP00068', 'Manuel', 'Diego', 'Paredes', 'daveynmdz.sti@gmail.com', '09170000068', 6, 27, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-11-23', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(69, 'EMP00069', 'Angela', 'Teresa', 'Suarez', 'daveynmdz.sti@gmail.com', '09170000069', 6, 28, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1991-12-24', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(70, 'EMP00070', 'Roberto', 'Alonso', 'Cabrera', 'daveynmdz.sti@gmail.com', '09170000070', 6, 29, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-01-25', 'male', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(71, 'EMP00071', 'Paula', 'Ines', 'Aguilar', 'daveynmdz.sti@gmail.com', '09170000071', 6, 30, '$2a$12$FdnTxkvzlCFVQR/XijAoXuoBjwyYQolQGd2Prj.m3m8.skQghvfna', 'active', NULL, '1992-02-26', 'female', '2025-09-26 11:05:35', '2025-09-26 11:05:35'),
-(72, 'EMP00072', 'Maria', 'Lopez', 'Santos', 'daveynmdz.sti@gmail.com', '09170000001', 2, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'N/A', '1992-05-10', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(73, 'EMP00073', 'John', 'Reyes', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000002', 2, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'N/A', '1988-11-22', 'male', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(74, 'EMP00074', 'Angela', 'Rivera', 'Torres', 'daveynmdz.sti@gmail.com', '09170000003', 2, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'N/A', '1995-03-15', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(75, 'EMP00075', 'Carlos', 'Manuel', 'Fernandez', 'daveynmdz.sti@gmail.com', '09170000004', 3, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'N/A', '1987-07-30', 'male', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(76, 'EMP00076', 'Sophia', 'Garcia', 'Mendoza', 'daveynmdz.sti@gmail.com', '09170000005', 4, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'DOC12345', '1985-09-18', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(77, 'EMP00077', 'Michael', 'Santos', 'Dela Cruz', 'daveynmdz.sti@gmail.com', '09170000006', 4, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'DOC67890', '1983-01-25', 'male', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(78, 'EMP00078', 'Isabella', 'Marie', 'Navarro', 'daveynmdz.sti@gmail.com', '09170000007', 4, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'DENT001', '1990-04-12', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(79, 'EMP00079', 'Gabriel', 'Jose', 'Castillo', 'daveynmdz.sti@gmail.com', '09170000008', 4, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'TB12345', '1984-12-02', 'male', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(80, 'EMP00080', 'Emily', 'Grace', 'Flores', 'daveynmdz.sti@gmail.com', '09170000009', 2, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'N/A', '1993-06-21', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(81, 'EMP00081', 'Daniel', 'Ramos', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000010', 4, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'FP98765', '1989-08-14', 'male', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(82, 'EMP00082', 'Victoria', 'Anne', 'Morales', 'daveynmdz.sti@gmail.com', '09170000011', 4, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'AB1234', '1991-02-27', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(83, 'EMP00083', 'Henry', 'Luis', 'Domingo', 'daveynmdz.sti@gmail.com', '09170000012', 5, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'N/A', '1986-10-05', 'male', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(84, 'EMP00084', 'Olivia', 'Rose', 'Bautista', 'daveynmdz.sti@gmail.com', '09170000013', 6, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'LAB001', '1994-11-19', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(85, 'EMP00085', 'Lucas', 'Miguel', 'Gutierrez', 'daveynmdz.sti@gmail.com', '09170000014', 7, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'PHAR123', '1988-03-07', 'male', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(86, 'EMP00086', 'Camila', 'Sophia', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000015', 7, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', 'PHAR456', '1992-09-29', 'female', '2025-10-04 12:16:40', '2025-10-04 12:21:51'),
-(87, 'EMP00087', 'Robert', 'James', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000087', 2, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', NULL, '1988-07-14', 'male', '2025-10-05 17:55:11', '2025-10-05 17:55:11'),
-(88, 'EMP00088', 'Patricia', 'Anne', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000088', 2, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', NULL, '1991-03-25', 'female', '2025-10-05 17:55:11', '2025-10-05 17:55:11'),
-(89, 'EMP00089', 'Michael', 'Reyes', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000089', 2, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', NULL, '1986-11-09', 'male', '2025-10-05 17:55:11', '2025-10-05 17:55:11'),
-(90, 'EMP00090', 'Samantha', 'L.', 'Torres', 'daveynmdz.sti@gmail.com', '09170000090', 3, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', NULL, '1993-04-12', 'female', '2025-10-05 17:55:11', '2025-10-05 17:55:11'),
-(91, 'EMP00091', 'Daniel', 'P.', 'Fernandez', 'daveynmdz.sti@gmail.com', '09170000091', 3, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', NULL, '1989-08-30', 'male', '2025-10-05 17:55:11', '2025-10-05 17:55:11'),
-(92, 'EMP00092', 'Christine', 'A.', 'Mendoza', 'daveynmdz.sti@gmail.com', '09170000092', 3, 1, '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'active', NULL, '1995-06-21', 'female', '2025-10-05 17:55:11', '2025-10-05 17:55:11');
+INSERT INTO `employees` (`employee_id`, `employee_number`, `first_name`, `middle_name`, `last_name`, `email`, `contact_num`, `role_id`, `facility_id`, `password`, `status`, `license_number`, `birth_date`, `gender`, `created_at`, `updated_at`, `last_login`, `failed_login_attempts`, `locked_until`, `password_changed_at`, `must_change_password`, `two_factor_enabled`, `two_factor_secret`) VALUES
+(1, 'EMP00001', 'Alice', 'Marie', 'Smith', 'daveynmdz.sti@gmail.com', '09170000001', 1, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1985-02-10', 'female', '2025-09-21 04:42:45', '2025-09-26 10:28:26', NULL, 0, NULL, NULL, 0, 0, NULL),
+(2, 'EMP00002', 'John', 'Michael', 'Doe', 'daveynmdz.sti@gmail.com', '09170000002', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-01-01', 'male', '2025-09-26 10:55:53', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(3, 'EMP00003', 'Anna', 'Marie', 'Reyes', 'daveynmdz.sti@gmail.com', '09170000003', 3, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-02-02', 'female', '2025-09-26 10:55:53', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(4, 'EMP00004', 'David', 'Lee', 'Santos', 'daveynmdz.sti@gmail.com', '09170000004', 4, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1992-03-03', 'male', '2025-09-26 10:55:53', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(5, 'EMP00005', 'Maria', 'Elena', 'Torres', 'daveynmdz.sti@gmail.com', '09170000005', 7, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1993-04-04', 'female', '2025-09-26 10:55:53', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(6, 'EMP00006', 'Carlos', 'Andres', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000006', 8, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1994-05-05', 'male', '2025-09-26 10:55:53', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(7, 'EMP00007', 'Sofia', 'Grace', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000007', 9, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1995-06-06', 'female', '2025-09-26 10:55:53', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(8, 'EMP00008', 'Miguel', 'Antonio', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000008', 5, 2, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1992-07-07', 'male', '2025-09-26 10:59:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(9, 'EMP00009', 'Isabella', 'Marie', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000009', 5, 3, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1993-08-08', 'female', '2025-09-26 10:59:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(10, 'EMP00010', 'Daniel', 'Reyes', 'Morales', 'daveynmdz.sti@gmail.com', '09170000010', 6, 4, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-09-09', 'male', '2025-09-26 11:02:18', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(46, 'EMP00046', 'Lucas', 'Antonio', 'Reyes', 'daveynmdz.sti@gmail.com', '09170000046', 6, 5, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-01-01', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(47, 'EMP00047', 'Sofia', 'Marie', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000047', 6, 6, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-02-02', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(48, 'EMP00048', 'Carlos', 'David', 'Torres', 'daveynmdz.sti@gmail.com', '09170000048', 6, 7, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-03-03', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(49, 'EMP00049', 'Maria', 'Elena', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000049', 6, 8, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-04-04', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(50, 'EMP00050', 'Diego', 'Andres', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000050', 6, 9, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-05-05', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(51, 'EMP00051', 'Elena', 'Grace', 'Santos', 'daveynmdz.sti@gmail.com', '09170000051', 6, 10, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-06-06', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(52, 'EMP00052', 'Mateo', 'Jose', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000052', 6, 11, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-07-07', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(53, 'EMP00053', 'Camila', 'Isabel', 'Flores', 'daveynmdz.sti@gmail.com', '09170000053', 6, 12, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-08-08', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(54, 'EMP00054', 'Javier', 'Luis', 'Mendoza', 'daveynmdz.sti@gmail.com', '09170000054', 6, 13, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-09-09', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(55, 'EMP00055', 'Valeria', 'Anne', 'Diaz', 'daveynmdz.sti@gmail.com', '09170000055', 6, 14, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-10-10', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(56, 'EMP00056', 'Andres', 'Miguel', 'Navarro', 'daveynmdz.sti@gmail.com', '09170000056', 6, 15, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-11-11', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(57, 'EMP00057', 'Lucia', 'Marina', 'Ortiz', 'daveynmdz.sti@gmail.com', '09170000057', 6, 16, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1990-12-12', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(58, 'EMP00058', 'Ricardo', 'Jose', 'Fernandez', 'daveynmdz.sti@gmail.com', '09170000058', 6, 17, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-01-13', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(59, 'EMP00059', 'Gabriela', 'Rosa', 'Martinez', 'daveynmdz.sti@gmail.com', '09170000059', 6, 18, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-02-14', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(60, 'EMP00060', 'Francisco', 'Antonio', 'Castro', 'daveynmdz.sti@gmail.com', '09170000060', 6, 19, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-03-15', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(61, 'EMP00061', 'Natalia', 'Beatriz', 'Gutierrez', 'daveynmdz.sti@gmail.com', '09170000061', 6, 20, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-04-16', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(62, 'EMP00062', 'Rafael', 'Manuel', 'Dominguez', 'daveynmdz.sti@gmail.com', '09170000062', 6, 21, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-05-17', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(63, 'EMP00063', 'Clara', 'Isidora', 'Herrera', 'daveynmdz.sti@gmail.com', '09170000063', 6, 22, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-06-18', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(64, 'EMP00064', 'Fernando', 'Ignacio', 'Silva', 'daveynmdz.sti@gmail.com', '09170000064', 6, 23, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-07-19', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(65, 'EMP00065', 'Daniela', 'Sofia', 'Vargas', 'daveynmdz.sti@gmail.com', '09170000065', 6, 24, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-08-20', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(66, 'EMP00066', 'Hector', 'Julio', 'Jimenez', 'daveynmdz.sti@gmail.com', '09170000066', 6, 25, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-09-21', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(67, 'EMP00067', 'Andrea', 'Lucia', 'Romero', 'daveynmdz.sti@gmail.com', '09170000067', 6, 26, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-10-22', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(68, 'EMP00068', 'Manuel', 'Diego', 'Paredes', 'daveynmdz.sti@gmail.com', '09170000068', 6, 27, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-11-23', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(69, 'EMP00069', 'Angela', 'Teresa', 'Suarez', 'daveynmdz.sti@gmail.com', '09170000069', 6, 28, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-12-24', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(70, 'EMP00070', 'Roberto', 'Alonso', 'Cabrera', 'daveynmdz.sti@gmail.com', '09170000070', 6, 29, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1992-01-25', 'male', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(71, 'EMP00071', 'Paula', 'Ines', 'Aguilar', 'daveynmdz.sti@gmail.com', '09170000071', 6, 30, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1992-02-26', 'female', '2025-09-26 11:05:35', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(72, 'EMP00072', 'Maria', 'Lopez', 'Santos', 'daveynmdz.sti@gmail.com', '09170000001', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'N/A', '1992-05-10', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(73, 'EMP00073', 'John', 'Reyes', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000002', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'N/A', '1988-11-22', 'male', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(74, 'EMP00074', 'Angela', 'Rivera', 'Torres', 'daveynmdz.sti@gmail.com', '09170000003', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'N/A', '1995-03-15', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(75, 'EMP00075', 'Carlos', 'Manuel', 'Fernandez', 'daveynmdz.sti@gmail.com', '09170000004', 3, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'N/A', '1987-07-30', 'male', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(76, 'EMP00076', 'Sophia', 'Garcia', 'Mendoza', 'daveynmdz.sti@gmail.com', '09170000005', 4, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'DOC12345', '1985-09-18', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(77, 'EMP00077', 'Michael', 'Santos', 'Dela Cruz', 'daveynmdz.sti@gmail.com', '09170000006', 4, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'DOC67890', '1983-01-25', 'male', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(78, 'EMP00078', 'Isabella', 'Marie', 'Navarro', 'daveynmdz.sti@gmail.com', '09170000007', 4, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'DENT001', '1990-04-12', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(79, 'EMP00079', 'Gabriel', 'Jose', 'Castillo', 'daveynmdz.sti@gmail.com', '09170000008', 4, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'TB12345', '1984-12-02', 'male', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(80, 'EMP00080', 'Emily', 'Grace', 'Flores', 'daveynmdz.sti@gmail.com', '09170000009', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'N/A', '1993-06-21', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(81, 'EMP00081', 'Daniel', 'Ramos', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000010', 4, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'FP98765', '1989-08-14', 'male', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(82, 'EMP00082', 'Victoria', 'Anne', 'Morales', 'daveynmdz.sti@gmail.com', '09170000011', 4, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'AB1234', '1991-02-27', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(83, 'EMP00083', 'Henry', 'Luis', 'Domingo', 'daveynmdz.sti@gmail.com', '09170000012', 5, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'N/A', '1986-10-05', 'male', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(84, 'EMP00084', 'Olivia', 'Rose', 'Bautista', 'daveynmdz.sti@gmail.com', '09170000013', 6, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'LAB001', '1994-11-19', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(85, 'EMP00085', 'Lucas', 'Miguel', 'Gutierrez', 'daveynmdz.sti@gmail.com', '09170000014', 7, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'PHAR123', '1988-03-07', 'male', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(86, 'EMP00086', 'Camila', 'Sophia', 'Ramos', 'daveynmdz.sti@gmail.com', '09170000015', 7, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', 'PHAR456', '1992-09-29', 'female', '2025-10-04 12:16:40', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(87, 'EMP00087', 'Robert', 'James', 'Lopez', 'daveynmdz.sti@gmail.com', '09170000087', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1988-07-14', 'male', '2025-10-05 17:55:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(88, 'EMP00088', 'Patricia', 'Anne', 'Garcia', 'daveynmdz.sti@gmail.com', '09170000088', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1991-03-25', 'female', '2025-10-05 17:55:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(89, 'EMP00089', 'Michael', 'Reyes', 'Cruz', 'daveynmdz.sti@gmail.com', '09170000089', 2, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1986-11-09', 'male', '2025-10-05 17:55:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(90, 'EMP00090', 'Samantha', 'L.', 'Torres', 'daveynmdz.sti@gmail.com', '09170000090', 3, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1993-04-12', 'female', '2025-10-05 17:55:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(91, 'EMP00091', 'Daniel', 'P.', 'Fernandez', 'daveynmdz.sti@gmail.com', '09170000091', 3, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1989-08-30', 'male', '2025-10-05 17:55:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL),
+(92, 'EMP00092', 'Christine', 'A.', 'Mendoza', 'daveynmdz.sti@gmail.com', '09170000092', 3, 1, '$2a$12$awcWf4nRPZPP02sRprlpMuOKsZS2s0BivPoILbDhTlUraBwf3XjbW', 'active', NULL, '1995-06-21', 'female', '2025-10-05 17:55:11', '2025-10-08 04:58:38', NULL, 0, NULL, NULL, 0, 0, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `employee_details`
+-- (See below for the actual view)
+--
+CREATE TABLE `employee_details` (
+`employee_id` int(10) unsigned
+,`employee_number` varchar(20)
+,`full_name` varchar(152)
+,`first_name` varchar(50)
+,`middle_name` varchar(50)
+,`last_name` varchar(50)
+,`email` varchar(100)
+,`contact_num` varchar(20)
+,`status` enum('active','inactive','on_leave','retired')
+,`license_number` varchar(50)
+,`birth_date` date
+,`gender` enum('male','female','other')
+,`last_login` datetime
+,`failed_login_attempts` int(11)
+,`locked_until` datetime
+,`must_change_password` tinyint(1)
+,`two_factor_enabled` tinyint(1)
+,`role_name` varchar(50)
+,`role_description` varchar(255)
+,`facility_name` varchar(100)
+,`facility_type` varchar(50)
+,`created_at` timestamp
+,`updated_at` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employee_sessions`
+--
+
+CREATE TABLE `employee_sessions` (
+  `session_id` int(10) UNSIGNED NOT NULL,
+  `employee_id` int(10) UNSIGNED NOT NULL,
+  `session_token` varchar(255) NOT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `last_activity` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `expires_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -737,6 +838,22 @@ INSERT INTO `lifestyle_information` (`id`, `patient_id`, `smoking_status`, `alco
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `password_reset_tokens`
+--
+
+CREATE TABLE `password_reset_tokens` (
+  `token_id` int(10) UNSIGNED NOT NULL,
+  `employee_id` int(10) UNSIGNED NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `created_by` int(10) UNSIGNED NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `past_medical_conditions`
 --
 
@@ -849,6 +966,72 @@ CREATE TABLE `patient_flags` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `permissions`
+--
+
+CREATE TABLE `permissions` (
+  `permission_id` int(10) UNSIGNED NOT NULL,
+  `permission_key` varchar(100) NOT NULL,
+  `permission_name` varchar(255) NOT NULL,
+  `category` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `permissions`
+--
+
+INSERT INTO `permissions` (`permission_id`, `permission_key`, `permission_name`, `category`, `description`, `created_at`, `updated_at`) VALUES
+(1, 'create_employee', 'Create Employee Accounts', 'user_management', 'Create new employee accounts', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(2, 'edit_employee', 'Edit Employee Information', 'user_management', 'Modify employee details', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(3, 'delete_employee', 'Delete/Deactivate Employees', 'user_management', 'Remove or deactivate employee accounts', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(4, 'view_employee', 'View Employee Details', 'user_management', 'Access employee information', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(5, 'manage_passwords', 'Reset/Manage Passwords', 'user_management', 'Reset and manage employee passwords', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(6, 'assign_roles', 'Assign/Change Employee Roles', 'user_management', 'Change employee roles and permissions', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(7, 'view_activity_logs', 'View User Activity Logs', 'user_management', 'Access user activity audit trails', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(8, 'create_patient', 'Register New Patients', 'patient_management', 'Register new patient records', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(9, 'edit_patient', 'Edit Patient Information', 'patient_management', 'Modify patient information', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(10, 'view_patient', 'View Patient Records', 'patient_management', 'Access patient records', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(11, 'delete_patient', 'Delete Patient Records', 'patient_management', 'Remove patient records', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(12, 'manage_medical_history', 'Manage Medical History', 'patient_management', 'Update medical history', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(13, 'view_patient_reports', 'View Patient Reports', 'patient_management', 'Generate and view patient reports', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(14, 'create_appointment', 'Schedule Appointments', 'appointment_management', 'Create new appointments', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(15, 'edit_appointment', 'Modify Appointments', 'appointment_management', 'Change appointment details', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(16, 'cancel_appointment', 'Cancel Appointments', 'appointment_management', 'Cancel patient appointments', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(17, 'view_appointments', 'View All Appointments', 'appointment_management', 'Access appointment schedules', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(18, 'approve_appointments', 'Approve/Reject Appointments', 'appointment_management', 'Manage appointment approvals', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(19, 'manage_schedules', 'Manage Doctor Schedules', 'appointment_management', 'Configure staff schedules', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(20, 'manage_queue', 'Manage Patient Queues', 'queue_management', 'Control patient queuing system', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(21, 'call_next_patient', 'Call Next Patient', 'queue_management', 'Call patients from queue', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(22, 'override_queue', 'Override Queue Order', 'queue_management', 'Change queue priority', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(23, 'view_queue_logs', 'View Queue Activity Logs', 'queue_management', 'Access queue audit trails', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(24, 'manage_stations', 'Assign/Manage Stations', 'queue_management', 'Configure station assignments', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(25, 'conduct_consultation', 'Conduct Medical Consultations', 'clinical_operations', 'Perform patient consultations', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(26, 'prescribe_medication', 'Prescribe Medications', 'clinical_operations', 'Write medical prescriptions', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(27, 'order_lab_tests', 'Order Laboratory Tests', 'clinical_operations', 'Request laboratory testing', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(28, 'view_lab_results', 'View Laboratory Results', 'clinical_operations', 'Access test results', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(29, 'upload_lab_results', 'Upload Laboratory Results', 'clinical_operations', 'Enter lab test results', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(30, 'dispense_medication', 'Dispense Medications', 'clinical_operations', 'Distribute prescribed medications', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(31, 'process_billing', 'Process Patient Billing', 'financial_operations', 'Handle patient billing', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(32, 'handle_payments', 'Handle Payment Transactions', 'financial_operations', 'Process payments', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(33, 'issue_receipts', 'Issue Payment Receipts', 'financial_operations', 'Generate payment receipts', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(34, 'view_financial_reports', 'View Financial Reports', 'financial_operations', 'Access financial reporting', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(35, 'manage_billing_rates', 'Manage Service Rates', 'financial_operations', 'Configure service pricing', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(36, 'generate_reports', 'Generate System Reports', 'administrative', 'Create system reports', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(37, 'manage_facilities', 'Manage Facility Information', 'administrative', 'Configure facility settings', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(38, 'system_configuration', 'System Configuration', 'administrative', 'Configure system settings', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(39, 'backup_restore', 'Backup & Restore Data', 'administrative', 'Manage data backups', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(40, 'view_system_logs', 'View System Logs', 'administrative', 'Access system audit logs', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(41, 'create_referral', 'Create Patient Referrals', 'referral_system', 'Generate patient referrals', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(42, 'approve_referral', 'Approve Referrals', 'referral_system', 'Approve referral requests', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(43, 'view_referrals', 'View Referral Records', 'referral_system', 'Access referral information', '2025-10-08 08:32:47', '2025-10-08 08:32:47'),
+(44, 'manage_referral_network', 'Manage Referral Network', 'referral_system', 'Configure referral network', '2025-10-08 08:32:47', '2025-10-08 08:32:47');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `personal_information`
 --
 
@@ -946,8 +1129,14 @@ CREATE TABLE `queue_entries` (
 
 INSERT INTO `queue_entries` (`queue_entry_id`, `visit_id`, `appointment_id`, `patient_id`, `service_id`, `queue_type`, `station_id`, `queue_number`, `queue_code`, `priority_level`, `status`, `time_in`, `time_started`, `time_completed`, `waiting_time`, `turnaround_time`, `remarks`, `created_at`, `updated_at`) VALUES
 (1, 1, 22, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'cancelled', '2025-10-06 07:29:52', NULL, '2025-10-06 07:57:52', NULL, 28, 'Personal Emergency', '2025-10-05 23:29:52', '2025-10-05 23:57:52'),
-(2, 2, 23, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'waiting', '2025-10-06 07:44:50', NULL, NULL, NULL, NULL, NULL, '2025-10-05 23:44:50', '2025-10-05 23:44:50'),
-(3, 3, 24, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'waiting', '2025-10-06 09:09:50', NULL, NULL, NULL, NULL, NULL, '2025-10-06 01:09:50', '2025-10-06 01:09:50');
+(2, 2, 23, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'cancelled', '2025-10-06 07:44:50', NULL, '2025-10-07 10:32:59', NULL, 1608, 'Schedule Conflict', '2025-10-05 23:44:50', '2025-10-07 02:32:59'),
+(3, 3, 24, 7, 1, 'consultation', NULL, 1, NULL, 'normal', 'cancelled', '2025-10-06 09:09:50', NULL, NULL, NULL, NULL, NULL, '2025-10-06 01:09:50', '2025-10-07 02:33:44'),
+(4, 4, 25, 7, 1, 'consultation', 5, NULL, NULL, 'normal', 'cancelled', '2025-10-07 10:35:00', NULL, '2025-10-07 11:10:35', NULL, 35, 'Feeling Better', '2025-10-07 02:35:00', '2025-10-07 03:10:35'),
+(5, 5, 33, 7, 1, 'consultation', 5, 1, '071025-04P-001', 'normal', 'done', '2025-10-07 14:54:22', '2025-10-07 15:19:07', '2025-10-07 15:19:53', 24, 25, 'Called to station', '2025-10-07 06:54:22', '2025-10-07 07:19:53'),
+(6, 6, 33, 7, 1, 'triage', 2, 3, '07A-003', 'normal', 'done', '2025-10-07 15:17:42', '2025-10-07 15:18:06', '2025-10-07 15:18:56', 0, 1, 'Called to station', '2025-10-07 07:17:42', '2025-10-07 07:18:56'),
+(7, 7, 34, 7, 1, 'consultation', 5, 2, '071025-04P-002', 'normal', 'done', '2025-10-07 15:51:36', '2025-10-07 15:58:29', '2025-10-07 16:02:08', 6, 10, 'Visit completed: ', '2025-10-07 07:51:36', '2025-10-07 08:02:08'),
+(8, 8, 35, 7, 1, 'consultation', 5, 3, '071025-04P-003', 'normal', 'in_progress', '2025-10-07 15:54:53', '2025-10-07 15:59:30', NULL, 4, NULL, 'Called to station', '2025-10-07 07:54:53', '2025-10-07 07:59:30'),
+(9, 9, 35, 7, 1, 'triage', 2, 6, '07A-006', 'normal', 'done', '2025-10-07 15:55:21', '2025-10-07 15:56:02', '2025-10-07 15:56:54', 0, 1, 'Called to station', '2025-10-07 07:55:21', '2025-10-07 07:56:54');
 
 -- --------------------------------------------------------
 
@@ -974,7 +1163,22 @@ INSERT INTO `queue_logs` (`queue_log_id`, `queue_entry_id`, `action`, `old_statu
 (1, 1, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-05 23:29:52'),
 (2, 2, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-05 23:44:50'),
 (3, 1, 'cancelled', 'waiting', 'cancelled', 'Personal Emergency', NULL, '2025-10-05 23:57:52'),
-(4, 3, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-06 01:09:50');
+(4, 3, 'created', NULL, 'waiting', 'Queue entry created for appointment', NULL, '2025-10-06 01:09:50'),
+(5, 2, 'cancelled', 'waiting', 'cancelled', 'Schedule Conflict', NULL, '2025-10-07 02:32:59'),
+(6, 4, 'created', NULL, 'waiting', 'Queue entry created for non-CHO appointment', NULL, '2025-10-07 02:35:00'),
+(7, 4, 'cancelled', 'waiting', 'cancelled', 'Feeling Better', NULL, '2025-10-07 03:10:35'),
+(8, 5, 'created', NULL, 'waiting', 'Queue created with code: 071025-04P-001', 1, '2025-10-07 06:54:22'),
+(9, 6, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:18:06'),
+(10, 6, 'status_changed', 'in_progress', 'done', '', 1, '2025-10-07 07:18:56'),
+(11, 5, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:19:07'),
+(12, 5, 'status_changed', 'in_progress', 'done', '', 1, '2025-10-07 07:19:53'),
+(13, 7, 'created', NULL, 'waiting', 'Queue created with code: 071025-04P-002', NULL, '2025-10-07 07:51:36'),
+(14, 8, 'created', NULL, 'waiting', 'Queue created with code: 071025-04P-003', NULL, '2025-10-07 07:54:53'),
+(15, 9, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:56:02'),
+(16, 9, 'status_changed', 'in_progress', 'done', '', 1, '2025-10-07 07:56:54'),
+(17, 7, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:58:29'),
+(18, 8, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:59:30'),
+(19, 7, 'status_changed', 'in_progress', 'done', 'Visit completed - no further treatment needed: ', 1, '2025-10-07 08:02:08');
 
 -- --------------------------------------------------------
 
@@ -1033,8 +1237,11 @@ INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring
 (8, 'REF-20250930-0002', 37, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s consultation', 1, '2025-09-30 16:41:14', 'accepted', '2025-09-30 08:42:00'),
 (9, 'REF-20251002-0001', 13, 1, 2, '', NULL, 1, 'district_office', 'Doctor\'s Check-up', 1, '2025-10-02 16:10:06', 'cancelled', '2025-10-04 11:39:55'),
 (10, 'REF-20251004-0001', 38, 1, 1, '', NULL, 1, 'city_office', 'Hypoglycemic', 1, '2025-10-04 13:04:30', 'cancelled', '2025-10-04 05:09:25'),
-(11, 'REF-20251004-0002', 38, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s Consultation', 1, '2025-10-04 13:11:14', 'active', '2025-10-04 05:11:14'),
-(12, 'REF-20251004-0003', 7, 1, 1, '', NULL, 1, 'city_office', 'Check Up', 1, '2025-10-04 21:59:22', 'accepted', '2025-10-05 23:52:13');
+(11, 'REF-20251004-0002', 38, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s Consultation', 1, '2025-10-04 13:11:14', 'cancelled', '2025-10-06 15:05:12'),
+(12, 'REF-20251004-0003', 7, 1, 1, '', NULL, 1, 'city_office', 'Check Up', 1, '2025-10-04 21:59:22', 'accepted', '2025-10-05 23:52:13'),
+(13, 'REF-20251007-0001', 7, 1, 1, '', NULL, 1, 'city_office', 'Need check-up', 1, '2025-10-07 14:51:39', 'accepted', '2025-10-07 06:54:38'),
+(14, 'REF-20251007-0002', 7, 1, 1, '', NULL, 1, 'city_office', 'afd', 1, '2025-10-07 15:50:58', 'accepted', '2025-10-07 07:51:58'),
+(15, 'REF-20251007-0003', 7, 1, 1, '', 8, 1, 'city_office', 'Need Doctor Checkup', 1, '2025-10-07 15:52:44', 'active', '2025-10-07 07:52:44');
 
 -- --------------------------------------------------------
 
@@ -1093,6 +1300,23 @@ INSERT INTO `roles` (`role_id`, `role_name`, `description`) VALUES
 (7, 'records_officer', 'Responsible for clinic records'),
 (8, 'cashier', 'Handles payments and billing'),
 (9, 'laboratory_tech', 'Laboratory technician');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_permissions`
+--
+
+CREATE TABLE `role_permissions` (
+  `permission_id` int(10) UNSIGNED NOT NULL,
+  `role_id` int(10) UNSIGNED NOT NULL,
+  `module_name` varchar(100) NOT NULL,
+  `can_view` tinyint(1) DEFAULT 0,
+  `can_add` tinyint(1) DEFAULT 0,
+  `can_edit` tinyint(1) DEFAULT 0,
+  `can_delete` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1191,7 +1415,7 @@ CREATE TABLE `stations` (
 --
 
 INSERT INTO `stations` (`station_id`, `station_name`, `service_id`, `station_type`, `station_number`, `is_active`, `is_open`, `created_at`, `updated_at`) VALUES
-(1, 'Triage 1', 1, 'triage', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:38'),
+(1, 'Triage 1', 1, 'triage', 1, 1, 0, '2025-10-04 04:26:36', '2025-10-06 16:26:37'),
 (2, 'Triage 2', 1, 'triage', 2, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:40'),
 (3, 'Triage 3', 1, 'triage', 3, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:42'),
 (4, 'Billing', 9, 'billing', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 13:15:52'),
@@ -1206,7 +1430,32 @@ INSERT INTO `stations` (`station_id`, `station_name`, `service_id`, `station_typ
 (13, 'Laboratory', 8, 'lab', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
 (14, 'Dispensing 1', 1, 'pharmacy', 1, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
 (15, 'Dispensing 2', 1, 'pharmacy', 2, 1, 1, '2025-10-04 04:26:36', '2025-10-04 04:26:36'),
-(16, 'Check-In Counter', 10, 'checkin', 1, 1, 1, '2025-10-04 04:57:03', '2025-10-04 13:15:35');
+(16, 'Check-In Counter', 10, 'checkin', 1, 1, 1, '2025-10-04 04:57:03', '2025-10-06 16:26:15');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `station_assignments`
+--
+
+CREATE TABLE `station_assignments` (
+  `assignment_id` int(10) UNSIGNED NOT NULL,
+  `employee_id` int(10) UNSIGNED NOT NULL,
+  `station_id` int(10) UNSIGNED NOT NULL,
+  `assigned_date` date NOT NULL,
+  `assignment_type` enum('permanent','temporary') DEFAULT 'permanent',
+  `shift_start_time` time DEFAULT '08:00:00',
+  `shift_end_time` time DEFAULT '17:00:00',
+  `end_date` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `assigned_by` int(10) UNSIGNED NOT NULL,
+  `removed_by` int(10) UNSIGNED DEFAULT NULL,
+  `removal_reason` varchar(255) DEFAULT NULL,
+  `removed_at` datetime DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1230,6 +1479,21 @@ INSERT INTO `surgical_history` (`id`, `patient_id`, `surgery`, `year`, `hospital
 (2, 7, 'Not Applicable', '2025', 'N/A'),
 (3, 7, 'Appendectomy', '2025', 'Dr. Arturo P. Pingoy Medical Center (DAPPMC)'),
 (4, 36, 'Mastectomy', '2002', 'Dr. Arturo P. Pingoy Medical Center (DAPPMC)');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_activity_logs`
+--
+
+CREATE TABLE `user_activity_logs` (
+  `log_id` int(10) UNSIGNED NOT NULL,
+  `admin_id` int(10) UNSIGNED NOT NULL,
+  `employee_id` int(10) UNSIGNED DEFAULT NULL,
+  `action_type` enum('create','update','deactivate','password_reset','role_change') NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -1261,7 +1525,13 @@ CREATE TABLE `visits` (
 INSERT INTO `visits` (`visit_id`, `patient_id`, `facility_id`, `appointment_id`, `vitals_id`, `visit_date`, `time_in`, `time_out`, `attending_employee_id`, `remarks`, `visit_status`, `attendance_status`, `created_at`, `updated_at`) VALUES
 (1, 7, 1, 22, NULL, '2025-10-06', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-05 23:29:52', '2025-10-05 23:29:52'),
 (2, 7, 1, 23, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-05 23:44:50', '2025-10-05 23:44:50'),
-(3, 7, 4, 24, NULL, '2025-10-06', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-06 01:09:50', '2025-10-06 01:09:50');
+(3, 7, 4, 24, NULL, '2025-10-06', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-06 01:09:50', '2025-10-06 01:09:50'),
+(4, 7, 4, 25, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 02:35:00', '2025-10-07 02:35:00'),
+(5, 7, 1, 33, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 06:54:22', '2025-10-07 06:54:22'),
+(6, 7, 1, 33, NULL, '2025-10-07', '2025-10-07 15:17:42', NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:17:42', '2025-10-07 07:17:42'),
+(7, 7, 1, 34, NULL, '2025-10-07', NULL, '2025-10-07 16:02:08', 1, 'Visit completed: ', 'completed', 'on_time', '2025-10-07 07:51:36', '2025-10-07 08:02:08'),
+(8, 7, 1, 35, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:54:53', '2025-10-07 07:54:53'),
+(9, 7, 1, 35, NULL, '2025-10-07', '2025-10-07 15:55:21', NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:55:21', '2025-10-07 07:55:21');
 
 -- --------------------------------------------------------
 
@@ -1296,7 +1566,26 @@ INSERT INTO `vitals` (`vitals_id`, `patient_id`, `systolic_bp`, `diastolic_bp`, 
 (4, 35, 120, 80, 72, 18, 36.00, 50.00, 155.00, 20.00, 8, '2025-09-27 19:06:16', 'Medyo okay'),
 (5, 15, 80, 70, 72, 18, 36.00, 60.00, 160.00, 23.00, 63, '2025-09-27 19:08:26', 'Kabado bente'),
 (6, 26, 90, 40, 75, 45, 45.00, 111.00, 202.00, 27.00, 1, '2025-09-28 23:13:47', ''),
-(7, 37, 120, 80, NULL, NULL, 36.00, 70.00, 175.00, 22.00, 63, '2025-09-30 16:38:18', '');
+(7, 37, 120, 80, NULL, NULL, 36.00, 70.00, 175.00, 22.00, 63, '2025-09-30 16:38:18', ''),
+(8, 7, NULL, NULL, NULL, NULL, 37.00, NULL, NULL, NULL, 1, '2025-10-07 15:52:44', 'Feverish');
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `current_station_assignments`
+--
+DROP TABLE IF EXISTS `current_station_assignments`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `current_station_assignments`  AS SELECT `sa`.`assignment_id` AS `assignment_id`, `sa`.`employee_id` AS `employee_id`, `ed`.`full_name` AS `employee_name`, `ed`.`role_name` AS `role_name`, `sa`.`station_id` AS `station_id`, `s`.`station_name` AS `station_name`, `s`.`station_type` AS `station_type`, `sa`.`assigned_date` AS `assigned_date`, `sa`.`end_date` AS `end_date`, `sa`.`assignment_type` AS `assignment_type`, `sa`.`shift_start_time` AS `shift_start_time`, `sa`.`shift_end_time` AS `shift_end_time`, `sa`.`status` AS `status`, `sa`.`created_at` AS `created_at` FROM ((`station_assignments` `sa` join `employee_details` `ed` on(`sa`.`employee_id` = `ed`.`employee_id`)) join `stations` `s` on(`sa`.`station_id` = `s`.`station_id`)) WHERE `sa`.`status` = 'active' AND (`sa`.`end_date` is null OR `sa`.`end_date` >= curdate()) ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `employee_details`
+--
+DROP TABLE IF EXISTS `employee_details`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `employee_details`  AS SELECT `e`.`employee_id` AS `employee_id`, `e`.`employee_number` AS `employee_number`, concat(`e`.`first_name`,' ',coalesce(`e`.`middle_name`,''),' ',`e`.`last_name`) AS `full_name`, `e`.`first_name` AS `first_name`, `e`.`middle_name` AS `middle_name`, `e`.`last_name` AS `last_name`, `e`.`email` AS `email`, `e`.`contact_num` AS `contact_num`, `e`.`status` AS `status`, `e`.`license_number` AS `license_number`, `e`.`birth_date` AS `birth_date`, `e`.`gender` AS `gender`, `e`.`last_login` AS `last_login`, `e`.`failed_login_attempts` AS `failed_login_attempts`, `e`.`locked_until` AS `locked_until`, `e`.`must_change_password` AS `must_change_password`, `e`.`two_factor_enabled` AS `two_factor_enabled`, `r`.`role_name` AS `role_name`, `r`.`description` AS `role_description`, `f`.`name` AS `facility_name`, `f`.`type` AS `facility_type`, `e`.`created_at` AS `created_at`, `e`.`updated_at` AS `updated_at` FROM ((`employees` `e` left join `roles` `r` on(`e`.`role_id` = `r`.`role_id`)) left join `facilities` `f` on(`e`.`facility_id` = `f`.`facility_id`)) ;
 
 --
 -- Indexes for dumped tables
@@ -1323,7 +1612,8 @@ ALTER TABLE `appointments`
   ADD KEY `idx_appointments_patient_status` (`patient_id`,`status`),
   ADD KEY `idx_scheduled_slot` (`scheduled_date`,`scheduled_time`,`service_id`),
   ADD KEY `idx_appointments_status_date` (`status`,`scheduled_date`),
-  ADD KEY `idx_appointments_facility_date` (`facility_id`,`scheduled_date`);
+  ADD KEY `idx_appointments_facility_date` (`facility_id`,`scheduled_date`),
+  ADD KEY `idx_appointments_qr_path` (`qr_code_path`(3072));
 
 --
 -- Indexes for table `appointment_logs`
@@ -1359,7 +1649,10 @@ ALTER TABLE `assignment_schedules`
   ADD KEY `idx_assignment_type` (`assignment_type`,`start_date`),
   ADD KEY `idx_assigned_by` (`assigned_by`),
   ADD KEY `idx_assignment_active` (`employee_id`,`station_id`,`is_active`,`start_date`,`end_date`),
-  ADD KEY `idx_employee_active_dates` (`employee_id`,`is_active`,`start_date`,`end_date`);
+  ADD KEY `idx_employee_active_dates` (`employee_id`,`is_active`,`start_date`,`end_date`),
+  ADD KEY `idx_employee_station` (`employee_id`,`station_id`),
+  ADD KEY `idx_start_date` (`start_date`),
+  ADD KEY `idx_is_active` (`is_active`);
 
 --
 -- Indexes for table `barangay`
@@ -1426,7 +1719,22 @@ ALTER TABLE `employees`
   ADD PRIMARY KEY (`employee_id`),
   ADD UNIQUE KEY `employee_number` (`employee_number`),
   ADD KEY `fk_employees_role` (`role_id`),
-  ADD KEY `fk_employees_facility` (`facility_id`);
+  ADD KEY `fk_employees_facility` (`facility_id`),
+  ADD KEY `idx_role_id` (`role_id`),
+  ADD KEY `idx_facility_id` (`facility_id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_employee_number` (`employee_number`);
+
+--
+-- Indexes for table `employee_sessions`
+--
+ALTER TABLE `employee_sessions`
+  ADD PRIMARY KEY (`session_id`),
+  ADD UNIQUE KEY `unique_session_token` (`session_token`),
+  ADD KEY `idx_employee_id` (`employee_id`),
+  ADD KEY `idx_expires` (`expires_at`),
+  ADD KEY `idx_active` (`is_active`),
+  ADD KEY `idx_last_activity` (`last_activity`);
 
 --
 -- Indexes for table `facilities`
@@ -1503,6 +1811,17 @@ ALTER TABLE `lifestyle_information`
   ADD KEY `fk_lifestyle_information_patient` (`patient_id`);
 
 --
+-- Indexes for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD PRIMARY KEY (`token_id`),
+  ADD KEY `fk_password_reset_created_by` (`created_by`),
+  ADD KEY `idx_token` (`token`),
+  ADD KEY `idx_employee_id` (`employee_id`),
+  ADD KEY `idx_expires` (`expires_at`),
+  ADD KEY `idx_used_at` (`used_at`);
+
+--
 -- Indexes for table `past_medical_conditions`
 --
 ALTER TABLE `past_medical_conditions`
@@ -1531,6 +1850,15 @@ ALTER TABLE `patient_flags`
   ADD KEY `idx_patient_flags_created_date` (`created_at`),
   ADD KEY `idx_patient_flags_appointment_date` (`appointment_id`,`created_at`),
   ADD KEY `idx_patient_flags_flag_type` (`flag_type`,`is_resolved`);
+
+--
+-- Indexes for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`permission_id`),
+  ADD UNIQUE KEY `permission_key` (`permission_key`),
+  ADD KEY `idx_category` (`category`),
+  ADD KEY `idx_permission_key` (`permission_key`);
 
 --
 -- Indexes for table `personal_information`
@@ -1621,6 +1949,13 @@ ALTER TABLE `roles`
   ADD UNIQUE KEY `role_name` (`role_name`);
 
 --
+-- Indexes for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD PRIMARY KEY (`permission_id`),
+  ADD KEY `fk_permissions_role` (`role_id`);
+
+--
 -- Indexes for table `services`
 --
 ALTER TABLE `services`
@@ -1644,11 +1979,35 @@ ALTER TABLE `stations`
   ADD KEY `idx_station_is_open` (`is_open`);
 
 --
+-- Indexes for table `station_assignments`
+--
+ALTER TABLE `station_assignments`
+  ADD PRIMARY KEY (`assignment_id`),
+  ADD KEY `fk_station_assignment_station` (`station_id`),
+  ADD KEY `fk_station_assignment_assigned_by` (`assigned_by`),
+  ADD KEY `fk_station_assignment_removed_by` (`removed_by`),
+  ADD KEY `idx_employee_station` (`employee_id`,`station_id`),
+  ADD KEY `idx_assigned_date` (`assigned_date`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_assignment_type` (`assignment_type`),
+  ADD KEY `idx_end_date` (`end_date`);
+
+--
 -- Indexes for table `surgical_history`
 --
 ALTER TABLE `surgical_history`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_surgical_history_patient` (`patient_id`);
+
+--
+-- Indexes for table `user_activity_logs`
+--
+ALTER TABLE `user_activity_logs`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `fk_activity_employee` (`employee_id`),
+  ADD KEY `idx_admin_employee` (`admin_id`,`employee_id`),
+  ADD KEY `idx_action_type` (`action_type`),
+  ADD KEY `idx_created_at` (`created_at`);
 
 --
 -- Indexes for table `visits`
@@ -1685,13 +2044,13 @@ ALTER TABLE `allergies`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `appointment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `appointment_logs`
 --
 ALTER TABLE `appointment_logs`
-  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `assignment_logs`
@@ -1760,6 +2119,12 @@ ALTER TABLE `employees`
   MODIFY `employee_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
 
 --
+-- AUTO_INCREMENT for table `employee_sessions`
+--
+ALTER TABLE `employee_sessions`
+  MODIFY `session_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `facilities`
 --
 ALTER TABLE `facilities`
@@ -1808,6 +2173,12 @@ ALTER TABLE `lifestyle_information`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  MODIFY `token_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `past_medical_conditions`
 --
 ALTER TABLE `past_medical_conditions`
@@ -1824,6 +2195,12 @@ ALTER TABLE `patients`
 --
 ALTER TABLE `patient_flags`
   MODIFY `flag_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `permission_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `personal_information`
@@ -1847,13 +2224,13 @@ ALTER TABLE `prescriptions`
 -- AUTO_INCREMENT for table `queue_entries`
 --
 ALTER TABLE `queue_entries`
-  MODIFY `queue_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `queue_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `queue_logs`
 --
 ALTER TABLE `queue_logs`
-  MODIFY `queue_log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `queue_log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `receipts`
@@ -1865,7 +2242,7 @@ ALTER TABLE `receipts`
 -- AUTO_INCREMENT for table `referrals`
 --
 ALTER TABLE `referrals`
-  MODIFY `referral_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `referral_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `referral_logs`
@@ -1878,6 +2255,12 @@ ALTER TABLE `referral_logs`
 --
 ALTER TABLE `roles`
   MODIFY `role_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  MODIFY `permission_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `services`
@@ -1898,22 +2281,34 @@ ALTER TABLE `stations`
   MODIFY `station_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
+-- AUTO_INCREMENT for table `station_assignments`
+--
+ALTER TABLE `station_assignments`
+  MODIFY `assignment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `surgical_history`
 --
 ALTER TABLE `surgical_history`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT for table `user_activity_logs`
+--
+ALTER TABLE `user_activity_logs`
+  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `visits`
 --
 ALTER TABLE `visits`
-  MODIFY `visit_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `visit_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `vitals`
 --
 ALTER TABLE `vitals`
-  MODIFY `vitals_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `vitals_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
@@ -2011,6 +2406,12 @@ ALTER TABLE `employees`
   ADD CONSTRAINT `fk_employees_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`);
 
 --
+-- Constraints for table `employee_sessions`
+--
+ALTER TABLE `employee_sessions`
+  ADD CONSTRAINT `fk_employee_session_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `facilities`
 --
 ALTER TABLE `facilities`
@@ -2070,6 +2471,13 @@ ALTER TABLE `lab_orders`
 --
 ALTER TABLE `lifestyle_information`
   ADD CONSTRAINT `fk_lifestyle_information_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD CONSTRAINT `fk_password_reset_created_by` FOREIGN KEY (`created_by`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_password_reset_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `past_medical_conditions`
@@ -2158,6 +2566,12 @@ ALTER TABLE `referral_logs`
   ADD CONSTRAINT `fk_referral_logs_referral` FOREIGN KEY (`referral_id`) REFERENCES `referrals` (`referral_id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD CONSTRAINT `fk_permissions_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `service_items`
 --
 ALTER TABLE `service_items`
@@ -2170,10 +2584,26 @@ ALTER TABLE `stations`
   ADD CONSTRAINT `fk_stations_service_id` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Constraints for table `station_assignments`
+--
+ALTER TABLE `station_assignments`
+  ADD CONSTRAINT `fk_station_assignment_assigned_by` FOREIGN KEY (`assigned_by`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_station_assignment_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_station_assignment_removed_by` FOREIGN KEY (`removed_by`) REFERENCES `employees` (`employee_id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_station_assignment_station` FOREIGN KEY (`station_id`) REFERENCES `stations` (`station_id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `surgical_history`
 --
 ALTER TABLE `surgical_history`
   ADD CONSTRAINT `fk_surgical_history_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `user_activity_logs`
+--
+ALTER TABLE `user_activity_logs`
+  ADD CONSTRAINT `fk_activity_admin` FOREIGN KEY (`admin_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_activity_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `visits`

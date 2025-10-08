@@ -58,42 +58,32 @@ if (($needsName || $needsNo) && $patient_id) {
     }
 }
 
-// Calculate the correct paths based on the calling file's location
-$assets_path = '';
-$vendor_path = '';
-$nav_base = '';
+// Get the proper base URL by extracting the project folder from the request URI
+$request_uri = $_SERVER['REQUEST_URI'];
+$script_name = $_SERVER['SCRIPT_NAME'];
 
-if (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/profile/') !== false) {
-    // Called from /pages/patient/profile/ (3 levels deep)
-    $assets_path = '../../../assets/css/sidebar.css';
-    $vendor_path = '../../../vendor/photo_controller.php';
-    $nav_base = '../';
-} elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/appointment/') !== false) {
-    // Called from /pages/patient/appointment/ (3 levels deep)
-    $assets_path = '../../../assets/css/sidebar.css';
-    $vendor_path = '../../../vendor/photo_controller.php';
-    $nav_base = '../';
-} elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/referrals/') !== false) {
-    // Called from /pages/patient/referrals/ (3 levels deep)
-    $assets_path = '../../../assets/css/sidebar.css';
-    $vendor_path = '../../../vendor/photo_controller.php';
-    $nav_base = '../';
-} elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/patient/') !== false) {
-    // Called from /pages/patient/ (2 levels deep)  
-    $assets_path = '../../assets/css/sidebar.css';
-    $vendor_path = '../../vendor/photo_controller.php';
-    $nav_base = '';
-} elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/') !== false) {
-    // Called from /pages/ (1 level deep)
-    $assets_path = '../assets/css/sidebar.css';
-    $vendor_path = '../vendor/photo_controller.php';
-    $nav_base = 'patient/';
+// Extract the base path (project folder) from the script name
+// For example: /wbhsms-cho-koronadal/pages/patient/profile/dashboard.php -> /wbhsms-cho-koronadal/
+if (preg_match('#^(.*?)/pages/#', $script_name, $matches)) {
+    $base_path = $matches[1];
 } else {
-    // Called from root level
-    $assets_path = 'assets/css/sidebar.css';
-    $vendor_path = 'vendor/photo_controller.php';
-    $nav_base = 'pages/patient/';
+    // Fallback: try to extract from REQUEST_URI
+    $uri_parts = explode('/', trim($request_uri, '/'));
+    if (count($uri_parts) > 0 && $uri_parts[0] !== 'pages') {
+        $base_path = '/' . $uri_parts[0];
+    } else {
+        $base_path = '';
+    }
 }
+
+// Ensure base_path ends with / if it's not empty
+if ($base_path && !str_ends_with($base_path, '/')) {
+    $base_path .= '/';
+}
+
+$assets_path = $base_path . 'assets/css/sidebar.css';
+$vendor_path = $base_path . 'vendor/photo_controller.php';
+$nav_base = $base_path . 'pages/patient/';
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="<?= $assets_path ?>">

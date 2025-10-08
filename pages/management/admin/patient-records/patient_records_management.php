@@ -12,7 +12,7 @@ if (!isset($_SESSION['employee_id'])) {
 }
 
 // Set active page for sidebar highlighting
-$activePage = 'patients';
+$activePage = 'patient_records';
 
 // Define role-based permissions
 $canEdit = in_array($_SESSION['role'], ['admin', 'records_officer']);
@@ -335,9 +335,7 @@ $barangayResult = $conn->query($barangaySql);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patient Records Management | CHO Koronadal</title>
-    <!-- CSS Files -->
-    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
-    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <!-- CSS Files - loaded by sidebar -->
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -1125,13 +1123,13 @@ $barangayResult = $conn->query($barangaySql);
 </head>
 <body>
     <!-- Include sidebar -->
-    <?php include '../../../includes/sidebar_admin.php'; ?>
+    <?php include $root_path . '/includes/sidebar_admin.php'; ?>
     
     <div class="homepage">
         <div class="main-content">
             <!-- Breadcrumb Navigation -->
             <div class="breadcrumb" style="margin-top: 50px;">
-                <a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
                 <i class="fas fa-chevron-right"></i>
                 <span>Patient Records Management</span>
             </div>
