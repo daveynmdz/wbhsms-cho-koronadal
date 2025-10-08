@@ -64,32 +64,32 @@ if (($needsName || $needsNo) && $employee_id) {
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <?php
-// Dynamic paths based on where this file is included from
-$cssPath = '';
-$vendorPath = '';
-$nav_base = '';
+// Get the proper base URL by extracting the project folder from the request URI
+$request_uri = $_SERVER['REQUEST_URI'];
+$script_name = $_SERVER['SCRIPT_NAME'];
 
-if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
-    // Called from /pages/management/ (3 levels deep)
-    $cssPath = '../../../assets/css/sidebar.css';
-    $vendorPath = '../../../vendor/photo_controller.php';
-    $nav_base = '../../../pages/';
-} elseif (strpos($_SERVER['PHP_SELF'], '/pages/patient/profile/') !== false) {
-    // Called from /pages/patient/profile/ (admin viewing patient)
-    $cssPath = '../../../assets/css/sidebar.css';
-    $vendorPath = '../../../vendor/photo_controller.php';
-    $nav_base = '../../../pages/';
-} elseif (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) {
-    // Called from /pages/ (2 levels deep)
-    $cssPath = '../../assets/css/sidebar.css';
-    $vendorPath = '../../vendor/photo_controller.php';
-    $nav_base = '../../pages/';
+// Extract the base path (project folder) from the script name
+// For example: /wbhsms-cho-koronadal/pages/management/pharmacist/dashboard.php -> /wbhsms-cho-koronadal/
+if (preg_match('#^(.*?)/pages/#', $script_name, $matches)) {
+    $base_path = $matches[1];
 } else {
-    // Default fallback (1 level deep)
-    $cssPath = '../../assets/css/sidebar.css';
-    $vendorPath = '../../vendor/photo_controller.php';
-    $nav_base = '../pages/';
+    // Fallback: try to extract from REQUEST_URI
+    $uri_parts = explode('/', trim($request_uri, '/'));
+    if (count($uri_parts) > 0 && $uri_parts[0] !== 'pages') {
+        $base_path = '/' . $uri_parts[0];
+    } else {
+        $base_path = '';
+    }
 }
+
+// Ensure base_path ends with / if it's not empty
+if ($base_path && !str_ends_with($base_path, '/')) {
+    $base_path .= '/';
+}
+
+$cssPath = $base_path . 'assets/css/sidebar.css';
+$vendorPath = $base_path . 'vendor/photo_controller.php';
+$nav_base = $base_path . 'pages/';
 ?>
 <link rel="stylesheet" href="<?= $cssPath ?>">
 
