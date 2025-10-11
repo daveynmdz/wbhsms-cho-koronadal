@@ -39,7 +39,7 @@ require_once $root_path . '/utils/staff_assignment.php';
 $employee_id = $_SESSION['employee_id'];
 
 // Enforce staff assignment for today
-$assignment = getStaffAssignment($conn, $employee_id);
+$assignment = getStaffAssignment($employee_id);
 if (!$assignment) {
     // Not assigned today, block access
     error_log('BHW Dashboard: No active staff assignment for today.');

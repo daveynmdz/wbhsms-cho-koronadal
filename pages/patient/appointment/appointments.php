@@ -90,28 +90,7 @@ try {
     $error = "Failed to fetch appointments: " . $e->getMessage();
 }
 
-// Fetch referrals (limit to recent 15 for performance)
-$referrals = [];
-try {
-    $stmt = $conn->prepare("
-        SELECT r.*, 
-               f.name as facility_name, f.type as facility_type,
-               e.first_name as doctor_first_name, e.last_name as doctor_last_name
-        FROM referrals r
-        LEFT JOIN facilities f ON r.referred_to_facility_id = f.facility_id
-        LEFT JOIN employees e ON r.referred_by = e.employee_id
-        WHERE r.patient_id = ?
-        ORDER BY r.referral_date DESC
-        LIMIT 15
-    ");
-    $stmt->bind_param("i", $patient_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $referrals = $result->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-} catch (Exception $e) {
-    $error = "Failed to fetch referrals: " . $e->getMessage();
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,7 +98,7 @@ try {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Appointments & Referrals - CHO Koronadal</title>
+    <title>My Appointments - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../../assets/css/sidebar.css">
@@ -404,8 +383,7 @@ try {
             gap: 1.5rem;
         }
 
-        .appointment-card,
-        .referral-card {
+        .appointment-card {
             background: white;
             border: 2px solid #e9ecef;
             border-radius: 15px;
@@ -413,7 +391,6 @@ try {
             transition: all 0.3s ease;
             position: relative;
             min-height: 320px;
-            max-height: 320px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -421,8 +398,7 @@ try {
             box-sizing: content-box;
         }
 
-        .appointment-card:hover,
-        .referral-card:hover {
+        .appointment-card:hover {
             border-color: #0077b6;
             transform: translateY(-3px);
             box-shadow: 0 12px 30px rgba(0, 119, 182, 0.2);
@@ -708,8 +684,6 @@ try {
     margin: 3% auto;
     padding: 0;
     border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
@@ -1145,16 +1119,20 @@ try {
         <div class="breadcrumb" style="margin-top: 50px;">
             <a href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
             <span> / </span>
-            <span style="color: #0077b6; font-weight: 600;">Appointments & Referrals</span>
+            <span style="color: #0077b6; font-weight: 600;">My Appointments</span>
         </div>
 
         <div class="page-header">
-            <h1><i class="fas fa-calendar-check" style="margin-right: 0.5rem;"></i>Appointments & Referrals</h1>
+            <h1><i class="fas fa-calendar-check" style="margin-right: 0.5rem;"></i>My Appointments</h1>
             <div class="action-buttons">
                 <a href="book_appointment.php" class="btn btn-primary">
                     <i class="fas fa-calendar-plus"></i>
-                    <span class="hide-on-mobile">Create Appointment</span>
+                    <span class="hide-on-mobile">Book New Appointment</span>
                 </a>
+                <button class="btn btn-secondary" onclick="downloadAppointmentHistory()">
+                    <i class="fas fa-download"></i>
+                    <span class="hide-on-mobile">Download History</span>
+                </button>
             </div>
         </div>
 
@@ -1176,9 +1154,9 @@ try {
                 <div class="section-icon">
                     <i class="fas fa-calendar-check"></i>
                 </div>
-                <div>
-                    <h2 class="section-title">My Appointments</h2>
-                    <p style="margin: 0; color: #6c757d;">Manage your healthcare appointments (showing latest 20)</p>
+                <h2 class="section-title">Appointment History</h2>
+                <div style="margin-left: auto; color: #6c757d; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Showing recent 20 appointments
                 </div>
             </div>
 
@@ -1187,7 +1165,8 @@ try {
                 <div class="filters-grid">
                     <div class="filter-group">
                         <label for="appointment-search">Search Appointments</label>
-                        <input type="text" id="appointment-search" placeholder="Search by facility, service, or ID..." onkeypress="handleSearchKeyPress(event, 'appointment')">
+                        <input type="text" id="appointment-search" placeholder="Search by service, facility, or appointment ID..." 
+                               onkeypress="handleSearchKeyPress(event, 'appointment')">
                     </div>
                     <div class="filter-group">
                         <label for="appointment-date-from">Date From</label>
@@ -1347,138 +1326,29 @@ try {
             </div>
         </div>
 
-        <!-- Referrals Section -->
-        <div class="section-container">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-file-medical"></i>
-                </div>
-                <div>
-                    <h2 class="section-title">My Referrals</h2>
-                    <p style="margin: 0; color: #6c757d;">Track your medical referrals (showing latest 15)</p>
-                </div>
+
+    </section>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px; margin: 15% auto;">
+            <div class="modal-header" id="notification-header">
+                <h3 id="notification-title">
+                    <i id="notification-icon" class="fas fa-info-circle"></i>
+                    <span id="notification-title-text">Notification</span>
+                </h3>
+                <button class="close" onclick="closeNotificationModal()">&times;</button>
             </div>
-
-            <!-- Search and Filter Section -->
-            <div class="search-filters">
-                <div class="filters-grid">
-                    <div class="filter-group">
-                        <label for="referral-search">Search Referrals</label>
-                        <input type="text" id="referral-search" placeholder="Search by facility, doctor, or ID..." onkeypress="handleSearchKeyPress(event, 'referral')">
-                    </div>
-                    <div class="filter-group">
-                        <label for="referral-date-from">Date From</label>
-                        <input type="date" id="referral-date-from">
-                    </div>
-                    <div class="filter-group">
-                        <label for="referral-date-to">Date To</label>
-                        <input type="date" id="referral-date-to">
-                    </div>
-                    <div class="filter-group">
-                        <label for="referral-status-filter">Status</label>
-                        <select id="referral-status-filter">
-                            <option value="">All Statuses</option>
-                            <option value="active">Active</option>
-                            <option value="accepted">Used</option>
-                            <option value="expired">Expired</option>
-                            <option value="issued">Issued</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <div class="filter-actions">
-                            <button type="button" class="btn-filter btn-filter-primary" onclick="filterReferralsBySearch()">
-                                <i class="fas fa-search"></i> Search
-                            </button>
-                            <button type="button" class="btn-filter btn-filter-secondary" onclick="clearReferralFilters()">Clear</button>
-                        </div>
-                    </div>
-                </div>
+            <div class="modal-body">
+                <div id="notification-message" style="font-size: 1rem; line-height: 1.5; color: #495057; text-align: center; padding: 1rem 0;"></div>
             </div>
-
-            <!-- Filter Tabs -->
-            <div class="filter-tabs">
-                <div class="filter-tab active" onclick="filterReferrals('all', this)">
-                    <i class="fas fa-list"></i> All Referrals
-                </div>
-                <div class="filter-tab" onclick="filterReferrals('active', this)">
-                    <i class="fas fa-check-circle"></i> Active
-                </div>
-                <div class="filter-tab" onclick="filterReferrals('accepted', this)">
-                    <i class="fas fa-calendar-check"></i> Used
-                </div>
-                <div class="filter-tab" onclick="filterReferrals('expired', this)">
-                    <i class="fas fa-times-circle"></i> Expired
-                </div>
-            </div>
-
-            <!-- Referrals Grid -->
-            <div class="card-grid" id="referrals-grid">
-                <?php if (empty($referrals)): ?>
-                    <div class="empty-state" style="grid-column: 1 / -1;">
-                        <i class="fas fa-file-medical"></i>
-                        <h3>No Referrals Found</h3>
-                        <p>You don't have any medical referrals yet. Referrals are issued by healthcare providers when specialized care is needed.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($referrals as $referral): ?>
-                        <?php
-                        $referral_date = new DateTime($referral['referral_date']);
-                        $expiry_date = !empty($referral['expiry_date']) ? new DateTime($referral['expiry_date']) : null;
-                        $facility_name = $referral['facility_name'] ?: $referral['external_facility_name'] ?: 'External Facility';
-                        $doctor_name = trim($referral['doctor_first_name'] . ' ' . $referral['doctor_last_name']) ?: 'Healthcare Provider';
-                        ?>
-                        <div class="referral-card" data-status="<?php echo $referral['status']; ?>" data-referral-date="<?php echo $referral_date->format('Y-m-d'); ?>">
-                            <div class="card-header">
-                                <h3 class="card-title">Referral #<?php echo htmlspecialchars($referral['referral_num']); ?></h3>
-                                <span class="status-badge status-<?php echo $referral['status']; ?>">
-                                    <?php echo ucfirst($referral['status']); ?>
-                                </span>
-                            </div>
-
-                            <div class="card-info">
-                                <div class="info-row">
-                                    <i class="fas fa-hospital"></i>
-                                    <strong>Facility:</strong>
-                                    <span class="value"><?php echo htmlspecialchars($facility_name); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <i class="fas fa-user-md"></i>
-                                    <strong>Doctor:</strong>
-                                    <span class="value"><?php echo htmlspecialchars($doctor_name); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <i class="fas fa-calendar"></i>
-                                    <strong>Date:</strong>
-                                    <span class="value"><?php echo $referral_date->format('M j, Y (l)'); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <i class="fas fa-clipboard-list"></i>
-                                    <strong>Reason:</strong>
-                                    <span class="value"><?php echo htmlspecialchars(substr($referral['referral_reason'], 0, 50)) . (strlen($referral['referral_reason']) > 50 ? '...' : ''); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <strong>Type:</strong>
-                                    <span class="value"><?php echo ucfirst(str_replace('_', ' ', $referral['destination_type'])); ?></span>
-                                </div>
-                            </div>
-
-                            <div class="card-actions">
-                                <button class="btn btn-sm btn-outline btn-outline-primary" onclick="viewReferralDetails(<?php echo $referral['referral_id']; ?>)">
-                                    <i class="fas fa-eye"></i> View Details
-                                </button>
-                                <?php if ($referral['status'] == 'active'): ?>
-                                    <button class="btn btn-sm btn-outline btn-outline-secondary" onclick="bookFromReferral(<?php echo $referral['referral_id']; ?>)">
-                                        <i class="fas fa-calendar-plus"></i> Book Appointment
-                                    </button>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+            <div class="modal-footer" style="justify-content: center;">
+                <button type="button" class="btn btn-primary" onclick="closeNotificationModal()" style="min-width: 100px;">
+                    <i class="fas fa-check"></i> OK
+                </button>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- Cancel Appointment Modal -->
     <div id="cancelModal" class="modal" style="display: none;">
@@ -1616,8 +1486,6 @@ try {
             if (event.key === 'Enter') {
                 if (type === 'appointment') {
                     filterAppointmentsBySearch();
-                } else if (type === 'referral') {
-                    filterReferralsBySearch();
                 }
             }
         }
@@ -1730,168 +1598,7 @@ try {
             }
         }
 
-        // Filter functionality for referrals
-        function filterReferrals(status, clickedElement) {
-            // Remove active class from all tabs in referrals section
-            const referralTabs = document.querySelectorAll('.section-container:last-child .filter-tabs .filter-tab');
-            referralTabs.forEach(tab => {
-                tab.classList.remove('active');
-            });
 
-            // Add active class to clicked tab
-            if (clickedElement) {
-                clickedElement.classList.add('active');
-            }
-
-            // Remove any existing no-results messages
-            const referralsGrid = document.getElementById('referrals-grid');
-            const existingNoResults = referralsGrid.querySelector('.no-results-message');
-            if (existingNoResults) {
-                existingNoResults.remove();
-            }
-
-            // Show/hide referral cards based on status
-            const referrals = document.querySelectorAll('#referrals-grid .referral-card');
-            let visibleCount = 0;
-
-            referrals.forEach(card => {
-                if (status === 'all' || card.dataset.status === status) {
-                    card.style.display = 'block';
-                    visibleCount++;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-
-            // Show no results message if no referrals match the filter
-            if (visibleCount === 0 && referrals.length > 0) {
-                const noResultsDiv = document.createElement('div');
-                noResultsDiv.className = 'no-results-message';
-                noResultsDiv.style.gridColumn = '1 / -1';
-                noResultsDiv.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <h3>No ${status === 'all' ? 'Referrals' : status.charAt(0).toUpperCase() + status.slice(1) + ' Referrals'} Found</h3>
-                        <p>No ${status === 'all' ? 'referrals' : status + ' referrals'} are available at this time.</p>
-                        <button class="btn btn-secondary" onclick="filterReferrals('all', document.querySelectorAll('.section-container')[document.querySelectorAll('.section-container').length-1].querySelector('.filter-tab'))" style="margin-top: 1rem;">
-                            <i class="fas fa-list"></i> Show All Referrals
-                        </button>
-                    </div>
-                `;
-                referralsGrid.appendChild(noResultsDiv);
-            }
-        }
-
-        // Advanced filter functionality for referrals
-        function filterReferralsBySearch() {
-            const searchTerm = document.getElementById('referral-search').value.toLowerCase();
-            const dateFrom = document.getElementById('referral-date-from').value;
-            const dateTo = document.getElementById('referral-date-to').value;
-            const statusFilter = document.getElementById('referral-status-filter').value;
-
-            const referrals = document.querySelectorAll('#referrals-grid .referral-card');
-            const referralsGrid = document.getElementById('referrals-grid');
-            let visibleCount = 0;
-
-            // Remove existing no-results message
-            const existingNoResults = referralsGrid.querySelector('.no-results-message');
-            if (existingNoResults) {
-                existingNoResults.remove();
-            }
-
-            referrals.forEach(card => {
-                let shouldShow = true;
-
-                // Text search
-                if (searchTerm) {
-                    const cardText = card.textContent.toLowerCase();
-                    if (!cardText.includes(searchTerm)) {
-                        shouldShow = false;
-                    }
-                }
-
-                // Date range filter
-                if (dateFrom || dateTo) {
-                    const cardDateElement = card.querySelector('[data-referral-date]');
-                    if (cardDateElement) {
-                        const cardDate = cardDateElement.getAttribute('data-referral-date');
-                        if (dateFrom && cardDate < dateFrom) shouldShow = false;
-                        if (dateTo && cardDate > dateTo) shouldShow = false;
-                    }
-                }
-
-                // Status filter
-                if (statusFilter && card.dataset.status !== statusFilter) {
-                    shouldShow = false;
-                }
-
-                card.style.display = shouldShow ? 'block' : 'none';
-                if (shouldShow) visibleCount++;
-            });
-
-            // Show no results message if no referrals match the filter
-            if (visibleCount === 0 && referrals.length > 0) {
-                const noResultsDiv = document.createElement('div');
-                noResultsDiv.className = 'no-results-message';
-                noResultsDiv.style.gridColumn = '1 / -1';
-                noResultsDiv.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <h3>No Referrals Found</h3>
-                        <p>No referrals match your search criteria. Try adjusting your filters or search terms.</p>
-                        <button class="btn btn-secondary" onclick="clearReferralFilters()" style="margin-top: 1rem;">
-                            <i class="fas fa-undo"></i> Clear Filters
-                        </button>
-                    </div>
-                `;
-                referralsGrid.appendChild(noResultsDiv);
-            }
-
-            // Clear tab selections when using search
-            if (searchTerm || dateFrom || dateTo || statusFilter) {
-                const sectionContainers = document.querySelectorAll('.section-container');
-                if (sectionContainers.length > 1) {
-                    const referralTabs = sectionContainers[sectionContainers.length - 1].querySelectorAll('.filter-tab');
-                    referralTabs.forEach(tab => {
-                        tab.classList.remove('active');
-                    });
-                }
-            }
-        }
-
-        // Clear referral filters
-        function clearReferralFilters() {
-            document.getElementById('referral-search').value = '';
-            document.getElementById('referral-date-from').value = '';
-            document.getElementById('referral-date-to').value = '';
-            document.getElementById('referral-status-filter').value = '';
-
-            // Remove no-results message if it exists
-            const referralsGrid = document.getElementById('referrals-grid');
-            const existingNoResults = referralsGrid.querySelector('.no-results-message');
-            if (existingNoResults) {
-                existingNoResults.remove();
-            }
-
-            // Show all referrals
-            const referrals = document.querySelectorAll('#referrals-grid .referral-card');
-            referrals.forEach(card => {
-                card.style.display = 'block';
-            });
-
-            // Reset to "All Referrals" tab - find the referrals section (last section)
-            const sectionContainers = document.querySelectorAll('.section-container');
-            if (sectionContainers.length > 1) {
-                const referralTabs = sectionContainers[sectionContainers.length - 1].querySelectorAll('.filter-tab');
-                referralTabs.forEach((tab, index) => {
-                    if (index === 0) {
-                        tab.classList.add('active');
-                    } else {
-                        tab.classList.remove('active');
-                    }
-                });
-            }
-        }
 
         // View appointment details
         function viewAppointmentDetails(appointmentId) {
@@ -2188,17 +1895,69 @@ try {
             currentCancelAppointmentId = null;
         }
 
+        // Notification Modal Functions
+        function showNotificationModal(type, title, message, callback = null) {
+            const modal = document.getElementById('notificationModal');
+            const header = document.getElementById('notification-header');
+            const icon = document.getElementById('notification-icon');
+            const titleText = document.getElementById('notification-title-text');
+            const messageElement = document.getElementById('notification-message');
+            
+            // Set title and message
+            titleText.textContent = title;
+            messageElement.textContent = message;
+            
+            // Configure appearance based on type
+            switch(type) {
+                case 'success':
+                    header.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                    icon.className = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    header.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+                    icon.className = 'fas fa-exclamation-triangle';
+                    break;
+                case 'warning':
+                    header.style.background = 'linear-gradient(135deg, #ffc107, #e0a800)';
+                    icon.className = 'fas fa-exclamation-triangle';
+                    break;
+                default:
+                    header.style.background = 'linear-gradient(135deg, #0077b6, #023e8a)';
+                    icon.className = 'fas fa-info-circle';
+            }
+            
+            // Store callback for later use
+            modal.dataset.callback = callback ? 'true' : 'false';
+            if (callback) {
+                window.notificationCallback = callback;
+            }
+            
+            // Show modal
+            modal.style.display = 'block';
+        }
+
+        function closeNotificationModal() {
+            const modal = document.getElementById('notificationModal');
+            modal.style.display = 'none';
+            
+            // Execute callback if exists
+            if (modal.dataset.callback === 'true' && window.notificationCallback) {
+                window.notificationCallback();
+                window.notificationCallback = null;
+            }
+        }
+
         function confirmCancellation() {
             const reason = document.getElementById('cancellation-reason').value;
             const otherReason = document.getElementById('other-reason').value;
 
             if (!reason) {
-                alert('Please select a reason for cancellation.');
+                showNotificationModal('warning', 'Validation Required', 'Please select a reason for cancellation.');
                 return;
             }
 
             if (reason === 'Other' && !otherReason.trim()) {
-                alert('Please specify the reason for cancellation.');
+                showNotificationModal('warning', 'Additional Details Required', 'Please specify the reason for cancellation.');
                 return;
             }
 
@@ -2210,6 +1969,7 @@ try {
             confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cancelling...';
 
             // Send cancellation request
+            console.log('Sending cancellation request for appointment:', currentCancelAppointmentId);
             fetch('cancel_appointment.php', {
                     method: 'POST',
                     headers: {
@@ -2220,18 +1980,35 @@ try {
                         cancellation_reason: finalReason
                     })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    // Check if the response is ok (status 200-299)
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
-                        alert('Appointment cancelled successfully.');
-                        location.reload(); // Refresh the page to show updated status
+                        showNotificationModal('success', 'Cancellation Successful', 'Your appointment has been cancelled successfully.', () => {
+                            location.reload(); // Refresh the page to show updated status
+                        });
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to cancel appointment'));
+                        showNotificationModal('error', 'Cancellation Failed', 'Error: ' + (data.message || 'Failed to cancel appointment'));
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while cancelling the appointment.');
+                    console.error('Fetch Error:', error);
+                    let errorMessage = 'An error occurred while cancelling the appointment.';
+                    
+                    if (error.message.includes('HTTP 404')) {
+                        errorMessage = 'Cancellation service not found. Please contact support.';
+                    } else if (error.message.includes('HTTP 500')) {
+                        errorMessage = 'Server error occurred. Please try again later.';
+                    } else if (error.message.includes('Failed to fetch')) {
+                        errorMessage = 'Network connection failed. Please check your connection and try again.';
+                    }
+                    
+                    showNotificationModal('error', 'Request Failed', errorMessage);
                 })
                 .finally(() => {
                     confirmBtn.disabled = false;
@@ -2275,6 +2052,47 @@ try {
                 location.reload();
             }
         }, 300000); // 5 minutes
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const cancelModal = document.getElementById('cancelModal');
+            const viewModal = document.getElementById('viewModal');
+            const notificationModal = document.getElementById('notificationModal');
+            
+            if (event.target === cancelModal) {
+                closeCancelModal();
+            }
+            if (event.target === viewModal) {
+                closeViewModal();
+            }
+            if (event.target === notificationModal) {
+                closeNotificationModal();
+            }
+        }
+
+        // Handle keyboard events
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                // Close any open modals
+                const cancelModal = document.getElementById('cancelModal');
+                const viewModal = document.getElementById('viewModal');
+                const notificationModal = document.getElementById('notificationModal');
+                
+                if (cancelModal.style.display === 'block') {
+                    closeCancelModal();
+                } else if (viewModal.style.display === 'block') {
+                    closeViewModal();
+                } else if (notificationModal.style.display === 'block') {
+                    closeNotificationModal();
+                }
+            }
+        });
+
+        // Download appointment history
+        function downloadAppointmentHistory() {
+            // TODO: Implement download functionality
+            alert('Download appointment history functionality will be implemented here.');
+        }
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
@@ -2349,6 +2167,46 @@ try {
 
         .alert i {
             font-size: 1.1rem;
+        }
+
+        /* Notification Modal Styles */
+        #notificationModal .modal-content {
+            animation: slideInDown 0.3s ease-out;
+        }
+
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        #notification-message {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Notification type animations */
+        .notification-success #notification-header {
+            background: linear-gradient(135deg, #28a745, #20c997) !important;
+        }
+
+        .notification-error #notification-header {
+            background: linear-gradient(135deg, #dc3545, #c82333) !important;
+        }
+
+        .notification-warning #notification-header {
+            background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+        }
+
+        .notification-info #notification-header {
+            background: linear-gradient(135deg, #0077b6, #023e8a) !important;
         }
     </style>
 

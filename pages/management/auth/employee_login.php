@@ -244,6 +244,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_type'] = $role;
             $_SESSION['user_id'] = $row['employee_id'];
 
+            // Check for station assignment (for queue management roles)
+            $queue_roles = ['doctor', 'nurse', 'pharmacist', 'laboratory_tech', 'cashier', 'records_officer', 'bhw'];
+            if (in_array($role, $queue_roles)) {
+                try {
+                    // Check if employee has a station assignment for today
+                    $stationStmt = $conn->prepare("
+                        SELECT 
+                            sa.station_id,
+                            sa.assigned_date,
+                            sa.shift_start,
+                            sa.shift_end,
+                            s.station_name,
+                            s.station_type,
+                            s.station_number,
+                            sv.name as service_name
+                        FROM assignment_schedules asch
+                        JOIN stations s ON asch.station_id = s.station_id
+                        JOIN services sv ON s.service_id = sv.service_id
+                        WHERE asch.employee_id = ? 
+                        AND asch.start_date <= CURDATE()
+                        AND (asch.end_date IS NULL OR asch.end_date >= CURDATE())
+                        AND asch.is_active = 1
+                        AND s.is_active = 1
+                        LIMIT 1
+                    ");
+                    
+                    if ($stationStmt) {
+                        $stationStmt->bind_param("i", $row['employee_id']);
+                        $stationStmt->execute();
+                        $stationResult = $stationStmt->get_result();
+                        
+                        if ($stationAssignment = $stationResult->fetch_assoc()) {
+                            // Set station assignment session variables
+                            $_SESSION['station_id'] = $stationAssignment['station_id'];
+                            $_SESSION['station_name'] = $stationAssignment['station_name'];
+                            $_SESSION['station_type'] = $stationAssignment['station_type'];
+                            $_SESSION['station_number'] = $stationAssignment['station_number'];
+                            $_SESSION['service_name'] = $stationAssignment['service_name'];
+                            $_SESSION['shift_start'] = $stationAssignment['shift_start'];
+                            $_SESSION['shift_end'] = $stationAssignment['shift_end'];
+                            $_SESSION['has_station_assignment'] = true;
+                            
+                            error_log('[employee_login] Station assignment found for ' . $employee_number . ': ' . $stationAssignment['station_name']);
+                        } else {
+                            // No station assignment found
+                            $_SESSION['has_station_assignment'] = false;
+                            error_log('[employee_login] No station assignment found for ' . $employee_number . ' on ' . date('Y-m-d'));
+                        }
+                        $stationStmt->close();
+                    }
+                } catch (Exception $e) {
+                    error_log('[employee_login] Error checking station assignment: ' . $e->getMessage());
+                    // Continue with login even if station check fails
+                    $_SESSION['has_station_assignment'] = false;
+                }
+            }
+
             // Simplified dashboard redirection
             error_log('[employee_login] Successful login for ' . $employee_number . ' with role ' . $role);
             $redirectPath = '../' . $role . '/dashboard.php';

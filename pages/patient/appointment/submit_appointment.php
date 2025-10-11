@@ -306,8 +306,7 @@ try {
     );
     
     if (!$log_success) {
-        error_log("Failed to log appointment creation for appointment_id: $appointment_id");
-        // Continue execution - don't fail appointment creation for logging issues
+        throw new Exception("Failed to log appointment creation. Transaction cancelled for data integrity.");
     }
     
     // Create queue entry for ALL appointments (BHC, DHO, CHO)

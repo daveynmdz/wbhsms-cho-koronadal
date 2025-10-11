@@ -65,38 +65,35 @@ if (($needsName || $needsNo) && $employee_id) {
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <?php
-// Dynamic paths based on where this file is included from
-$cssPath = '';
-$vendorPath = '';
-$nav_base = '';
+// Get the proper base URL by extracting the project folder from the script name
+$request_uri = $_SERVER['REQUEST_URI'];
+$script_name = $_SERVER['SCRIPT_NAME'];
 
-if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
-    // Called from /pages/management/ (3 levels deep)
-    $cssPath = '../../../assets/css/sidebar.css';
-    $vendorPath = '../../../vendor/photo_controller.php';
-    $nav_base = '../../../pages/';
-} elseif (strpos($_SERVER['PHP_SELF'], '/pages/patient/profile/') !== false) {
-    // Called from /pages/patient/profile/ (admin viewing patient)
-    $cssPath = '../../../assets/css/sidebar.css';
-    $vendorPath = '../../../vendor/photo_controller.php';
-    $nav_base = '../../../pages/';
-} elseif (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) {
-    // Called from /pages/ (2 levels deep)
-    $cssPath = '../../assets/css/sidebar.css';
-    $vendorPath = '../../vendor/photo_controller.php';
-    $nav_base = '../../pages/';
+// Extract the base path (project folder) from the script name
+// For example: /wbhsms-cho-koronadal/pages/management/admin/dashboard.php -> /wbhsms-cho-koronadal/
+if (preg_match('#^(/[^/]+)/pages/#', $script_name, $matches)) {
+    $base_path = $matches[1] . '/';
 } else {
-    // Default fallback (1 level deep)
-    $cssPath = '../../assets/css/sidebar.css';
-    $vendorPath = '../../vendor/photo_controller.php';
-    $nav_base = '../pages/';
+    // Fallback: try to extract from REQUEST_URI - first segment should be project folder
+    $uri_parts = explode('/', trim($request_uri, '/'));
+    if (count($uri_parts) > 0 && $uri_parts[0] && $uri_parts[0] !== 'pages') {
+        $base_path = '/' . $uri_parts[0] . '/';
+    } else {
+        $base_path = '/';
+    }
 }
+
+$cssPath = $base_path . 'assets/css/sidebar.css';
+$dashboardCssPath = $base_path . 'assets/css/dashboard.css';
+$vendorPath = $base_path . 'vendor/photo_controller.php';
+$nav_base = $base_path . 'pages/';
 ?>
 <link rel="stylesheet" href="<?= $cssPath ?>">
+<link rel="stylesheet" href="<?= $dashboardCssPath ?>">
 
 <!-- Mobile topbar -->
 <div class="mobile-topbar">
-    <a href="<?= $nav_base ?>dashboard/dashboard_admin.php">
+    <a href="<?= $nav_base ?>management/admin/dashboard.php">
         <img id="topbarLogo" class="logo" src="https://ik.imagekit.io/wbhsmslogo/Nav_Logo.png?updatedAt=1750422462527" alt="City Health Logo" />
     </a>
 </div>
@@ -118,26 +115,30 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= $nav_base ?>management/admin/patient_records_management.php"
+        <a href="<?= $nav_base ?>management/admin/patient-records/patient_records_management.php"
             class="<?= $activePage === 'patient_records' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-users"></i> Patient Records
         </a>
-        <a href="<?= $nav_base ?>management/admin/referrals_management.php"
+        <a href="<?= $nav_base ?>management/admin/referrals/referrals_management.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-share"></i> Referrals Management
         </a>
-        <a href="<?= $nav_base ?>management/admin/appointments_management.php"
+        <a href="<?= $nav_base ?>management/admin/appointments/appointments_management.php"
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments Management
         </a>
-        <a href="<?= $nav_base ?>management/admin/staff_assignments.php"
-            class="<?= $activePage === 'employees' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-user-tie"></i> Staff Assignment
+        <a href="<?= $nav_base ?>management/admin/user-management/employee_list.php"
+            class="<?= $activePage === 'user_management' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-users-cog"></i> Employee Management
         </a>
-        <!-- These links are placeholders for pages not yet created -->
-        <a href="#"
-            class="<?= $activePage === 'clinical' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-stethoscope"></i> Clinical Records
+        <a href="<?= $nav_base ?>management/admin/staff-management/staff_assignments.php"
+            class="<?= $activePage === 'staff_assignments' ? 'active' : '' ?>" role="menuitem">
+            <i class="fa-solid fa-person-booth"></i> Station Assignment
+        </a>
+        <!-- Clinical Encounter Management -->
+        <a href="<?= $nav_base ?>clinical-encounter-management/index.php"
+            class="<?= $activePage === 'clinical_encounters' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-stethoscope"></i> Clinical Encounters
         </a>
         <a href="#"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?> disabled" role="menuitem">
@@ -194,22 +195,8 @@ if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
 </nav>
 
 <?php
-// Generate correct logout URL based on current file location
-$logoutUrl = '';
-
-if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
-    // Called from /pages/management/ (3 levels deep)
-    $logoutUrl = '../../../pages/management/auth/employee_logout.php';
-} elseif (strpos($_SERVER['PHP_SELF'], '/pages/patient/profile/') !== false) {
-    // Called from /pages/patient/profile/ (admin viewing patient)
-    $logoutUrl = '../../../pages/management/auth/employee_logout.php';
-} elseif (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) {
-    // Called from /pages/ (2 levels deep)
-    $logoutUrl = '../../pages/management/auth/employee_logout.php';
-} else {
-    // Default fallback (1 level deep)
-    $logoutUrl = '../pages/management/auth/employee_logout.php';
-}
+// Generate correct logout URL using the same base path calculation
+$logoutUrl = $base_path . 'pages/management/auth/employee_logout.php';
 ?>
 
 <!-- Hidden logout form with CSRF protection -->

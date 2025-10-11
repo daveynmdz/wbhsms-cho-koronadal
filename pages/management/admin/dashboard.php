@@ -39,15 +39,16 @@ $defaults = [
 
 // Get employee info
 $stmt = $conn->prepare('SELECT first_name, middle_name, last_name, employee_number, role_id FROM employees WHERE employee_id = ?');
-$stmt->bind_param("i", $employee_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$row = $result->fetch_assoc();
-if ($row) {
-    $full_name = $row['first_name'];
-    if (!empty($row['middle_name'])) $full_name .= ' ' . $row['middle_name'];
-    $full_name .= ' ' . $row['last_name'];
-    $defaults['name'] = trim($full_name);
+if ($stmt) {
+    $stmt->bind_param("i", $employee_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    if ($row) {
+        $full_name = $row['first_name'];
+        if (!empty($row['middle_name'])) $full_name .= ' ' . $row['middle_name'];
+        $full_name .= ' ' . $row['last_name'];
+        $defaults['name'] = trim($full_name);
     $defaults['employee_number'] = $row['employee_number'];
     
     // Map role_id to role names
@@ -63,18 +64,21 @@ if ($row) {
         9 => 'dho'
     ];
     $defaults['role'] = $role_mapping[$row['role_id']] ?? 'unknown';
+    }
+    $stmt->close();
 }
-$stmt->close();
 
 // Dashboard Statistics
 try {
     // Total Patients
     $stmt = $conn->prepare('SELECT COUNT(*) as count FROM patients');
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $defaults['stats']['total_patients'] = $row['count'] ?? 0;
-    $stmt->close();
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $defaults['stats']['total_patients'] = $row['count'] ?? 0;
+        $stmt->close();
+    }
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; ignore
 }
@@ -83,12 +87,14 @@ try {
     // Today's Appointments
     $today = date('Y-m-d');
     $stmt = $conn->prepare('SELECT COUNT(*) as count FROM appointments WHERE DATE(date) = ?');
-    $stmt->bind_param("s", $today);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $defaults['stats']['today_appointments'] = $row['count'] ?? 0;
-    $stmt->close();
+    if ($stmt) {
+        $stmt->bind_param("s", $today);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $defaults['stats']['today_appointments'] = $row['count'] ?? 0;
+        $stmt->close();
+    }
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; ignore
 }
@@ -96,11 +102,13 @@ try {
 try {
     // Pending Lab Results
     $stmt = $conn->prepare('SELECT COUNT(*) as count FROM lab_tests WHERE status = "pending"');
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $defaults['stats']['pending_lab_results'] = $row['count'] ?? 0;
-    $stmt->close();
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $defaults['stats']['pending_lab_results'] = $row['count'] ?? 0;
+        $stmt->close();
+    }
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; ignore
 }
@@ -108,11 +116,13 @@ try {
 try {
     // Total Employees
     $stmt = $conn->prepare('SELECT COUNT(*) as count FROM employees');
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $defaults['stats']['total_employees'] = $row['count'] ?? 0;
-    $stmt->close();
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $defaults['stats']['total_employees'] = $row['count'] ?? 0;
+        $stmt->close();
+    }
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; ignore
 }
@@ -121,12 +131,14 @@ try {
     // Monthly Revenue (current month)
     $current_month = date('Y-m');
     $stmt = $conn->prepare('SELECT SUM(amount) as total FROM billing WHERE DATE_FORMAT(date, "%Y-%m") = ? AND status = "paid"');
-    $stmt->bind_param("s", $current_month);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $defaults['stats']['monthly_revenue'] = $row['total'] ?? 0;
-    $stmt->close();
+    if ($stmt) {
+        $stmt->bind_param("s", $current_month);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $defaults['stats']['monthly_revenue'] = $row['total'] ?? 0;
+        $stmt->close();
+    }
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; ignore
 }
@@ -134,11 +146,13 @@ try {
 try {
     // Queue Count
     $stmt = $conn->prepare('SELECT COUNT(*) as count FROM patient_queue WHERE status = "waiting"');
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $defaults['stats']['queue_count'] = $row['count'] ?? 0;
-    $stmt->close();
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $defaults['stats']['queue_count'] = $row['count'] ?? 0;
+        $stmt->close();
+    }
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; ignore
 }
@@ -146,16 +160,18 @@ try {
 // Recent Activities (latest 5)
 try {
     $stmt = $conn->prepare('SELECT activity, created_at FROM admin_activity_log WHERE employee_id = ? ORDER BY created_at DESC LIMIT 5');
-    $stmt->bind_param("i", $employee_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $defaults['recent_activities'][] = [
-            'activity' => $row['activity'] ?? '',
-            'date' => date('m/d/Y H:i', strtotime($row['created_at']))
-        ];
+    if ($stmt) {
+        $stmt->bind_param("i", $employee_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $defaults['recent_activities'][] = [
+                'activity' => $row['activity'] ?? '',
+                'date' => date('m/d/Y H:i', strtotime($row['created_at']))
+            ];
+        }
+        $stmt->close();
     }
-    $stmt->close();
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; add some default activities
     $defaults['recent_activities'] = [
@@ -167,17 +183,19 @@ try {
 // Pending Tasks
 try {
     $stmt = $conn->prepare('SELECT task, priority, due_date FROM admin_tasks WHERE employee_id = ? AND status = "pending" ORDER BY due_date ASC LIMIT 5');
-    $stmt->bind_param("i", $employee_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $defaults['pending_tasks'][] = [
-            'task' => $row['task'] ?? '',
-            'priority' => $row['priority'] ?? 'normal',
-            'due_date' => date('m/d/Y', strtotime($row['due_date']))
-        ];
+    if ($stmt) {
+        $stmt->bind_param("i", $employee_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $defaults['pending_tasks'][] = [
+                'task' => $row['task'] ?? '',
+                'priority' => $row['priority'] ?? 'normal',
+                'due_date' => date('m/d/Y', strtotime($row['due_date']))
+            ];
+        }
+        $stmt->close();
     }
-    $stmt->close();
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; add some default tasks
     $defaults['pending_tasks'] = [
@@ -189,16 +207,18 @@ try {
 // System Alerts
 try {
     $stmt = $conn->prepare('SELECT message, type, created_at FROM system_alerts WHERE status = "active" ORDER BY created_at DESC LIMIT 3');
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $defaults['system_alerts'][] = [
-            'message' => $row['message'] ?? '',
-            'type' => $row['type'] ?? 'info',
-            'date' => date('m/d/Y H:i', strtotime($row['created_at']))
-        ];
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $defaults['system_alerts'][] = [
+                'message' => $row['message'] ?? '',
+                'type' => $row['type'] ?? 'info',
+                'date' => date('m/d/Y H:i', strtotime($row['created_at']))
+            ];
+        }
+        $stmt->close();
     }
-    $stmt->close();
 } catch (mysqli_sql_exception $e) {
     // table might not exist yet; add some default alerts
     $defaults['system_alerts'] = [
