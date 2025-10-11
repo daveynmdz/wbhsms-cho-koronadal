@@ -15,10 +15,14 @@ if (!is_employee_logged_in()) {
 // Get employee details with role lookup
 $employee_id = get_employee_session('employee_id');
 $employee_stmt = $conn->prepare("SELECT e.*, r.role_name as role FROM employees e LEFT JOIN roles r ON e.role_id = r.role_id WHERE e.employee_id = ?");
-$employee_stmt->bind_param("i", $employee_id);
-$employee_stmt->execute();
-$employee_result = $employee_stmt->get_result();
-$employee_details = $employee_result->fetch_assoc();
+if ($employee_stmt) {
+    $employee_stmt->bind_param("i", $employee_id);
+    $employee_stmt->execute();
+    $employee_result = $employee_stmt->get_result();
+    $employee_details = $employee_result->fetch_assoc();
+} else {
+    $employee_details = null;
+}
 
 if (!$employee_details) {
     header("Location: /wbhsms-cho-koronadal/pages/management/login.php");
@@ -31,7 +35,8 @@ $employee_name = $employee_details['first_name'] . ' ' . $employee_details['last
 // Get visit_id from URL
 $visit_id = isset($_GET['visit_id']) ? (int)$_GET['visit_id'] : 0;
 if (!$visit_id) {
-    header("Location: /wbhsms-cho-koronadal/pages/clinical-encounter-management/index.php?error=invalid_visit");
+    // Redirect to clinical encounter management with a helpful message
+    header("Location: index.php?error=visit_required");
     exit();
 }
 
@@ -58,20 +63,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // Check if vitals already exist
             $check_stmt = $conn->prepare("SELECT vital_id FROM vitals WHERE visit_id = ?");
-            $check_stmt->bind_param("i", $visit_id);
-            $check_stmt->execute();
-            $existing_vitals = $check_stmt->get_result()->fetch_assoc();
-            
-            if ($existing_vitals) {
-                // Update existing vitals
-                $update_stmt = $conn->prepare("UPDATE vitals SET blood_pressure = ?, heart_rate = ?, temperature = ?, respiratory_rate = ?, height = ?, weight = ?, updated_by = ?, updated_at = NOW() WHERE visit_id = ?");
-                $update_stmt->bind_param("siidddii", $blood_pressure, $heart_rate, $temperature, $respiratory_rate, $height, $weight, $employee_id, $visit_id);
-                $update_stmt->execute();
-            } else {
-                // Insert new vitals
-                $insert_stmt = $conn->prepare("INSERT INTO vitals (visit_id, blood_pressure, heart_rate, temperature, respiratory_rate, height, weight, taken_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
-                $insert_stmt->bind_param("isiidddi", $visit_id, $blood_pressure, $heart_rate, $temperature, $respiratory_rate, $height, $weight, $employee_id);
-                $insert_stmt->execute();
+            if ($check_stmt) {
+                $check_stmt->bind_param("i", $visit_id);
+                $check_stmt->execute();
+                $existing_vitals = $check_stmt->get_result()->fetch_assoc();
+                
+                if ($existing_vitals) {
+                    // Update existing vitals
+                    $update_stmt = $conn->prepare("UPDATE vitals SET blood_pressure = ?, heart_rate = ?, temperature = ?, respiratory_rate = ?, height = ?, weight = ?, updated_by = ?, updated_at = NOW() WHERE visit_id = ?");
+                    if ($update_stmt) {
+                        $update_stmt->bind_param("siidddii", $blood_pressure, $heart_rate, $temperature, $respiratory_rate, $height, $weight, $employee_id, $visit_id);
+                        $update_stmt->execute();
+                    }
+                } else {
+                    // Insert new vitals
+                    $insert_stmt = $conn->prepare("INSERT INTO vitals (visit_id, blood_pressure, heart_rate, temperature, respiratory_rate, height, weight, taken_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+                    if ($insert_stmt) {
+                        $insert_stmt->bind_param("isiidddi", $visit_id, $blood_pressure, $heart_rate, $temperature, $respiratory_rate, $height, $weight, $employee_id);
+                        $insert_stmt->execute();
+                    }
+                }
             }
             
             $success_message = "Vitals saved successfully.";
@@ -95,35 +106,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 // Get patient_id from visit
                 $visit_stmt = $conn->prepare("SELECT patient_id FROM visits WHERE visit_id = ?");
-                $visit_stmt->bind_param("i", $visit_id);
-                $visit_stmt->execute();
-                $visit_result = $visit_stmt->get_result()->fetch_assoc();
-                
-                if (!$visit_result) {
-                    $error_message = "Invalid visit.";
-                } else {
-                    $patient_id = $visit_result['patient_id'];
+                if ($visit_stmt) {
+                    $visit_stmt->bind_param("i", $visit_id);
+                    $visit_stmt->execute();
+                    $visit_result = $visit_stmt->get_result()->fetch_assoc();
                     
-                    // Check if consultation already exists
-                    $check_stmt = $conn->prepare("SELECT consultation_id FROM consultations WHERE visit_id = ?");
-                    $check_stmt->bind_param("i", $visit_id);
-                    $check_stmt->execute();
-                    $existing_consultation = $check_stmt->get_result()->fetch_assoc();
-                    
-                    if ($existing_consultation) {
-                        // Update existing consultation
-                        $update_stmt = $conn->prepare("UPDATE consultations SET chief_complaint = ?, diagnosis = ?, treatment_plan = ?, remarks = ?, consultation_status = ?, attending_employee_id = ?, updated_at = NOW() WHERE visit_id = ?");
-                        $update_stmt->bind_param("sssssii", $chief_complaint, $diagnosis, $treatment_plan, $remarks, $consultation_status, $employee_id, $visit_id);
-                        $update_stmt->execute();
+                    if (!$visit_result) {
+                        $error_message = "Invalid visit.";
                     } else {
-                        // Insert new consultation
-                        $insert_stmt = $conn->prepare("INSERT INTO consultations (visit_id, patient_id, attending_employee_id, chief_complaint, diagnosis, treatment_plan, remarks, consultation_status, consultation_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())");
-                        $insert_stmt->bind_param("iiisssss", $visit_id, $patient_id, $employee_id, $chief_complaint, $diagnosis, $treatment_plan, $remarks, $consultation_status);
-                        $insert_stmt->execute();
+                        $patient_id = $visit_result['patient_id'];
+                        
+                        // Check if consultation already exists
+                        $check_stmt = $conn->prepare("SELECT consultation_id FROM consultations WHERE visit_id = ?");
+                        if ($check_stmt) {
+                            $check_stmt->bind_param("i", $visit_id);
+                            $check_stmt->execute();
+                            $existing_consultation = $check_stmt->get_result()->fetch_assoc();
+                            
+                            if ($existing_consultation) {
+                                // Update existing consultation
+                                $update_stmt = $conn->prepare("UPDATE consultations SET chief_complaint = ?, diagnosis = ?, treatment_plan = ?, remarks = ?, consultation_status = ?, attending_employee_id = ?, updated_at = NOW() WHERE visit_id = ?");
+                                if ($update_stmt) {
+                                    $update_stmt->bind_param("sssssii", $chief_complaint, $diagnosis, $treatment_plan, $remarks, $consultation_status, $employee_id, $visit_id);
+                                    $update_stmt->execute();
+                                }
+                            } else {
+                                // Insert new consultation
+                                $insert_stmt = $conn->prepare("INSERT INTO consultations (visit_id, patient_id, attending_employee_id, chief_complaint, diagnosis, treatment_plan, remarks, consultation_status, consultation_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())");
+                                if ($insert_stmt) {
+                                    $insert_stmt->bind_param("iiisssss", $visit_id, $patient_id, $employee_id, $chief_complaint, $diagnosis, $treatment_plan, $remarks, $consultation_status);
+                                    $insert_stmt->execute();
+                                }
+                            }
+                        }
                     }
-                    
-                    $success_message = "Consultation saved successfully.";
+                } else {
+                    $error_message = "Database error occurred.";
                 }
+                
+                $success_message = "Consultation saved successfully.";
             } catch (Exception $e) {
                 $error_message = "Error saving consultation: " . $e->getMessage();
             }
@@ -144,10 +165,14 @@ try {
         LEFT JOIN districts d ON b.district_id = d.district_id
         WHERE v.visit_id = ?
     ");
-    $data_stmt->bind_param("i", $visit_id);
-    $data_stmt->execute();
-    $result = $data_stmt->get_result();
-    $combined_data = $result->fetch_assoc();
+    if ($data_stmt) {
+        $data_stmt->bind_param("i", $visit_id);
+        $data_stmt->execute();
+        $result = $data_stmt->get_result();
+        $combined_data = $result->fetch_assoc();
+    } else {
+        $combined_data = null;
+    }
     
     if (!$combined_data) {
         header("Location: /wbhsms-cho-koronadal/pages/clinical-encounter-management/index.php?error=visit_not_found");
@@ -159,10 +184,14 @@ try {
     
     // Get vitals data
     $vitals_stmt = $conn->prepare("SELECT * FROM vitals WHERE visit_id = ?");
-    $vitals_stmt->bind_param("i", $visit_id);
-    $vitals_stmt->execute();
-    $vitals_result = $vitals_stmt->get_result();
-    $vitals_data = $vitals_result->fetch_assoc();
+    if ($vitals_stmt) {
+        $vitals_stmt->bind_param("i", $visit_id);
+        $vitals_stmt->execute();
+        $vitals_result = $vitals_stmt->get_result();
+        $vitals_data = $vitals_result->fetch_assoc();
+    } else {
+        $vitals_data = null;
+    }
     
     // Get consultation data
     $consultation_stmt = $conn->prepare("
@@ -174,10 +203,14 @@ try {
         LEFT JOIN employees updater ON c.attending_employee_id = updater.employee_id
         WHERE c.visit_id = ?
     ");
-    $consultation_stmt->bind_param("i", $visit_id);
-    $consultation_stmt->execute();
-    $consultation_result = $consultation_stmt->get_result();
-    $consultation_data = $consultation_result->fetch_assoc();
+    if ($consultation_stmt) {
+        $consultation_stmt->bind_param("i", $visit_id);
+        $consultation_stmt->execute();
+        $consultation_result = $consultation_stmt->get_result();
+        $consultation_data = $consultation_result->fetch_assoc();
+    } else {
+        $consultation_data = null;
+    }
     
 } catch (Exception $e) {
     $error_message = "Error loading data: " . $e->getMessage();
@@ -202,9 +235,13 @@ if ($employee_role === 'bhw' || $employee_role === 'dho') {
             LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
             WHERE e.employee_id = ? AND p.patient_id = (SELECT patient_id FROM visits WHERE visit_id = ?)
         ");
-        $location_stmt->bind_param("ii", $employee_id, $visit_id);
-        $location_stmt->execute();
-        $location_result = $location_stmt->get_result()->fetch_assoc();
+        if ($location_stmt) {
+            $location_stmt->bind_param("ii", $employee_id, $visit_id);
+            $location_stmt->execute();
+            $location_result = $location_stmt->get_result()->fetch_assoc();
+        } else {
+            $location_result = null;
+        }
         
         if ($location_result) {
             if ($employee_role === 'bhw') {

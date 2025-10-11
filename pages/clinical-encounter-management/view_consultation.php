@@ -15,10 +15,14 @@ if (!is_employee_logged_in()) {
 // Get employee details with role lookup
 $employee_id = get_employee_session('employee_id');
 $employee_stmt = $conn->prepare("SELECT e.*, r.role_name as role FROM employees e LEFT JOIN roles r ON e.role_id = r.role_id WHERE e.employee_id = ?");
-$employee_stmt->bind_param("i", $employee_id);
-$employee_stmt->execute();
-$employee_result = $employee_stmt->get_result();
-$employee_details = $employee_result->fetch_assoc();
+if ($employee_stmt) {
+    $employee_stmt->bind_param("i", $employee_id);
+    $employee_stmt->execute();
+    $employee_result = $employee_stmt->get_result();
+    $employee_details = $employee_result->fetch_assoc();
+} else {
+    $employee_details = null;
+}
 
 if (!$employee_details) {
     header("Location: /wbhsms-cho-koronadal/pages/management/login.php");
@@ -74,10 +78,14 @@ try {
         LEFT JOIN employees doc ON c.attending_employee_id = doc.employee_id
         WHERE c.consultation_id = ?
     ");
-    $consultation_stmt->bind_param("i", $consultation_id);
-    $consultation_stmt->execute();
-    $result = $consultation_stmt->get_result();
-    $consultation_data = $result->fetch_assoc();
+    if ($consultation_stmt) {
+        $consultation_stmt->bind_param("i", $consultation_id);
+        $consultation_stmt->execute();
+        $result = $consultation_stmt->get_result();
+        $consultation_data = $result->fetch_assoc();
+    } else {
+        $consultation_data = null;
+    }
     
     if (!$consultation_data) {
         header("Location: /wbhsms-cho-koronadal/pages/clinical-encounter-management/index.php?error=consultation_not_found");
@@ -110,10 +118,14 @@ try {
         LEFT JOIN employees e ON v.taken_by = e.employee_id
         WHERE v.visit_id = ?
     ");
-    $vitals_stmt->bind_param("i", $consultation_data['visit_id']);
-    $vitals_stmt->execute();
-    $vitals_result = $vitals_stmt->get_result();
-    $vitals_data = $vitals_result->fetch_assoc();
+    if ($vitals_stmt) {
+        $vitals_stmt->bind_param("i", $consultation_data['visit_id']);
+        $vitals_stmt->execute();
+        $vitals_result = $vitals_stmt->get_result();
+        $vitals_data = $vitals_result->fetch_assoc();
+    } else {
+        $vitals_data = null;
+    }
     
     // Get lab orders
     $lab_stmt = $conn->prepare("
@@ -123,10 +135,14 @@ try {
         WHERE l.visit_id = ? OR l.consultation_id = ?
         ORDER BY l.created_at DESC
     ");
-    $lab_stmt->bind_param("ii", $consultation_data['visit_id'], $consultation_id);
-    $lab_stmt->execute();
-    $lab_result = $lab_stmt->get_result();
-    $lab_orders = $lab_result->fetch_all(MYSQLI_ASSOC);
+    if ($lab_stmt) {
+        $lab_stmt->bind_param("ii", $consultation_data['visit_id'], $consultation_id);
+        $lab_stmt->execute();
+        $lab_result = $lab_stmt->get_result();
+        $lab_orders = $lab_result->fetch_all(MYSQLI_ASSOC);
+    } else {
+        $lab_orders = [];
+    }
     
     // Get prescriptions
     $prescription_stmt = $conn->prepare("
@@ -136,10 +152,14 @@ try {
         WHERE p.visit_id = ? OR p.consultation_id = ?
         ORDER BY p.created_at DESC
     ");
-    $prescription_stmt->bind_param("ii", $consultation_data['visit_id'], $consultation_id);
-    $prescription_stmt->execute();
-    $prescription_result = $prescription_stmt->get_result();
-    $prescriptions = $prescription_result->fetch_all(MYSQLI_ASSOC);
+    if ($prescription_stmt) {
+        $prescription_stmt->bind_param("ii", $consultation_data['visit_id'], $consultation_id);
+        $prescription_stmt->execute();
+        $prescription_result = $prescription_stmt->get_result();
+        $prescriptions = $prescription_result->fetch_all(MYSQLI_ASSOC);
+    } else {
+        $prescriptions = [];
+    }
     
     // Get follow-up appointments
     $followup_stmt = $conn->prepare("
@@ -150,10 +170,14 @@ try {
         ORDER BY a.appointment_date DESC, a.appointment_time DESC
         LIMIT 3
     ");
-    $followup_stmt->bind_param("i", $consultation_data['patient_id']);
-    $followup_stmt->execute();
-    $followup_result = $followup_stmt->get_result();
-    $followup_appointments = $followup_result->fetch_all(MYSQLI_ASSOC);
+    if ($followup_stmt) {
+        $followup_stmt->bind_param("i", $consultation_data['patient_id']);
+        $followup_stmt->execute();
+        $followup_result = $followup_stmt->get_result();
+        $followup_appointments = $followup_result->fetch_all(MYSQLI_ASSOC);
+    } else {
+        $followup_appointments = [];
+    }
     
 } catch (Exception $e) {
     $error_message = "Error loading consultation data: " . $e->getMessage();

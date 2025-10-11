@@ -24,7 +24,7 @@ $message = '';
 $error = '';
 
 // Initialize queue management service
-$queueService = new QueueManagementService($conn);
+$queueService = new QueueManagementService($pdo);
 
 // Check if role is authorized for queue management
 $allowed_roles = ['doctor', 'nurse', 'pharmacist', 'laboratory_tech', 'cashier', 'records_officer', 'bhw', 'admin'];
@@ -108,6 +108,12 @@ if ($selected_station_id) {
     foreach ($all_stations as $station) {
         if ($station['station_id'] == $selected_station_id) {
             $assigned_employee_info = $station;
+            
+            // Redirect to specialized triage interface if this is a triage station
+            if ($station['station_type'] === 'triage' && in_array(strtolower($employee_role), ['nurse', 'admin', 'doctor'])) {
+                header("Location: triage_station.php");
+                exit();
+            }
             break;
         }
     }
@@ -122,15 +128,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_station']) && 
     $can_toggle_this_station = $is_admin || ($station_assignment && $station_assignment['station_id'] == $station_id);
     
     if ($can_toggle_this_station) {
-        $stmt = $conn->prepare("UPDATE stations SET is_open = ? WHERE station_id = ?");
-        $stmt->bind_param("ii", $is_open, $station_id);
+        $stmt = $pdo->prepare("UPDATE stations SET is_open = ? WHERE station_id = ?");
         
-        if ($stmt->execute()) {
+        if ($stmt->execute([$is_open, $station_id])) {
             $message = $is_open ? "Station opened successfully" : "Station closed successfully";
         } else {
             $error = "Failed to update station status";
         }
-        $stmt->close();
     } else {
         $error = "You don't have permission to toggle this station";
     }

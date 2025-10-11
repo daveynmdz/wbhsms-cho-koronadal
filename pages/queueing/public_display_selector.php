@@ -85,13 +85,12 @@ $query = "
         FIELD(s.station_type, 'triage', 'consultation', 'lab', 'pharmacy', 'billing', 'document')
 ";
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param("ss", $today, $today);
-$stmt->execute();
-$stations_result = $stmt->get_result();
+$stmt = $pdo->prepare($query);
+$stmt->execute([$today, $today]);
+$stations_result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stations_data = [];
 
-while ($row = $stations_result->fetch_assoc()) {
+foreach ($stations_result as $row) {
     $stations_data[$row['station_type']] = $row;
 }
 

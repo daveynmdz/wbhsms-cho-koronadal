@@ -122,6 +122,10 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'patient_care' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-user-nurse"></i> Patient Care
         </a>
+        <a href="<?= $nav_base ?>clinical-encounter-management/index.php"
+            class="<?= $activePage === 'clinical_encounters' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-notes-medical"></i> Clinical Encounters
+        </a>
         <a href="<?= $nav_base ?>management/nurse/vital_signs.php"
             class="<?= $activePage === 'vital_signs' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-heartbeat"></i> Vital Signs

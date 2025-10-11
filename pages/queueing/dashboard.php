@@ -31,8 +31,8 @@ require_once $root_path . '/utils/queue_management_service.php';
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
-// Initialize queue management service
-$queueService = new QueueManagementService($conn);
+// Initialize queue management service with PDO connection
+$queueService = new QueueManagementService($pdo);
 
 $today = date('Y-m-d');
 $message = '';
@@ -43,10 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_station'])) {
     $station_id = intval($_POST['station_id']);
     $is_open = intval($_POST['is_open']);
     
-    $stmt = $conn->prepare("UPDATE stations SET is_open = ? WHERE station_id = ?");
-    $stmt->bind_param("ii", $is_open, $station_id);
+    $stmt = $pdo->prepare("UPDATE stations SET is_open = ? WHERE station_id = ?");
     
-    if ($stmt->execute()) {
+    if ($stmt->execute([$is_open, $station_id])) {
         $message = $is_open ? "Station opened successfully" : "Station closed successfully";
     } else {
         $error = "Failed to update station status";
@@ -72,11 +71,9 @@ $stats_query = "
     WHERE DATE(created_at) = ?
 ";
 
-$stmt = $conn->prepare($stats_query);
-$stmt->bind_param("s", $today);
-$stmt->execute();
-$stats = $stmt->get_result()->fetch_assoc();
-$stmt->close();
+$stmt = $pdo->prepare($stats_query);
+$stmt->execute([$today]);
+$stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Get queue type breakdown for today
 $type_stats_query = "
@@ -92,11 +89,9 @@ $type_stats_query = "
     ORDER BY count DESC
 ";
 
-$stmt = $conn->prepare($type_stats_query);
-$stmt->bind_param("s", $today);
-$stmt->execute();
-$type_stats = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+$stmt = $pdo->prepare($type_stats_query);
+$stmt->execute([$today]);
+$type_stats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get all stations with current assignments and status
 $stations = $queueService->getAllStationsWithAssignments($today);
@@ -117,11 +112,9 @@ $station_counts_query = "
     LIMIT 5
 ";
 
-$stmt = $conn->prepare($station_counts_query);
-$stmt->bind_param("s", $today);
-$stmt->execute();
-$busiest_stations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+$stmt = $pdo->prepare($station_counts_query);
+$stmt->execute([$today]);
+$busiest_stations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Set active page for sidebar highlighting
 $activePage = 'queueing';
@@ -454,6 +447,10 @@ $activePage = 'queueing';
 
         .queue-dashboard-container .btn-info {
             background: linear-gradient(135deg, #0096c7, #0077b6);
+        }
+
+        .queue-dashboard-container .btn-warning {
+            background: linear-gradient(135deg, #ffc107, #f39c12);
         }
 
         /* Alert Messages - matching staff assignments */
@@ -853,6 +850,20 @@ $activePage = 'queueing';
         /* Secondary button styling for Staff Assignments */
         .queue-dashboard-container .btn-secondary {
             background: linear-gradient(135deg, #adb5bd, #6c757d);
+        }
+
+        /* Laboratory Station Button - Custom Orange Gradient */
+        .queue-dashboard-container .btn-lab {
+            background: linear-gradient(135deg, #ff8c00, #ff6347);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3);
+        }
+
+        .queue-dashboard-container .btn-lab:hover {
+            background: linear-gradient(135deg, #ff6347, #dc143c);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 99, 71, 0.4);
         }
 
         @media (max-width: 768px) {
@@ -1360,9 +1371,7 @@ $activePage = 'queueing';
             <div class="breadcrumb" style="margin-top: 50px;">
                 <a href="../management/admin/dashboard.php"><i class="fas fa-home"></i> Admin Dashboard</a>
                 <i class="fas fa-chevron-right"></i>
-                <a href="."><i class="fas fa-users"></i> Queue Management</a>
-                <i class="fas fa-chevron-right"></i>
-                <span>Dashboard</span>
+                <span>Queue Management Dashboard</span>
             </div>
 
             <!-- Page Header with Status Badges - matching staff assignments -->
@@ -1385,7 +1394,7 @@ $activePage = 'queueing';
                         <i class="fas fa-history"></i>
                         <span>Queue Logs</span>
                     </a>
-                    <a href="staff_assignments.php" class="action-btn btn-secondary">
+                    <a href="../management/admin/staff-management/staff_assignments.php" class="action-btn btn-secondary">
                         <i class="fas fa-users-cog"></i>
                         <span>Staff Assignments</span>
                     </a>
@@ -1560,133 +1569,86 @@ $activePage = 'queueing';
                     </div>
                 </div>
 
-                <!-- Queue Types Overview & Quick Actions -->
+                <!-- Station Views Panel -->
                 <div class="right-panel">
-                    <!-- Queue Types Section -->
-                    <div class="dashboard-section compact-section">
+                    <!-- Station Views Section -->
+                    <div class="dashboard-section">
                         <div class="section-header">
                             <h3 class="section-title">
-                                <i class="fas fa-chart-pie"></i>
-                                Queue Types
+                                <i class="fas fa-hospital"></i>
+                                Station Views
                             </h3>
-                            <span class="section-meta">Today's breakdown</span>
+                            <span class="section-meta">Direct access</span>
                         </div>
-                        <div class="section-body compact-body">
-                            <?php if (empty($type_stats)): ?>
-                                <div class="empty-state compact-empty">
-                                    <i class="fas fa-chart-pie"></i>
-                                    <h4>No Queue Data</h4>
-                                    <p>No queue entries found for today.</p>
+                        <div class="section-body">
+                            <div class="action-buttons-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                                <?php
+                                // Get all active stations organized by type for direct access (excluding check-in)
+                                $all_stations_query = "SELECT station_id, station_name, station_type FROM stations WHERE is_active = 1 AND station_type != 'checkin' ORDER BY station_type, station_name";
+                                $all_stations_stmt = $pdo->prepare($all_stations_query);
+                                $all_stations_stmt->execute();
+                                $all_stations = $all_stations_stmt->fetchAll(PDO::FETCH_ASSOC);
+                                
+                                // Define station type configurations
+                                $station_configs = [
+                                    'triage' => [
+                                        'icon' => 'fas fa-stethoscope', 
+                                        'class' => 'btn-success',
+                                        'url' => 'triage_station.php'
+                                    ],
+                                    'consultation' => [
+                                        'icon' => 'fas fa-user-md',
+                                        'class' => 'btn-info', 
+                                        'url' => 'consultation_station.php'
+                                    ],
+                                    'lab' => [
+                                        'icon' => 'fas fa-flask',
+                                        'class' => 'btn-lab',
+                                        'url' => 'lab_station.php'
+                                    ],
+                                    'pharmacy' => [
+                                        'icon' => 'fas fa-pills',
+                                        'class' => 'btn-success',
+                                        'url' => 'pharmacy_station.php'
+                                    ],
+                                    'billing' => [
+                                        'icon' => 'fas fa-calculator',
+                                        'class' => 'btn-danger',
+                                        'url' => 'billing_station.php'
+                                    ],
+                                    'document' => [
+                                        'icon' => 'fas fa-file-medical',
+                                        'class' => 'btn-secondary',
+                                        'url' => 'document_station.php'
+                                    ]
+                                ];
+                                
+                                if (!empty($all_stations)):
+                                    foreach ($all_stations as $station):
+                                        $config = $station_configs[$station['station_type']] ?? [
+                                            'icon' => 'fas fa-desktop',
+                                            'class' => 'btn-outline', 
+                                            'url' => 'station.php'
+                                        ];
+                                        
+                                        // Build URL with station_id parameter
+                                        $station_url = $config['url'] . '?station_id=' . $station['station_id'];
+                                ?>
+                                <a href="<?php echo $station_url; ?>" class="action-btn <?php echo $config['class']; ?>" style="padding: 12px 10px; min-height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                                    <i class="<?php echo $config['icon']; ?>" style="font-size: 18px; margin-bottom: 6px;"></i>
+                                    <span style="font-size: 11px; line-height: 1.2; font-weight: 600;"><?php echo htmlspecialchars($station['station_name']); ?></span>
+                                    <small style="font-size: 9px; opacity: 0.8; text-transform: uppercase; margin-top: 2px;"><?php echo ucfirst($station['station_type']); ?></small>
+                                </a>
+                                <?php 
+                                    endforeach;
+                                else: 
+                                ?>
+                                <div class="empty-state" style="padding: 1.5rem; text-align: center; grid-column: 1 / -1;">
+                                    <i class="fas fa-hospital" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5; color: var(--secondary);"></i>
+                                    <h4 style="margin: 0 0 0.5rem 0; color: var(--secondary);">No Active Stations</h4>
+                                    <p style="margin: 0; color: var(--secondary); font-size: 0.9rem;">Configure and activate stations to enable direct access.</p>
                                 </div>
-                            <?php else: ?>
-                                <div class="queue-types compact-queue-types">
-                                    <?php foreach ($type_stats as $type): ?>
-                                        <div class="queue-type-card compact-card">
-                                            <div class="queue-type-header">
-                                                <div class="queue-type-name"><?php echo htmlspecialchars(ucfirst($type['queue_type'])); ?></div>
-                                                <div class="queue-type-total"><?php echo $type['count']; ?></div>
-                                            </div>
-                                            <div class="queue-type-stats compact-stats">
-                                                <div class="queue-stat waiting">
-                                                    <span class="queue-stat-value"><?php echo $type['waiting']; ?></span>
-                                                    <span class="queue-stat-label">Wait</span>
-                                                </div>
-                                                <div class="queue-stat progress">
-                                                    <span class="queue-stat-value"><?php echo $type['in_progress']; ?></span>
-                                                    <span class="queue-stat-label">Active</span>
-                                                </div>
-                                                <div class="queue-stat done">
-                                                    <span class="queue-stat-value"><?php echo $type['completed']; ?></span>
-                                                    <span class="queue-stat-label">Done</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Quick Stats Section -->
-                    <div class="dashboard-section compact-section">
-                        <div class="section-header">
-                            <h3 class="section-title">
-                                <i class="fas fa-clock"></i>
-                                Today's Summary
-                            </h3>
-                            <span class="section-meta">Real-time</span>
-                        </div>
-                        <div class="section-body compact-body">
-                            <div class="summary-grid">
-                                <div class="summary-item">
-                                    <div class="summary-icon waiting-bg">
-                                        <i class="fas fa-hourglass-half"></i>
-                                    </div>
-                                    <div class="summary-details">
-                                        <span class="summary-value"><?php echo $stats['avg_waiting_time'] ? number_format($stats['avg_waiting_time'], 0) : '0'; ?>min</span>
-                                        <span class="summary-label">Avg Wait</span>
-                                    </div>
-                                </div>
-                                <div class="summary-item">
-                                    <div class="summary-icon success-bg">
-                                        <i class="fas fa-check-double"></i>
-                                    </div>
-                                    <div class="summary-details">
-                                        <span class="summary-value"><?php echo number_format(($stats['done_count'] ?? 0) + ($stats['cancelled_count'] ?? 0)); ?></span>
-                                        <span class="summary-label">Processed</span>
-                                    </div>
-                                </div>
-                                <div class="summary-item">
-                                    <div class="summary-icon info-bg">
-                                        <i class="fas fa-users"></i>
-                                    </div>
-                                    <div class="summary-details">
-                                        <span class="summary-value"><?php echo number_format(($stats['waiting_count'] ?? 0) + ($stats['in_progress_count'] ?? 0)); ?></span>
-                                        <span class="summary-label">Active</span>
-                                    </div>
-                                </div>
-                                <div class="summary-item">
-                                    <div class="summary-icon primary-bg">
-                                        <i class="fas fa-hospital"></i>
-                                    </div>
-                                    <div class="summary-details">
-                                        <span class="summary-value"><?php echo count(array_filter($stations, function($s) { return $s['is_active'] && isset($s['is_open']) && $s['is_open']; })); ?></span>
-                                        <span class="summary-label">Open</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- System Status Section -->
-                    <div class="dashboard-section compact-section">
-                        <div class="section-header">
-                            <h3 class="section-title">
-                                <i class="fas fa-heartbeat"></i>
-                                System Status
-                            </h3>
-                            <span class="section-meta">Live</span>
-                        </div>
-                        <div class="section-body compact-body">
-                            <div class="status-indicators">
-                                <div class="status-item">
-                                    <div class="status-indicator active"></div>
-                                    <span class="status-text">Queue System Online</span>
-                                </div>
-                                <div class="status-item">
-                                    <div class="status-indicator <?php echo !empty($stations) ? 'active' : 'inactive'; ?>"></div>
-                                    <span class="status-text">Stations <?php echo !empty($stations) ? 'Active' : 'Offline'; ?></span>
-                                </div>
-                                <div class="status-item">
-                                    <div class="status-indicator <?php echo ($stats['total_queues'] ?? 0) > 0 ? 'active' : 'warning'; ?>"></div>
-                                    <span class="status-text">Queue Processing</span>
-                                </div>
-                            </div>
-                            <div class="system-uptime">
-                                <small class="text-muted">
-                                    <i class="fas fa-clock"></i>
-                                    Last updated: <?php echo date('H:i:s'); ?>
-                                </small>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

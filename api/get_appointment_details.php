@@ -1,4 +1,8 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
@@ -8,14 +12,28 @@ require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/config/db.php';
 
 // Check if user is logged in and authorized
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+if (!is_employee_logged_in()) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access', 'debug' => 'Session not found']);
+    exit();
+}
+
+$employee_id = get_employee_session('employee_id');
+$role = get_employee_session('role');
+
+if (!$employee_id || !$role) {
+    echo json_encode(['success' => false, 'message' => 'Session data incomplete', 'debug' => 'employee_id or role missing']);
     exit();
 }
 
 $authorized_roles = ['admin', 'dho', 'bhw', 'doctor', 'nurse'];
-if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
-    echo json_encode(['success' => false, 'message' => 'Insufficient permissions']);
+if (!in_array(strtolower($role), $authorized_roles)) {
+    echo json_encode(['success' => false, 'message' => 'Insufficient permissions', 'role' => $role]);
+    exit();
+}
+
+// Check database connection
+if (!isset($conn) || $conn->connect_error) {
+    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
     exit();
 }
 

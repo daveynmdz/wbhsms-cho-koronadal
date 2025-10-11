@@ -27,7 +27,7 @@ if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
 
 // Database connection
 require_once $root_path . '/config/db.php';
-$baseurl = '/wbhsms-cho-koronadal';
+$baseurl = '/wbhsms-cho-koronadal-1';
 
 // Check database connection
 if (!isset($conn) || $conn->connect_error) {
@@ -594,6 +594,8 @@ try {
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            position: relative;
+            z-index: 1050;
         }
 
         .alert-success {
@@ -604,6 +606,31 @@ try {
         .alert-error {
             border-left-color: #dc3545;
             color: #721c24;
+        }
+
+        /* Dynamic alerts that appear on top of modals */
+        .alert.alert-dynamic {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1100;
+            min-width: 300px;
+            max-width: 600px;
+            margin: 0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            animation: slideInFromTop 0.3s ease-out;
+        }
+
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
         }
 
         .modal {
@@ -1299,7 +1326,13 @@ try {
             document.getElementById('viewAppointmentModal').style.display = 'block';
 
             // Get appointment data
-            fetch(`../../../../api/get_appointment_details.php?appointment_id=${appointmentId}`)
+            fetch(`../../../../api/get_appointment_details.php?appointment_id=${appointmentId}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            })
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1492,24 +1525,26 @@ try {
 
         // Helper function to show error message
         function showErrorMessage(message) {
-            const existingAlert = document.querySelector('.alert-error');
+            const existingAlert = document.querySelector('.alert-dynamic');
             if (existingAlert) existingAlert.remove();
 
             const alert = document.createElement('div');
-            alert.className = 'alert alert-error';
-            alert.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            alert.className = 'alert alert-error alert-dynamic';
+            alert.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i> 
+                ${message}
+                <button type="button" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.7; color: inherit; padding: 0; margin-left: auto;" onclick="this.parentElement.remove();">&times;</button>
+            `;
 
-            const container = document.querySelector('.content-wrapper');
-            const pageHeader = container.querySelector('.page-header');
-            container.insertBefore(alert, pageHeader.nextSibling);
+            document.body.appendChild(alert);
 
             setTimeout(() => {
                 if (alert.parentElement) {
                     alert.style.opacity = '0';
-                    alert.style.transform = 'translateY(-10px)';
+                    alert.style.transform = 'translate(-50%, -20px)';
                     setTimeout(() => alert.remove(), 300);
                 }
-            }, 5000);
+            }, 8000);
         }
     </script>
 </body>

@@ -15,10 +15,14 @@ if (!is_employee_logged_in()) {
 // Get employee details with role lookup
 $employee_id = get_employee_session('employee_id');
 $employee_stmt = $conn->prepare("SELECT e.*, r.role_name as role FROM employees e LEFT JOIN roles r ON e.role_id = r.role_id WHERE e.employee_id = ?");
-$employee_stmt->bind_param("i", $employee_id);
-$employee_stmt->execute();
-$employee_result = $employee_stmt->get_result();
-$employee_details = $employee_result->fetch_assoc();
+if ($employee_stmt) {
+    $employee_stmt->bind_param("i", $employee_id);
+    $employee_stmt->execute();
+    $employee_result = $employee_stmt->get_result();
+    $employee_details = $employee_result->fetch_assoc();
+} else {
+    $employee_details = null;
+}
 
 if (!$employee_details) {
     header("Location: /wbhsms-cho-koronadal/pages/management/login.php");

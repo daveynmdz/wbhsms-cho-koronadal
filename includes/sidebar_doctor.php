@@ -130,6 +130,10 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'consultations' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-stethoscope"></i> Consultations
         </a>
+        <a href="<?= $nav_base ?>clinical-encounter-management/index.php"
+            class="<?= $activePage === 'clinical_encounters' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-notes-medical"></i> Clinical Encounters
+        </a>
         <a href="<?= $nav_base ?>management/doctor/prescriptions.php"
             class="<?= $activePage === 'prescriptions' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-prescription"></i> Prescriptions

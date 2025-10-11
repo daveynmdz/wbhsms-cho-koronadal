@@ -10,7 +10,7 @@ require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
 
 // Initialize queue management service
-$queueService = new QueueManagementService($conn);
+$queueService = new QueueManagementService($pdo);
 
 // Get current date for display
 $current_date = date('Y-m-d');
@@ -93,12 +93,9 @@ $stations_query = "
     ORDER BY s.station_number
 ";
 
-$stmt = $conn->prepare($stations_query);
-$stmt->bind_param("ssssssss", $current_date, $current_date, $current_date, $current_date, $current_date, $current_date, $current_date, $current_date);
-$stmt->execute();
-$result = $stmt->get_result();
-$stations = $result->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+$stmt = $pdo->prepare($stations_query);
+$stmt->execute([$current_date, $current_date, $current_date, $current_date, $current_date, $current_date, $current_date, $current_date]);
+$stations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get overall consultation statistics for today
 $total_waiting = 0;

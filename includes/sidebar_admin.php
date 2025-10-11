@@ -135,10 +135,10 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'staff_assignments' ? 'active' : '' ?>" role="menuitem">
             <i class="fa-solid fa-person-booth"></i> Station Assignment
         </a>
-        <!-- These links are placeholders for pages not yet created -->
-        <a href="#"
-            class="<?= $activePage === 'clinical' ? 'active' : '' ?> disabled" role="menuitem">
-            <i class="fas fa-stethoscope"></i> Clinical Records
+        <!-- Clinical Encounter Management -->
+        <a href="<?= $nav_base ?>clinical-encounter-management/index.php"
+            class="<?= $activePage === 'clinical_encounters' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-stethoscope"></i> Clinical Encounters
         </a>
         <a href="#"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?> disabled" role="menuitem">

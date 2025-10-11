@@ -39,10 +39,12 @@ try {
         JOIN roles r ON e.role_id = r.role_id 
         WHERE e.employee_id = ?
     ");
-    $stmt->bind_param('i', $employee_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $employee_details = $result->fetch_assoc();
+    if ($stmt) {
+        $stmt->bind_param('i', $employee_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $employee_details = $result->fetch_assoc();
+    }
     
     // Update session role if needed
     if ($employee_details && isset($employee_details['role_name'])) {
@@ -188,13 +190,19 @@ $count_sql = "
 $total_records = 0;
 if (!empty($params)) {
     $stmt = $conn->prepare($count_sql);
-    $stmt->bind_param($param_types, ...$params);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $total_records = $result->fetch_assoc()['total'];
+    if ($stmt) {
+        $stmt->bind_param($param_types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $total_records = $row ? $row['total'] : 0;
+    }
 } else {
     $result = $conn->query($count_sql);
-    $total_records = $result->fetch_assoc()['total'];
+    if ($result) {
+        $row = $result->fetch_assoc();
+        $total_records = $row ? $row['total'] : 0;
+    }
 }
 
 $total_pages = ceil($total_records / $records_per_page);
@@ -231,13 +239,21 @@ $limit_param_types = $param_types . 'ii';
 try {
     if (!empty($limit_params)) {
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param($limit_param_types, ...$limit_params);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $encounters = $result->fetch_all(MYSQLI_ASSOC);
+        if ($stmt) {
+            $stmt->bind_param($limit_param_types, ...$limit_params);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $encounters = $result->fetch_all(MYSQLI_ASSOC);
+        } else {
+            $encounters = [];
+        }
     } else {
         $result = $conn->query($sql);
-        $encounters = $result->fetch_all(MYSQLI_ASSOC);
+        if ($result) {
+            $encounters = $result->fetch_all(MYSQLI_ASSOC);
+        } else {
+            $encounters = [];
+        }
     }
 } catch (Exception $e) {
     $encounters = [];
@@ -265,9 +281,11 @@ try {
 $barangays = [];
 try {
     $stmt = $conn->prepare("SELECT barangay_id, barangay_name FROM barangay ORDER BY barangay_name");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $barangays = $result->fetch_all(MYSQLI_ASSOC);
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $barangays = $result->fetch_all(MYSQLI_ASSOC);
+    }
 } catch (Exception $e) {
     // Ignore errors for barangays
 }
@@ -276,9 +294,11 @@ try {
 $districts = [];
 try {
     $stmt = $conn->prepare("SELECT district_id, district_name FROM districts ORDER BY district_name");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $districts = $result->fetch_all(MYSQLI_ASSOC);
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $districts = $result->fetch_all(MYSQLI_ASSOC);
+    }
 } catch (Exception $e) {
     // Ignore errors for districts
 }
@@ -320,13 +340,19 @@ try {
             WHERE $stats_where_clause";
     if (!empty($stats_params)) {
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param($stats_param_types, ...$stats_params);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $stats['total_encounters'] = $result->fetch_assoc()['total'];
+        if ($stmt) {
+            $stmt->bind_param($stats_param_types, ...$stats_params);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            $stats['total_encounters'] = $row ? $row['total'] : 0;
+        }
     } else {
         $result = $conn->query($sql);
-        $stats['total_encounters'] = $result->fetch_assoc()['total'];
+        if ($result) {
+            $row = $result->fetch_assoc();
+            $stats['total_encounters'] = $row ? $row['total'] : 0;
+        }
     }
 
     // Completed today
@@ -341,13 +367,19 @@ try {
             WHERE $completed_where_clause";
     if (!empty($stats_params)) {
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param($stats_param_types, ...$stats_params);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $stats['completed_today'] = $result->fetch_assoc()['total'];
+        if ($stmt) {
+            $stmt->bind_param($stats_param_types, ...$stats_params);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            $stats['completed_today'] = $row ? $row['total'] : 0;
+        }
     } else {
         $result = $conn->query($sql);
-        $stats['completed_today'] = $result->fetch_assoc()['total'];
+        if ($result) {
+            $row = $result->fetch_assoc();
+            $stats['completed_today'] = $row ? $row['total'] : 0;
+        }
     }
 
     // Follow-ups needed
@@ -361,13 +393,19 @@ try {
             WHERE $followup_where_clause";
     if (!empty($stats_params)) {
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param($stats_param_types, ...$stats_params);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $stats['follow_ups_needed'] = $result->fetch_assoc()['total'];
+        if ($stmt) {
+            $stmt->bind_param($stats_param_types, ...$stats_params);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            $stats['follow_ups_needed'] = $row ? $row['total'] : 0;
+        }
     } else {
         $result = $conn->query($sql);
-        $stats['follow_ups_needed'] = $result->fetch_assoc()['total'];
+        if ($result) {
+            $row = $result->fetch_assoc();
+            $stats['follow_ups_needed'] = $row ? $row['total'] : 0;
+        }
     }
 
     // Referred cases
@@ -378,13 +416,19 @@ try {
             WHERE $stats_where_clause";
     if (!empty($stats_params)) {
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param($stats_param_types, ...$stats_params);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $stats['referred_cases'] = $result->fetch_assoc()['total'];
+        if ($stmt) {
+            $stmt->bind_param($stats_param_types, ...$stats_params);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            $stats['referred_cases'] = $row ? $row['total'] : 0;
+        }
     } else {
         $result = $conn->query($sql);
-        $stats['referred_cases'] = $result->fetch_assoc()['total'];
+        if ($result) {
+            $row = $result->fetch_assoc();
+            $stats['referred_cases'] = $row ? $row['total'] : 0;
+        }
     }
 } catch (Exception $e) {
     // Keep default values
@@ -402,6 +446,273 @@ try {
     <link rel="stylesheet" href="../../assets/css/dashboard.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
+        .content-wrapper {
+            margin-left: 300px;
+            padding: 2rem;
+            transition: margin-left 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .page-header h1 {
+            color: #0077b6;
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 0 15px 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 119, 182, 0.2);
+        }
+
+        .breadcrumb {
+            background: none;
+            padding: 0;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .breadcrumb a {
+            color: #0077b6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .breadcrumb a:hover {
+            color: #023e8a;
+        }
+
+        .breadcrumb i {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #0077b6;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #0077b6;
+            box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0077b6, #023e8a);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #023e8a, #001d3d);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
+            overflow: hidden;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 70vh;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+
+        .table th {
+            background: linear-gradient(135deg, #0077b6, #03045e);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(240, 247, 255, 0.6);
+        }
+
+        .card-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #0077b6;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            color: #0077b6;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        @media (max-width: 768px) {
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .table-wrapper {
+                font-size: 14px;
+            }
+
+            .table th,
+            .table td {
+                padding: 8px 10px;
+            }
+
+            .table th {
+                font-size: 12px;
+            }
+        }
+
+        /* Alert Styles */
+        .alert {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .alert-warning {
+            background: #fff8e1;
+            color: #f57c00;
+            border-left-color: #ff9800;
+        }
+
+        .alert-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.7;
+            color: inherit;
+            padding: 0;
+            margin-left: auto;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alert-close:hover {
+            opacity: 1;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -714,14 +1025,22 @@ try {
 </head>
 
 <body>
-    <div class="homepage">
-        <?php include '../../includes/sidebar_' . $employee_role . '.php'; ?>
+    <?php
+    $activePage = 'clinical_encounters';
+    include $root_path . '/includes/sidebar_' . $employee_role . '.php';
+    ?>
 
-        <main class="main-content">
-            <div class="content-wrapper">
-                <div class="page-header">
-                    <h1><i class="fas fa-stethoscope"></i> Clinical Encounter Management</h1>
-                    <p>Manage patient consultations, diagnoses, and clinical documentation</p>
+    <section class="content-wrapper">
+        <!-- Breadcrumb Navigation -->
+        <div class="breadcrumb" style="margin-top: 50px;">
+            <a href="../management/dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Clinical Encounter Management</span>
+        </div>
+
+        <div class="page-header">
+            <h1><i class="fas fa-stethoscope"></i> Clinical Encounter Management</h1>
+        </div>
                     
                     <?php
                     $scope_message = '';
@@ -749,6 +1068,46 @@ try {
                             <i class="fas fa-info-circle"></i> <?= htmlspecialchars($scope_message) ?>
                         </div>
                     <?php endif; ?>
+
+                    <?php
+                    // Handle error messages
+                    if (isset($_GET['error'])) {
+                        $error_message = '';
+                        switch ($_GET['error']) {
+                            case 'visit_required':
+                                $error_message = 'A patient visit is required to create a consultation. Please use the "New Consultation" button for proper guidance.';
+                                break;
+                            case 'invalid_visit':
+                                $error_message = 'Invalid or missing visit ID. Please select a valid patient visit to create a consultation.';
+                                break;
+                            default:
+                                $error_message = 'An error occurred. Please try again.';
+                        }
+                        ?>
+                        <div class="alert alert-warning" id="errorAlert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span><?= htmlspecialchars($error_message) ?></span>
+                            <button type="button" class="alert-close" onclick="this.parentElement.remove();">&times;</button>
+                        </div>
+                        <script>
+                            // Auto-dismiss error after 8 seconds
+                            setTimeout(function() {
+                                const errorAlert = document.getElementById('errorAlert');
+                                if (errorAlert) {
+                                    errorAlert.style.opacity = '0';
+                                    errorAlert.style.transform = 'translateY(-20px)';
+                                    setTimeout(() => errorAlert.remove(), 300);
+                                }
+                            }, 8000);
+
+                            // Show the modal automatically if visit_required error
+                            <?php if ($_GET['error'] === 'visit_required'): ?>
+                            setTimeout(function() {
+                                showNewConsultationModal();
+                            }, 1000);
+                            <?php endif; ?>
+                        </script>
+                    <?php } ?>
                 </div>
 
                 <!-- Statistics Cards -->
@@ -796,7 +1155,11 @@ try {
 
                 <!-- Filters -->
                 <div class="filters-container">
-                    <h3><i class="fas fa-filter"></i> Filter Encounters</h3>
+                    <div class="section-header" style="margin-bottom: 15px;">
+                        <h4 style="margin: 0;color: var(--primary-dark);font-size: 18px;font-weight: 600;">
+                            <i class="fas fa-filter"></i> Search & Filter Options
+                        </h4>
+                    </div>
                     <form method="GET" class="filters-grid">
                         <div class="form-group">
                             <label for="search">Search Patient</label>
@@ -867,28 +1230,34 @@ try {
                         <?php endif; ?>
                         
                         <div class="form-group">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Filter
-                            </button>
+                            <label>&nbsp;</label>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter"></i> Apply Filters
+                                </button>
+                                <a href="?" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Clear Filters
+                                </a>
+                            </div>
                         </div>
                     </form>
                 </div>
 
                 <!-- Encounters Table -->
-                <div class="encounter-table">
-                    <div class="table-header">
-                        <div class="table-title">
-                            <i class="fas fa-list"></i>
-                            Clinical Encounters (<?= number_format($total_records) ?> total)
-                        </div>
-                        <a href="consultation.php" class="btn-new-encounter">
+                <div class="card-container">
+                    <div class="section-header">
+                        <h4 style="margin: 0;color: var(--primary-dark);font-size: 18px;font-weight: 600;">
+                            <i class="fas fa-stethoscope"></i> Clinical Encounters
+                        </h4>
+                        <button onclick="showNewConsultationModal()" class="btn btn-primary">
                             <i class="fas fa-plus"></i> New Consultation
-                        </a>
+                        </button>
                     </div>
 
-                    <div class="table-responsive">
-                        <?php if (!empty($encounters)): ?>
-                            <table class="encounters-table">
+                    <div class="table-container">
+                        <div class="table-wrapper">
+                            <?php if (!empty($encounters)): ?>
+                                <table class="table">
                                 <thead>
                                     <tr>
                                         <th>Consultation Date</th>
@@ -997,17 +1366,18 @@ try {
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
-                            </table>
-                        <?php else: ?>
-                            <div class="empty-state">
-                                <i class="fas fa-stethoscope"></i>
-                                <h3>No Clinical Encounters Found</h3>
-                                <p>No consultations match your current filters.</p>
-                                <a href="consultation.php" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> Create New Consultation
-                                </a>
-                            </div>
-                        <?php endif; ?>
+                                </table>
+                            <?php else: ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-stethoscope"></i>
+                                    <h3>No Clinical Encounters Found</h3>
+                                    <p>No consultations match your current filters.</p>
+                                    <button onclick="showNewConsultationModal()" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Create New Consultation
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
 
@@ -1036,8 +1406,254 @@ try {
                     </div>
                 <?php endif; ?>
             </div>
-        </main>
+        </div>
+    </section>
+
+    <!-- New Consultation Modal -->
+    <div id="newConsultationModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-info-circle"></i> Create New Consultation</h3>
+                <span class="close" onclick="closeNewConsultationModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="info-box">
+                    <i class="fas fa-stethoscope info-icon"></i>
+                    <h4>Patient Visit Required</h4>
+                    <p>To create a new consultation, you need to start with a patient visit first.</p>
+                </div>
+                
+                <div class="workflow-steps">
+                    <h5>Correct Workflow:</h5>
+                    <ol>
+                        <li><strong>Patient Registration:</strong> Ensure patient is registered in the system</li>
+                        <li><strong>Create Visit:</strong> Start a new patient visit (walk-in, appointment, etc.)</li>
+                        <li><strong>Begin Consultation:</strong> Create consultation for the active visit</li>
+                    </ol>
+                </div>
+                
+                <div class="action-options">
+                    <h5>What would you like to do?</h5>
+                    <div class="option-buttons">
+                        <a href="../management/admin/patient-records/patient_records_management.php" class="btn btn-primary">
+                            <i class="fas fa-users"></i> Manage Patients
+                        </a>
+                        <a href="../appointment/" class="btn btn-secondary">
+                            <i class="fas fa-calendar-plus"></i> Schedule Appointment
+                        </a>
+                        <button onclick="closeNewConsultationModal()" class="btn btn-outline">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function showNewConsultationModal() {
+            document.getElementById('newConsultationModal').style.display = 'flex';
+        }
+
+        function closeNewConsultationModal() {
+            document.getElementById('newConsultationModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('newConsultationModal');
+            if (event.target === modal) {
+                closeNewConsultationModal();
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeNewConsultationModal();
+            }
+        });
+    </script>
+
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 1.5rem 2rem 1rem;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #0077b6;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .close {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 1.5rem 2rem 2rem;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
+            border: 2px solid #0077b6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .info-icon {
+            font-size: 2rem;
+            color: #0077b6;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box h4 {
+            margin: 0 0 0.5rem 0;
+            color: #0077b6;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #333;
+        }
+
+        .workflow-steps {
+            margin-bottom: 1.5rem;
+        }
+
+        .workflow-steps h5 {
+            color: #333;
+            margin-bottom: 0.75rem;
+        }
+
+        .workflow-steps ol {
+            color: #666;
+            padding-left: 1.5rem;
+        }
+
+        .workflow-steps li {
+            margin-bottom: 0.5rem;
+        }
+
+        .action-options h5 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .option-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .option-buttons .btn {
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+            text-decoration: none;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0077b6, #023e8a);
+            color: white;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #023e8a, #001d3d);
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-outline:hover {
+            background: #f8f9fa;
+            border-color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 1rem;
+            }
+
+            .modal-header,
+            .modal-body {
+                padding: 1rem 1.5rem;
+            }
+
+            .option-buttons {
+                flex-direction: column;
+            }
+
+            .option-buttons .btn {
+                min-width: auto;
+            }
+        }
+    </style>
 </body>
 
 </html>

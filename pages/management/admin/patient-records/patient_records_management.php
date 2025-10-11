@@ -4,7 +4,7 @@
 $root_path = dirname(dirname(dirname(dirname(__DIR__))));
 require_once $root_path . '/config/session/employee_session.php';
 include $root_path . '/config/db.php';
-$baseurl = '/wbhsms-cho-koronadal'; // Change this if your deployment base changes
+$baseurl = '/wbhsms-cho-koronadal-1'; // Change this if your deployment base changes
 
 
 // Check if user is logged in

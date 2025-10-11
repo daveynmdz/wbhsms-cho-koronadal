@@ -126,6 +126,10 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'medical_records' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-file-medical"></i> Medical Records
         </a>
+        <a href="<?= $nav_base ?>clinical-encounter-management/index.php"
+            class="<?= $activePage === 'clinical_encounters' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-notes-medical"></i> Clinical Encounters
+        </a>
         <a href="<?= $nav_base ?>management/records_officer/data_entry.php"
             class="<?= $activePage === 'data_entry' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-keyboard"></i> Data Entry

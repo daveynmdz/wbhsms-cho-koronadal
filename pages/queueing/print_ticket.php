@@ -27,7 +27,7 @@ $ticket_data = null;
 $error = '';
 
 // Check database connection
-if (!isset($conn) || $conn->connect_error) {
+if (!isset($pdo)) {
     die("Database connection failed. Please contact administrator.");
 }
 
@@ -37,7 +37,7 @@ if (empty($queue_entry_id) || !is_numeric($queue_entry_id)) {
 } else {
     try {
         // Fetch queue entry data with related information
-        $stmt = $conn->prepare("
+        $stmt = $pdo->prepare("
             SELECT qe.queue_entry_id, qe.queue_number, qe.queue_type, qe.priority_level,
                    qe.status, qe.created_at, qe.time_in,
                    p.first_name, p.last_name, p.patient_number, p.isPWD, p.isSenior,
@@ -57,11 +57,8 @@ if (empty($queue_entry_id) || !is_numeric($queue_entry_id)) {
             WHERE qe.queue_entry_id = ?
         ");
         
-        $stmt->bind_param("i", $queue_entry_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $ticket_data = $result->fetch_assoc();
-        $stmt->close();
+        $stmt->execute([$queue_entry_id]);
+        $ticket_data = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$ticket_data) {
             $error = "Queue entry not found";

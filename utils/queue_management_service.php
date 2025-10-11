@@ -1048,12 +1048,10 @@ class QueueManagementService {
         ";
         
         $params = [$station_id, $date];
-        $types = "is";
         
         if ($status_filter) {
             $base_query .= " AND qe.status = ?";
             $params[] = $status_filter;
-            $types .= "s";
         }
         
         $base_query .= " ORDER BY 
@@ -1061,10 +1059,8 @@ class QueueManagementService {
             qe.queue_number ASC
         ";
         
-        if ($limit !== null) {
-            $base_query .= " LIMIT ?";
-            $params[] = $limit;
-            $types .= "i";
+        if ($limit !== null && is_numeric($limit)) {
+            $base_query .= " LIMIT " . intval($limit);
         }
         
         $stmt = $this->conn->prepare($base_query);

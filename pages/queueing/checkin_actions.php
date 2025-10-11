@@ -7,8 +7,8 @@
  * Created: October 2025
  */
 
-// Start session and include required files
-session_start();
+// Include employee session configuration first
+require_once '../../config/session/employee_session.php';
 require_once '../../config/db.php';
 require_once '../../utils/queue_management_service.php';
 
@@ -73,7 +73,7 @@ if (empty($action)) {
 // ==========================================
 
 try {
-    $queueService = new QueueManagementService($conn);
+    $queueService = new QueueManagementService($pdo);
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,

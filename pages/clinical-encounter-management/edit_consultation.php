@@ -15,10 +15,14 @@ if (!is_employee_logged_in()) {
 // Get employee details with role lookup
 $employee_id = get_employee_session('employee_id');
 $employee_stmt = $conn->prepare("SELECT e.*, r.role_name as role FROM employees e LEFT JOIN roles r ON e.role_id = r.role_id WHERE e.employee_id = ?");
-$employee_stmt->bind_param("i", $employee_id);
-$employee_stmt->execute();
-$employee_result = $employee_stmt->get_result();
-$employee_details = $employee_result->fetch_assoc();
+if ($employee_stmt) {
+    $employee_stmt->bind_param("i", $employee_id);
+    $employee_stmt->execute();
+    $employee_result = $employee_stmt->get_result();
+    $employee_details = $employee_result->fetch_assoc();
+} else {
+    $employee_details = null;
+}
 
 if (!$employee_details) {
     header("Location: /wbhsms-cho-koronadal/pages/management/login.php");
@@ -69,9 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_consultation']
                     consultation_status = ?, updated_at = NOW()
                 WHERE consultation_id = ?
             ");
-            $update_stmt->bind_param("sssssi", $chief_complaint, $diagnosis, $treatment_plan, $remarks, $consultation_status, $consultation_id);
-            
-            if ($update_stmt->execute()) {
+            if ($update_stmt) {
+                $update_stmt->bind_param("sssssi", $chief_complaint, $diagnosis, $treatment_plan, $remarks, $consultation_status, $consultation_id);
+                
+                if ($update_stmt->execute()) {
                 $success_message = "Consultation updated successfully.";
                 
                 // Redirect to view consultation with success message
@@ -80,6 +85,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_consultation']
                 exit();
             } else {
                 $error_message = "Error updating consultation. Please try again.";
+            }
+            } else {
+                $error_message = "Database error occurred.";
             }
         } catch (Exception $e) {
             $error_message = "Error updating consultation: " . $e->getMessage();
@@ -104,10 +112,14 @@ try {
         LEFT JOIN employees doc ON c.attending_employee_id = doc.employee_id
         WHERE c.consultation_id = ?
     ");
-    $consultation_stmt->bind_param("i", $consultation_id);
-    $consultation_stmt->execute();
-    $result = $consultation_stmt->get_result();
-    $consultation_data = $result->fetch_assoc();
+    if ($consultation_stmt) {
+        $consultation_stmt->bind_param("i", $consultation_id);
+        $consultation_stmt->execute();
+        $result = $consultation_stmt->get_result();
+        $consultation_data = $result->fetch_assoc();
+    } else {
+        $consultation_data = null;
+    }
     
     if (!$consultation_data) {
         header("Location: /wbhsms-cho-koronadal/pages/clinical-encounter-management/index.php?error=consultation_not_found");
