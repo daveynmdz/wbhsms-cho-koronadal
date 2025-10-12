@@ -27,6 +27,12 @@ if (!getenv('DB_HOST')) {
 }
 
 // Use getenv() to read variables — works in Coolify
+$host = getenv('DB_HOST') ?: 'localhost';
+$port = getenv('DB_PORT') ?: '3306';
+$db   = getenv('DB_DATABASE') ?: 'wbhsms_database';
+$user = getenv('DB_USERNAME') ?: 'root';
+$pass = getenv('DB_PASSWORD') ?: '';
+
 echo "<pre>";
 echo "DB_HOST: " . getenv('DB_HOST') . PHP_EOL;
 echo "DB_PORT: " . getenv('DB_PORT') . PHP_EOL;
