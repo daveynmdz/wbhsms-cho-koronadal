@@ -1224,13 +1224,13 @@ $employee_info = [
                                     </div>
                                 </a>
                                 
-                                <a href="station.php" class="modern-btn btn-nav">
+                                <a href="#" class="modern-btn btn-nav" onclick="openPublicDisplay(); return false;">
                                     <div class="btn-icon">
                                         <i class="fas fa-desktop"></i>
                                     </div>
                                     <div class="btn-content">
-                                        <span class="btn-title">General Station</span>
-                                        <span class="btn-subtitle">Multi-station interface</span>
+                                        <span class="btn-title" style="text-align: left;">Open Waiting Display</span>
+                                        <span class="btn-subtitle" style="text-align: left;">Launch the public queue view for this station</span>
                                     </div>
                                 </a>
                                 
@@ -1692,6 +1692,191 @@ $employee_info = [
         const currentPatient = <?php echo json_encode($current_patient); ?>;
         const canManageQueue = <?php echo json_encode($can_manage_queue); ?>;
         
+        // Public display window reference
+        let publicDisplayWindow = null;
+        
+        // Function to open public document display in popup window
+        function openPublicDisplay() {
+            // Check if public display is already open
+            if (publicDisplayWindow && !publicDisplayWindow.closed) {
+                publicDisplayWindow.focus();
+                showAlert('Public document display is already open', 'info');
+                return;
+            }
+            
+            // Calculate optimal window size for different screen sizes
+            const screenWidth = window.screen.width;
+            const screenHeight = window.screen.height;
+            
+            let windowWidth, windowHeight;
+            
+            // Responsive window sizing
+            if (screenWidth <= 768) {
+                // Mobile/small screens - fullscreen
+                windowWidth = screenWidth;
+                windowHeight = screenHeight;
+            } else if (screenWidth <= 1024) {
+                // Tablets - 90% of screen
+                windowWidth = Math.floor(screenWidth * 0.9);
+                windowHeight = Math.floor(screenHeight * 0.9);
+            } else {
+                // Desktop - 80% of screen
+                windowWidth = Math.floor(screenWidth * 0.8);
+                windowHeight = Math.floor(screenHeight * 0.8);
+            }
+            
+            // Center the window
+            const left = Math.floor((screenWidth - windowWidth) / 2);
+            const top = Math.floor((screenHeight - windowHeight) / 2);
+            
+            // Window features optimized for public display
+            const windowFeatures = [
+                `width=${windowWidth}`,
+                `height=${windowHeight}`,
+                `left=${left}`,
+                `top=${top}`,
+                'resizable=yes',
+                'scrollbars=auto',
+                'toolbar=no',
+                'menubar=no',
+                'location=no',
+                'status=no',
+                'titlebar=yes'
+            ].join(',');
+            
+            try {
+                // Open the public document display window
+                publicDisplayWindow = window.open(
+                    'public_display_document.php',
+                    'DocumentPublicDisplay',
+                    windowFeatures
+                );
+                
+                if (publicDisplayWindow) {
+                    // Focus on the new window
+                    publicDisplayWindow.focus();
+                    
+                    // Set window title after load
+                    publicDisplayWindow.addEventListener('load', function() {
+                        try {
+                            publicDisplayWindow.document.title = 'Document Services Queue Display - CHO Koronadal';
+                        } catch (e) {
+                            // Cross-origin restriction, ignore
+                        }
+                    });
+                    
+                    // Handle window close event
+                    publicDisplayWindow.addEventListener('beforeunload', function() {
+                        console.log('Public document display window closing');
+                        publicDisplayWindow = null;
+                        updateDisplayButtonState(false);
+                    });
+                    
+                    // Show success message
+                    showAlert('Public document display opened successfully', 'success');
+                    
+                    // Update button appearance to show active state
+                    updateDisplayButtonState(true);
+                    
+                } else {
+                    throw new Error('Popup was blocked');
+                }
+                
+            } catch (error) {
+                console.error('Error opening public document display:', error);
+                showAlert('Could not open public display. Please check popup settings and try again.', 'error');
+            }
+        }
+        
+        // Function to update button appearance based on display state
+        function updateDisplayButtonState(isOpen) {
+            const displayButton = document.querySelector('a[onclick*="openPublicDisplay"]');
+            if (displayButton) {
+                if (isOpen) {
+                    displayButton.style.borderColor = '#28a745';
+                    displayButton.style.backgroundColor = '#f8fff9';
+                } else {
+                    displayButton.style.borderColor = '#e9ecef';
+                    displayButton.style.backgroundColor = 'white';
+                }
+            }
+        }
+        
+        // Check public display status periodically
+        setInterval(function() {
+            if (publicDisplayWindow && publicDisplayWindow.closed) {
+                publicDisplayWindow = null;
+                updateDisplayButtonState(false);
+            }
+        }, 5000);
+        
+        // Function to show alert messages with enhanced DOM insertion
+        function showAlert(message, type = 'info') {
+            // Create alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove();">&times;</button>
+            `;
+            
+            // Try multiple insertion strategies for DOM compatibility
+            let insertionSuccessful = false;
+            
+            // Strategy 1: Insert after page header
+            const pageHeader = document.querySelector('.page-header, .header, h1');
+            if (pageHeader && !insertionSuccessful) {
+                try {
+                    pageHeader.parentNode.insertBefore(alertDiv, pageHeader.nextSibling);
+                    insertionSuccessful = true;
+                } catch (e) {
+                    console.log('Header insertion failed:', e);
+                }
+            }
+            
+            // Strategy 2: Insert at beginning of main content area
+            if (!insertionSuccessful) {
+                const mainContent = document.querySelector('.content, .main-content, .container-fluid, main');
+                if (mainContent) {
+                    try {
+                        mainContent.insertBefore(alertDiv, mainContent.firstChild);
+                        insertionSuccessful = true;
+                    } catch (e) {
+                        console.log('Main content insertion failed:', e);
+                    }
+                }
+            }
+            
+            // Strategy 3: Insert at beginning of body
+            if (!insertionSuccessful) {
+                try {
+                    document.body.insertBefore(alertDiv, document.body.firstChild);
+                    insertionSuccessful = true;
+                } catch (e) {
+                    console.log('Body insertion failed:', e);
+                }
+            }
+            
+            // Fallback: Use console log if all DOM insertion fails
+            if (!insertionSuccessful) {
+                console.log(`Alert [${type}]: ${message}`);
+            } else {
+                // Auto-remove alert after 8 seconds
+                setTimeout(() => {
+                    if (alertDiv && alertDiv.parentNode) {
+                        alertDiv.style.transition = 'opacity 0.5s ease';
+                        alertDiv.style.opacity = '0';
+                        setTimeout(() => {
+                            if (alertDiv.parentNode) {
+                                alertDiv.parentNode.removeChild(alertDiv);
+                            }
+                        }, 500);
+                    }
+                }, 8000);
+            }
+        }
+
         // Auto-refresh interval (30 seconds)
         setInterval(() => {
             if (canManageQueue) {

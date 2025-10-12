@@ -423,15 +423,20 @@ $current_datetime = date('F j, Y g:i A');
                         <span>Public Display Launcher</span>
                     </div>
 
-                    <!-- Page Header with Refresh Button -->
+                    <!-- Page Header with Action Buttons -->
                     <div class="page-header">
                         <h1>
                             <i class="fas fa-tv"></i>
                             Public Display Launcher
                         </h1>
-                        <a href="javascript:void(0)" class="refresh-btn" onclick="window.location.reload()">
-                            <i class="fas fa-sync-alt"></i>Refresh Status
-                        </a>
+                        <div style="display: flex; gap: 10px;">
+                            <a href="javascript:void(0)" class="refresh-btn" onclick="openAllDisplays()">
+                                <i class="fas fa-external-link-alt"></i>Open All Displays
+                            </a>
+                            <a href="javascript:void(0)" class="refresh-btn" onclick="window.location.reload()">
+                                <i class="fas fa-sync-alt"></i>Refresh Status
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Intro Text -->
@@ -493,7 +498,7 @@ $current_datetime = date('F j, Y g:i A');
                                     </div>
                                 </div>
 
-                                <a href="<?php echo $config['file']; ?>" target="_blank" class="open-display-btn">
+                                <a href="#" onclick="openPublicDisplay('<?php echo $config['file']; ?>', '<?php echo $config['name']; ?>'); return false;" class="open-display-btn">
                                     <i class="fas fa-external-link-alt"></i>
                                     Open Display
                                 </a>
@@ -512,6 +517,338 @@ $current_datetime = date('F j, Y g:i A');
     </div>
 
     <!-- Scripts -->
-    <script src="../../assets/js/sidebar.js"></script>
+    <script>
+        // Track opened display windows
+        let openDisplayWindows = {};
+        
+        // Function to open public displays in popup windows
+        function openPublicDisplay(displayFile, stationName) {
+            // Check if this display is already open
+            if (openDisplayWindows[displayFile] && !openDisplayWindows[displayFile].closed) {
+                openDisplayWindows[displayFile].focus();
+                showAlert(`${stationName} display is already open`, 'info');
+                return;
+            }
+            
+            // Calculate optimal window size for different screen sizes
+            const screenWidth = window.screen.width;
+            const screenHeight = window.screen.height;
+            
+            let windowWidth, windowHeight;
+            
+            // Responsive window sizing
+            if (screenWidth <= 768) {
+                // Mobile/small screens - fullscreen
+                windowWidth = screenWidth;
+                windowHeight = screenHeight;
+            } else if (screenWidth <= 1024) {
+                // Tablets - 90% of screen
+                windowWidth = Math.floor(screenWidth * 0.9);
+                windowHeight = Math.floor(screenHeight * 0.9);
+            } else {
+                // Desktop - optimized for public displays (larger)
+                windowWidth = Math.floor(screenWidth * 0.85);
+                windowHeight = Math.floor(screenHeight * 0.85);
+            }
+            
+            // Center the window
+            const left = Math.floor((screenWidth - windowWidth) / 2);
+            const top = Math.floor((screenHeight - windowHeight) / 2);
+            
+            // Window features optimized for public displays
+            const windowFeatures = [
+                `width=${windowWidth}`,
+                `height=${windowHeight}`,
+                `left=${left}`,
+                `top=${top}`,
+                'resizable=yes',
+                'scrollbars=auto',
+                'toolbar=no',
+                'menubar=no',
+                'location=no',
+                'status=no',
+                'titlebar=yes'
+            ].join(',');
+            
+            try {
+                // Open the public display window
+                const displayWindow = window.open(
+                    displayFile,
+                    `PublicDisplay_${displayFile.replace('.php', '')}`,
+                    windowFeatures
+                );
+                
+                if (displayWindow) {
+                    // Store reference to the window
+                    openDisplayWindows[displayFile] = displayWindow;
+                    
+                    // Focus on the new window
+                    displayWindow.focus();
+                    
+                    // Set window title after load
+                    displayWindow.addEventListener('load', function() {
+                        try {
+                            displayWindow.document.title = `${stationName} Queue Display - CHO Koronadal`;
+                        } catch (e) {
+                            // Cross-origin restriction, ignore
+                        }
+                    });
+                    
+                    // Handle window close event
+                    displayWindow.addEventListener('beforeunload', function() {
+                        console.log(`${stationName} display window closing`);
+                        delete openDisplayWindows[displayFile];
+                        updateDisplayButtonState(displayFile, false);
+                    });
+                    
+                    // Show success message
+                    showAlert(`${stationName} display opened successfully`, 'success');
+                    
+                    // Update button appearance to show active state
+                    updateDisplayButtonState(displayFile, true);
+                    
+                } else {
+                    throw new Error('Popup was blocked');
+                }
+                
+            } catch (error) {
+                console.error(`Error opening ${stationName} display:`, error);
+                showAlert(`Could not open ${stationName} display. Please check popup settings and try again.`, 'error');
+            }
+        }
+        
+        // Function to update button appearance based on display state
+        function updateDisplayButtonState(displayFile, isOpen) {
+            const displayButton = document.querySelector(`a[onclick*="${displayFile}"]`);
+            if (displayButton) {
+                if (isOpen) {
+                    displayButton.style.borderColor = '#28a745';
+                    displayButton.style.backgroundColor = '#f8fff9';
+                    displayButton.style.transform = 'scale(0.98)';
+                } else {
+                    displayButton.style.borderColor = '';
+                    displayButton.style.backgroundColor = '';
+                    displayButton.style.transform = '';
+                }
+            }
+        }
+        
+        // Function to show alert messages with enhanced DOM insertion
+        function showAlert(message, type = 'info') {
+            // Create alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+                max-width: 500px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                font-weight: 500;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+                background: ${type === 'success' ? '#d1edda' : type === 'error' ? '#f8d7da' : type === 'warning' ? '#fff3cd' : '#d1ecf1'};
+                color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : type === 'warning' ? '#856404' : '#0c5460'};
+                border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : type === 'warning' ? '#ffeaa7' : '#bee5eb'};
+            `;
+            
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'info-circle'}" style="margin-right: 10px;"></i>
+                ${message}
+                <button type="button" style="
+                    background: none;
+                    border: none;
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: inherit;
+                    cursor: pointer;
+                    float: right;
+                    margin-left: 15px;
+                    padding: 0;
+                    line-height: 1;
+                " onclick="this.parentElement.remove();">&times;</button>
+            `;
+            
+            // Add to body
+            document.body.appendChild(alertDiv);
+            
+            // Animate in
+            setTimeout(() => {
+                alertDiv.style.opacity = '1';
+                alertDiv.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // Auto-remove alert after 6 seconds
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                alertDiv.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 300);
+            }, 6000);
+        }
+        
+        // Check display status periodically and clean up closed windows
+        setInterval(function() {
+            Object.keys(openDisplayWindows).forEach(displayFile => {
+                if (openDisplayWindows[displayFile] && openDisplayWindows[displayFile].closed) {
+                    delete openDisplayWindows[displayFile];
+                    updateDisplayButtonState(displayFile, false);
+                }
+            });
+        }, 5000);
+        
+        // Open all displays function (enhanced sequential opening to bypass popup blockers)
+        function openAllDisplays() {
+            // Show instructions dialog
+            const userConfirmed = confirm(
+                "This will open all 6 station displays one by one.\n\n" +
+                "For best results:\n" +
+                "• Allow popups when prompted by your browser\n" +
+                "• Click 'Always allow' if asked\n" +
+                "• Wait for each window to open before the next one\n\n" +
+                "Click 'OK' to start the process."
+            );
+            
+            if (!userConfirmed) {
+                showAlert('Operation cancelled by user', 'info');
+                return;
+            }
+            
+            const displayFiles = [
+                { file: 'public_display_triage.php', name: 'Triage Station' },
+                { file: 'public_display_consultation.php', name: 'Consultation' },
+                { file: 'public_display_lab.php', name: 'Laboratory' },
+                { file: 'public_display_pharmacy.php', name: 'Pharmacy' },
+                { file: 'public_display_billing.php', name: 'Billing' },
+                { file: 'public_display_document.php', name: 'Document Processing' }
+            ];
+            
+            let currentIndex = 0;
+            let successCount = 0;
+            let failureCount = 0;
+            
+            // Show progress alert
+            showAlert('Starting to open displays... Please allow popups when prompted.', 'info');
+            
+            function openNextDisplay() {
+                if (currentIndex >= displayFiles.length) {
+                    // All done - show final results
+                    setTimeout(() => {
+                        if (successCount === displayFiles.length) {
+                            showAlert(`🎉 All ${successCount} displays opened successfully!`, 'success');
+                        } else if (successCount > 0) {
+                            showAlert(`✅ ${successCount} displays opened, ❌ ${failureCount} failed. You may need to enable popups.`, 'warning');
+                        } else {
+                            showAlert('❌ No displays could be opened. Please enable popups in your browser and try again.', 'error');
+                        }
+                    }, 500);
+                    return;
+                }
+                
+                const display = displayFiles[currentIndex];
+                currentIndex++;
+                
+                try {
+                    // Check if this display is already open
+                    if (openDisplayWindows[display.file] && !openDisplayWindows[display.file].closed) {
+                        openDisplayWindows[display.file].focus();
+                        successCount++;
+                        showAlert(`${display.name} was already open - focused existing window`, 'info');
+                        // Continue to next display after short delay
+                        setTimeout(openNextDisplay, 800);
+                        return;
+                    }
+                    
+                    // Calculate window positioning with offset
+                    const screenWidth = window.screen.width;
+                    const screenHeight = window.screen.height;
+                    const windowWidth = Math.floor(screenWidth * 0.75);
+                    const windowHeight = Math.floor(screenHeight * 0.75);
+                    
+                    // Smart positioning to avoid overlap
+                    const offsetX = ((currentIndex - 1) % 3) * 40; // 3 columns
+                    const offsetY = Math.floor((currentIndex - 1) / 3) * 40; // 2 rows
+                    const left = Math.floor((screenWidth - windowWidth) / 2) + offsetX;
+                    const top = Math.floor((screenHeight - windowHeight) / 2) + offsetY;
+                    
+                    const windowFeatures = [
+                        `width=${windowWidth}`,
+                        `height=${windowHeight}`,
+                        `left=${left}`,
+                        `top=${top}`,
+                        'resizable=yes',
+                        'scrollbars=auto',
+                        'toolbar=no',
+                        'menubar=no',
+                        'location=no',
+                        'status=no',
+                        'titlebar=yes'
+                    ].join(',');
+                    
+                    // Open the display window with unique name to avoid conflicts
+                    const displayWindow = window.open(
+                        display.file,
+                        `CHO_Display_${display.file.replace('.php', '').replace('public_display_', '')}_${Date.now()}`,
+                        windowFeatures
+                    );
+                    
+                    if (displayWindow) {
+                        // Success
+                        openDisplayWindows[display.file] = displayWindow;
+                        
+                        // Set title and handle events
+                        displayWindow.addEventListener('load', function() {
+                            try {
+                                displayWindow.document.title = `${display.name} Queue Display - CHO Koronadal`;
+                            } catch (e) {
+                                // Cross-origin restriction, ignore
+                            }
+                        });
+                        
+                        displayWindow.addEventListener('beforeunload', function() {
+                            delete openDisplayWindows[display.file];
+                            updateDisplayButtonState(display.file, false);
+                        });
+                        
+                        updateDisplayButtonState(display.file, true);
+                        successCount++;
+                        
+                        showAlert(`✅ ${display.name} opened (${successCount}/${displayFiles.length})`, 'success');
+                        
+                        // Continue to next display after successful opening
+                        setTimeout(openNextDisplay, 1200);
+                        
+                    } else {
+                        // Popup was blocked
+                        failureCount++;
+                        showAlert(`❌ ${display.name} blocked by popup blocker (${currentIndex}/${displayFiles.length})`, 'error');
+                        
+                        // Continue to next display even if this one failed
+                        setTimeout(openNextDisplay, 1000);
+                    }
+                    
+                } catch (error) {
+                    // Error occurred
+                    console.error(`Error opening ${display.name} display:`, error);
+                    failureCount++;
+                    showAlert(`❌ Error opening ${display.name}: ${error.message}`, 'error');
+                    
+                    // Continue to next display even if this one failed
+                    setTimeout(openNextDisplay, 1000);
+                }
+            }
+            
+            // Start the sequential opening process
+            setTimeout(openNextDisplay, 500);
+        }
+    </script>
 </body>
 </html>

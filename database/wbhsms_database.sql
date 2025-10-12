@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 10, 2025 at 02:40 PM
+-- Generation Time: Oct 12, 2025 at 09:56 AM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -90,7 +90,8 @@ INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `refe
 (32, 7, 2, NULL, 1, '2025-10-08', '10:00:00', 'cancelled', NULL, '2025-10-07 04:54:26', '2025-10-07 06:52:14', 0x89504e470d0a1a0a0000000d4948445200000128000001280103000000d1c9fe5a00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000112494441546881ed95c11284300843fbff3fcdae9250acd69b33398475a80baf970cc4311c8e4f23328e37148edab563aa5195ff85b35ae7d23795199528192346154ceda801b6a96aea8582aab9ad79c7d4135539db296cdcb7da145b98b9f5878ea94e5544698be7314c11c9b30436b5a1629e3165a5b6a44d716bb99da9e4f904ef98da505925963d7e1d4c5da92e22b71537e77f53e23ea14a69fb842aa5e813aa94a64fa852aa3ea14a69fb842aa5e813aa94a64fa852aa3ea14a69fb842aa5e813aa94a64fa852339a809164db6d534d3f4c1d16b84a184a5317aaf2e26ecca616ea2c40dff1e685a63ac5915bddced48ec257608e273535d52966ece9ea76a6ae14df73f2202f343575a31c8ecfe207ee4606f7364e7c930000000049454e44ae426082),
 (33, 7, 1, 13, 1, '2025-10-07', '16:00:00', 'cancelled', 'TESTING IF IT WORKS OR NOT', '2025-10-07 06:54:22', '2025-10-10 03:26:15', 0x89504e470d0a1a0a0000000d4948445200000128000001280103000000d1c9fe5a00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000116494441546881edd4c18ec430080350feffa79969c184246da51e2af960461b45cdcb1e10b1994af56979d47f73fc8e4d6ec789545758dd634debb69c4be5ea8e2f892f4ea47675fe610c6b28a56e543cd1ba2275a7aa8d79a92ecce752b13abe6dbf3c91eaaa0adf3cdb6a97251564c078b152372ae62d584b360775a9493559f70c5d95da544d9ef763436b5dea422de9b6bf5ea9de3ec69c60554d52e504ab7af16aa5a01873825591e604ab6a922a2758d58b572b05c59813ac8a34275855935439c1aa5ebc5a2928c69c2055cb287adfe65da9a646575baaa1c9e35f485533b1b6478b17ebd555a91167396f8f2927b5294c63ee4dea519de7317953da492d2ad7eaed927652b3aae9ebf7aaad528b52a93eab1f2bea6788758f97dc0000000049454e44ae426082),
 (34, 7, 1, 14, 1, '2025-10-07', '16:00:00', 'completed', NULL, '2025-10-07 07:51:36', '2025-10-07 08:02:08', NULL),
-(35, 7, 1, 15, 1, '2025-10-07', '16:00:00', 'cancelled', 'sasasasasasa', '2025-10-07 07:54:53', '2025-10-10 03:32:13', NULL);
+(35, 7, 1, 15, 1, '2025-10-07', '16:00:00', 'cancelled', 'sasasasasasa', '2025-10-07 07:54:53', '2025-10-10 03:32:13', NULL),
+(36, 7, 1, NULL, 1, '2025-10-12', '14:00:00', 'cancelled', 'dadsddasdsdsa', '2025-10-12 03:03:24', '2025-10-12 04:21:22', NULL);
 
 -- --------------------------------------------------------
 
@@ -137,7 +138,8 @@ INSERT INTO `appointment_logs` (`log_id`, `appointment_id`, `patient_id`, `actio
 (12, 34, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:51:36'),
 (13, 35, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:54:53'),
 (14, 33, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'TESTING IF IT WORKS OR NOT', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:26:15'),
-(15, 35, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'sasasasasasa', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:32:13');
+(15, 35, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'sasasasasasa', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:32:13'),
+(16, 36, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'dadsddasdsdsa', NULL, 'employee', 1, NULL, NULL, '2025-10-12 04:21:22');
 
 -- --------------------------------------------------------
 
@@ -279,7 +281,10 @@ CREATE TABLE `billing` (
   `payment_status` enum('unpaid','partial','paid','exempted','cancelled') DEFAULT 'unpaid',
   `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `philhealth_coverage` decimal(10,2) DEFAULT 0.00,
+  `receipt_id` int(10) UNSIGNED DEFAULT NULL,
+  `processed_by` int(10) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1547,7 +1552,8 @@ INSERT INTO `visits` (`visit_id`, `patient_id`, `facility_id`, `appointment_id`,
 (6, 7, 1, 33, NULL, '2025-10-07', '2025-10-07 15:17:42', NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:17:42', '2025-10-07 07:17:42'),
 (7, 7, 1, 34, NULL, '2025-10-07', NULL, '2025-10-07 16:02:08', 1, 'Visit completed: ', 'completed', 'on_time', '2025-10-07 07:51:36', '2025-10-07 08:02:08'),
 (8, 7, 1, 35, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:54:53', '2025-10-07 07:54:53'),
-(9, 7, 1, 35, NULL, '2025-10-07', '2025-10-07 15:55:21', NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:55:21', '2025-10-07 07:55:21');
+(9, 7, 1, 35, NULL, '2025-10-07', '2025-10-07 15:55:21', NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:55:21', '2025-10-07 07:55:21'),
+(10, 7, 1, NULL, NULL, '2025-10-12', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-12 03:08:04', '2025-10-12 03:08:04');
 
 -- --------------------------------------------------------
 
@@ -1683,14 +1689,19 @@ ALTER TABLE `barangay`
 ALTER TABLE `billing`
   ADD PRIMARY KEY (`billing_id`),
   ADD KEY `idx_billing_visit_id` (`visit_id`),
-  ADD KEY `idx_billing_patient_id` (`patient_id`);
+  ADD KEY `idx_billing_patient_id` (`patient_id`),
+  ADD KEY `fk_billing_processed_by` (`processed_by`),
+  ADD KEY `idx_billing_payment_status` (`payment_status`),
+  ADD KEY `idx_billing_date` (`billing_date`),
+  ADD KEY `idx_billing_receipt_id` (`receipt_id`);
 
 --
 -- Indexes for table `billing_items`
 --
 ALTER TABLE `billing_items`
   ADD PRIMARY KEY (`billing_item_id`),
-  ADD KEY `fk_billing_items_service_item` (`service_item_id`);
+  ADD KEY `fk_billing_items_service_item` (`service_item_id`),
+  ADD KEY `idx_billing_items_billing_id` (`billing_id`);
 
 --
 -- Indexes for table `chronic_illnesses`
@@ -2067,13 +2078,13 @@ ALTER TABLE `allergies`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `appointment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `appointment_logs`
 --
 ALTER TABLE `appointment_logs`
-  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `assignment_logs`
@@ -2253,7 +2264,7 @@ ALTER TABLE `queue_counters`
 -- AUTO_INCREMENT for table `queue_entries`
 --
 ALTER TABLE `queue_entries`
-  MODIFY `queue_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `queue_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `queue_logs`
@@ -2331,7 +2342,7 @@ ALTER TABLE `user_activity_logs`
 -- AUTO_INCREMENT for table `visits`
 --
 ALTER TABLE `visits`
-  MODIFY `visit_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `visit_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `vitals`
@@ -2393,12 +2404,15 @@ ALTER TABLE `barangay`
 --
 ALTER TABLE `billing`
   ADD CONSTRAINT `fk_billing_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_billing_processed_by` FOREIGN KEY (`processed_by`) REFERENCES `employees` (`employee_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_billing_receipt` FOREIGN KEY (`receipt_id`) REFERENCES `receipts` (`receipt_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_billing_visit` FOREIGN KEY (`visit_id`) REFERENCES `visits` (`visit_id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `billing_items`
 --
 ALTER TABLE `billing_items`
+  ADD CONSTRAINT `fk_billing_items_billing` FOREIGN KEY (`billing_id`) REFERENCES `billing` (`billing_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_billing_items_service_item` FOREIGN KEY (`service_item_id`) REFERENCES `service_items` (`item_id`) ON UPDATE CASCADE;
 
 --

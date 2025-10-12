@@ -688,8 +688,6 @@ if (!isset($defaults)) {
             </div>
         </section>
 
-        <hr class="section-divider">
-
         <section class="quick-actions">
             <h2 class="actions-title">Quick Actions</h2>
 

@@ -1219,19 +1219,19 @@ $employee_info = [
                                         <i class="fas fa-tachometer-alt"></i>
                                     </div>
                                     <div class="btn-content">
-                                        <span class="btn-title">Queue Dashboard</span>
-                                        <span class="btn-subtitle">Main queue overview</span>
+                                        <span class="btn-title"style="text-align: left;">Queue Dashboard</span>
+                                        <span class="btn-subtitle" style="text-align: left;">Main queue overview</span>
                                     </div>
                                 </a>
                                 
-                                <a href="station.php" class="modern-btn btn-nav">
+                                <a href="#" class="modern-btn btn-nav" onclick="openPublicDisplay(); return false;">
                                     <div class="btn-icon">
                                         <i class="fas fa-desktop"></i>
                                     </div>
                                     <div class="btn-content">
-                                        <span class="btn-title">General Station</span>
-                                        <span class="btn-subtitle">Multi-station interface</span>
-                                    </div>
+                                        <span class="btn-title" style="text-align: left;">Open Waiting Display</span>
+                                        <span class="btn-subtitle" style="text-align: left;">Launch the public queue view for this station</span>
+                                   </div>
                                 </a>
                                 
                                 <?php if (count($available_lab_stations) > 1): ?>
@@ -1240,7 +1240,7 @@ $employee_info = [
                                         <i class="fas fa-exchange-alt"></i>
                                     </div>
                                     <div class="btn-content">
-                                        <span class="btn-title">Switch Station</span>
+                                        <span class="btn-title" style="text-align: left;">Switch Station</span>
                                         <select id="stationSelector" onchange="switchStation(this.value)" class="station-select">
                                             <option value="">Select Station...</option>
                                             <?php foreach ($available_lab_stations as $station): ?>
@@ -1259,8 +1259,8 @@ $employee_info = [
                                         <i class="fas fa-history"></i>
                                     </div>
                                     <div class="btn-content">
-                                        <span class="btn-title">Queue Logs</span>
-                                        <span class="btn-subtitle">Activity history</span>
+                                        <span class="btn-title" style="text-align: left;">Queue Logs</span>
+                                        <span class="btn-subtitle" style="text-align: left;">Activity history</span>
                                     </div>
                                 </button>
                             </div>
@@ -1507,10 +1507,10 @@ $employee_info = [
                     <!-- Div 5: Live Laboratory Queue -->
                     <div class="div5 card-container">
                         <div class="section-header">
-                            <h4><i class="fas fa-vials"></i> Laboratory Queue (<?php echo count($live_queue); ?>)</h4>
+                            <h4><i class="fas fa-vials"></i> Laboratory Queue (<?php echo count($lab_queue); ?>)</h4>
                         </div>
                         <div class="section-body" style="padding: 15px 20px;">
-                        <?php if (!empty($live_queue)): ?>
+                        <?php if (!empty($lab_queue)): ?>
                         <table class="queue-table">
                             <thead>
                                 <tr>
@@ -1523,7 +1523,7 @@ $employee_info = [
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($live_queue as $patient): ?>
+                                <?php foreach ($lab_queue as $patient): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($patient['queue_code'] ?? 'N/A'); ?></td>
                                     <td><?php echo htmlspecialchars($patient['patient_name']); ?></td>
@@ -1678,6 +1678,124 @@ $employee_info = [
         const currentPatient = <?php echo json_encode($current_patient); ?>;
         const canManageQueue = <?php echo json_encode($can_manage_queue); ?>;
         
+        // Public display window reference
+        let publicDisplayWindow = null;
+        
+        // Function to open public laboratory display in popup window
+        function openPublicDisplay() {
+            // Check if public display is already open
+            if (publicDisplayWindow && !publicDisplayWindow.closed) {
+                publicDisplayWindow.focus();
+                showAlert('Public laboratory display is already open', 'info');
+                return;
+            }
+            
+            // Calculate optimal window size for different screen sizes
+            const screenWidth = window.screen.width;
+            const screenHeight = window.screen.height;
+            
+            let windowWidth, windowHeight;
+            
+            // Responsive window sizing
+            if (screenWidth <= 768) {
+                // Mobile/small screens - fullscreen
+                windowWidth = screenWidth;
+                windowHeight = screenHeight;
+            } else if (screenWidth <= 1024) {
+                // Tablets - 90% of screen
+                windowWidth = Math.floor(screenWidth * 0.9);
+                windowHeight = Math.floor(screenHeight * 0.9);
+            } else {
+                // Desktop - 80% of screen
+                windowWidth = Math.floor(screenWidth * 0.8);
+                windowHeight = Math.floor(screenHeight * 0.8);
+            }
+            
+            // Center the window
+            const left = Math.floor((screenWidth - windowWidth) / 2);
+            const top = Math.floor((screenHeight - windowHeight) / 2);
+            
+            // Window features optimized for public display
+            const windowFeatures = [
+                `width=${windowWidth}`,
+                `height=${windowHeight}`,
+                `left=${left}`,
+                `top=${top}`,
+                'resizable=yes',
+                'scrollbars=auto',
+                'toolbar=no',
+                'menubar=no',
+                'location=no',
+                'status=no',
+                'titlebar=yes'
+            ].join(',');
+            
+            try {
+                // Open the public laboratory display window
+                publicDisplayWindow = window.open(
+                    'public_display_lab.php',
+                    'LaboratoryPublicDisplay',
+                    windowFeatures
+                );
+                
+                if (publicDisplayWindow) {
+                    // Focus on the new window
+                    publicDisplayWindow.focus();
+                    
+                    // Set window title after load
+                    publicDisplayWindow.addEventListener('load', function() {
+                        try {
+                            publicDisplayWindow.document.title = 'Laboratory Queue Display - CHO Koronadal';
+                        } catch (e) {
+                            // Cross-origin restriction, ignore
+                        }
+                    });
+                    
+                    // Handle window close event
+                    publicDisplayWindow.addEventListener('beforeunload', function() {
+                        console.log('Public laboratory display window closing');
+                        publicDisplayWindow = null;
+                        updateDisplayButtonState(false);
+                    });
+                    
+                    // Show success message
+                    showAlert('Public laboratory display opened successfully', 'success');
+                    
+                    // Update button appearance to show active state
+                    updateDisplayButtonState(true);
+                    
+                } else {
+                    throw new Error('Popup was blocked');
+                }
+                
+            } catch (error) {
+                console.error('Error opening public laboratory display:', error);
+                showAlert('Could not open public display. Please check popup settings and try again.', 'error');
+            }
+        }
+        
+        // Function to update button appearance based on display state
+        function updateDisplayButtonState(isOpen) {
+            const displayButton = document.querySelector('a[onclick*="openPublicDisplay"]');
+            if (displayButton) {
+                if (isOpen) {
+                    displayButton.style.borderColor = '#28a745';
+                    displayButton.style.backgroundColor = '#f8fff9';
+                } else {
+                    displayButton.style.borderColor = '#e9ecef';
+                    displayButton.style.backgroundColor = 'white';
+                }
+            }
+        }
+        
+        // Check public display status periodically
+        setInterval(function() {
+            if (publicDisplayWindow && publicDisplayWindow.closed) {
+                publicDisplayWindow = null;
+                updateDisplayButtonState(false);
+            }
+        }, 5000);
+        
         // Auto-refresh interval (30 seconds)
         setInterval(() => {
             if (canManageQueue) {
@@ -1730,7 +1848,7 @@ $employee_info = [
         }
 
         function forceCallPatient() {
-            const waitingPatients = <?php echo json_encode($waiting_queue); ?>;
+            const waitingPatients = <?php echo json_encode($lab_queue); ?>;
             if (waitingPatients.length === 0) {
                 showAlert('No patients in waiting queue', 'error');
                 return;
@@ -1942,12 +2060,12 @@ $employee_info = [
             });
         }
 
-        // Alert system
+        // Alert system - Fixed version
         function showAlert(message, type) {
             // Remove existing alerts
             const existingAlerts = document.querySelectorAll('.alert');
             existingAlerts.forEach(alert => {
-                if (!alert.parentElement.classList.contains('modal-content')) {
+                if (!alert.closest('.modal-content')) {
                     alert.remove();
                 }
             });
@@ -1965,15 +2083,52 @@ $employee_info = [
                 <button type="button" class="btn-close" onclick="this.parentElement.remove()">&times;</button>
             `;
             
-            const container = document.querySelector('.queue-dashboard-container');
-            const header = document.querySelector('.page-header');
-            container.insertBefore(alertDiv, header.nextSibling);
+            // More robust insertion method
+            const container = document.querySelector('.queue-dashboard-container .content-area');
+            if (container) {
+                // Find the best insertion point
+                const breadcrumb = container.querySelector('.breadcrumb');
+                const pageHeader = container.querySelector('.page-header');
+                const firstCard = container.querySelector('.card-container');
+                
+                if (pageHeader && pageHeader.parentNode === container) {
+                    // Insert after page header if it exists and is a direct child
+                    container.insertBefore(alertDiv, pageHeader.nextSibling);
+                } else if (breadcrumb && breadcrumb.parentNode === container) {
+                    // Insert after breadcrumb if it exists and is a direct child
+                    container.insertBefore(alertDiv, breadcrumb.nextSibling);
+                } else if (firstCard && firstCard.parentNode === container) {
+                    // Insert before first card if it exists and is a direct child
+                    container.insertBefore(alertDiv, firstCard);
+                } else {
+                    // Fallback: prepend to container
+                    container.insertBefore(alertDiv, container.firstChild);
+                }
+            } else {
+                // Ultimate fallback: append to body
+                document.body.appendChild(alertDiv);
+                
+                // Position it fixed at the top
+                alertDiv.style.position = 'fixed';
+                alertDiv.style.top = '20px';
+                alertDiv.style.left = '50%';
+                alertDiv.style.transform = 'translateX(-50%)';
+                alertDiv.style.zIndex = '9999';
+                alertDiv.style.maxWidth = '90%';
+                alertDiv.style.width = 'auto';
+            }
             
             // Auto-remove success and info alerts after 5 seconds
             if (type === 'success' || type === 'info') {
                 setTimeout(() => {
                     if (alertDiv.parentElement) {
-                        alertDiv.remove();
+                        alertDiv.style.opacity = '0';
+                        alertDiv.style.transition = 'opacity 0.3s ease-out';
+                        setTimeout(() => {
+                            if (alertDiv.parentElement) {
+                                alertDiv.remove();
+                            }
+                        }, 300);
                     }
                 }, 5000);
             }

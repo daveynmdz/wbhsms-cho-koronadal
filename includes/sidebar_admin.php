@@ -144,8 +144,8 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?> disabled" role="menuitem">
             <i class="fas fa-vials"></i> Laboratory Results Management
         </a>
-        <a href="#"
-            class="<?= $activePage === 'billing' ? 'active' : '' ?> disabled" role="menuitem">
+        <a href="<?= $nav_base ?>management/admin/billing/billing_overview.php"
+            class="<?= $activePage === 'billing' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-file-invoice-dollar"></i> Billing Management
         </a>
         <a href="#"

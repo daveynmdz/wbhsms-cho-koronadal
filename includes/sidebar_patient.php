@@ -116,6 +116,10 @@ $nav_base = $base_path . 'pages/patient/';
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> My Appointments
         </a>
+        <a href="<?= $nav_base ?>queueing/queue_status.php"
+            class="<?= $activePage === 'queue_status' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-ticket-alt"></i> My Queue Status
+        </a>
         <a href="<?= $nav_base ?>referrals/referrals.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-file-medical"></i> Medical Referrals
@@ -124,7 +128,7 @@ $nav_base = $base_path . 'pages/patient/';
             class="<?= $activePage === 'prescription' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-prescription-bottle-alt"></i> Prescription
         </a>
-        <a href="<?= $nav_base ?>laboratory/lab_tests.php"
+        <a href="<?= $nav_base ?>laboratory/lab_test.php"
             class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-vials"></i> Laboratory
         </a>

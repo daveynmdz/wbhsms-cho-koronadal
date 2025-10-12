@@ -118,9 +118,9 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= $nav_base ?>management/cashier/billing.php"
-            class="<?= $activePage === 'billing' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-file-invoice-dollar"></i> Billing
+        <a href="<?= $nav_base ?>billing/billing_management.php"
+            class="<?= $activePage === 'billing_management' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-file-invoice-dollar"></i> Billing Management
         </a>
         <a href="<?= $nav_base ?>management/cashier/payments.php"
             class="<?= $activePage === 'payments' ? 'active' : '' ?>" role="menuitem">
