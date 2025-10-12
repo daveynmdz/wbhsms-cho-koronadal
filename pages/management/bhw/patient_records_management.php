@@ -4,6 +4,7 @@
 $root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 include $root_path . '/config/db.php';
+$baseurl = '/wbhsms-cho-koronadal-1'; // Change this if your deployment base changes
 
 // Check if user is logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -1322,7 +1323,7 @@ $bhw_barangay_name = $barangay_name_result->fetch_assoc()['barangay_name'];
                                                         <img src="data:image/jpeg;base64,<?php echo base64_encode($patient['profile_photo']); ?>" 
                                                              class="profile-img" alt="Patient Photo">
                                                     <?php else: ?>
-                                                        <img src="../../../assets/images/user-default.png" 
+                                                        <img src="<?php echo $baseurl; ?>/assets/images/user-default.png" 
                                                              class="profile-img" alt="Patient Photo">
                                                     <?php endif; ?>
                                                 </td>
@@ -1370,7 +1371,7 @@ $bhw_barangay_name = $barangay_name_result->fetch_assoc()['barangay_name'];
                                                                 data-barangay="<?php echo !empty($patient['barangay_name']) ? htmlspecialchars($patient['barangay_name']) : 'N/A'; ?>"
                                                                 data-emergency-name="<?php echo !empty($patient['contact_name']) ? htmlspecialchars($patient['contact_name']) : 'N/A'; ?>"
                                                                 data-emergency-contact="<?php echo !empty($patient['emergency_contact']) ? htmlspecialchars($patient['emergency_contact']) : 'N/A'; ?>"
-                                                                data-photo="<?php echo !empty($patient['profile_photo']) ? 'data:image/jpeg;base64,'.base64_encode($patient['profile_photo']) : '../../../assets/images/user-default.png'; ?>"
+                                                                data-photo="<?php echo !empty($patient['profile_photo']) ? 'data:image/jpeg;base64,'.base64_encode($patient['profile_photo']) : $baseurl . '/assets/images/user-default.png'; ?>"
                                                                 title="View Contact">
                                                             <i class="fas fa-address-card"></i>
                                                         </button>
@@ -1438,7 +1439,7 @@ $bhw_barangay_name = $barangay_name_result->fetch_assoc()['barangay_name'];
                             <h5>WBHSMS - CHO Koronadal</h5>
                         </div>
                         <div style="text-align: center; padding: 20px 0;">
-                            <img src="../../../assets/images/user-default.png" id="patientPhoto" alt="Patient Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #0077b6; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            <img src="<?php echo $baseurl; ?>/assets/images/user-default.png" id="patientPhoto" alt="Patient Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #0077b6; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                             <h4 id="patientName" style="margin-top: 15px; color: var(--primary-dark); font-weight: 600;"></h4>
                             <p style="color: var(--primary); font-weight: 500; letter-spacing: 1px;"><i class="fas fa-id-badge" style="margin-right: 5px;"></i> Patient ID: <span id="patientId"></span></p>
                         </div>
@@ -1556,7 +1557,7 @@ $bhw_barangay_name = $barangay_name_result->fetch_assoc()['barangay_name'];
             }
             
             function showContactModal(data) {
-                $('#patientPhoto').attr('src', data.photo || '../../../assets/images/user-default.png');
+                $('#patientPhoto').attr('src', data.photo || '<?php echo $baseurl; ?>/assets/images/user-default.png');
                 $('#patientName').text(data.name || 'N/A');
                 $('#patientId').text(data.username || 'N/A');
                 $('#patientDob').text(data.dob || 'N/A');
