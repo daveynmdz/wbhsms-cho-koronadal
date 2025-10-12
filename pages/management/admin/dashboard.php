@@ -8,9 +8,28 @@ header('Expires: 0');
 $root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 
-// If user is not logged in or not an admin, bounce to login
-if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
+// Authentication check - refactored to eliminate redirect loops
+// Check 1: Is the user logged in at all?
+if (!isset($_SESSION['employee_id']) || empty($_SESSION['employee_id'])) {
+    // User is not logged in - redirect to login, but prevent redirect loops
+    error_log('Admin Dashboard: No session found, redirecting to login');
     header('Location: ../auth/employee_login.php');
+    exit();
+}
+
+// Check 2: Does the user have the correct role?
+// Make sure role comparison is case-insensitive
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'admin') {
+    // User has wrong role - log and redirect
+    error_log('Access denied: User ' . $_SESSION['employee_id'] . ' with role ' . 
+              ($_SESSION['role'] ?? 'none') . ' attempted to access admin dashboard');
+    
+    // Clear any redirect loop detection
+    unset($_SESSION['redirect_attempt']);
+    
+    // Return to login with access denied message
+    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'Access denied. You do not have permission to view that page.');
+    header('Location: ../auth/employee_login.php?access_denied=1');
     exit();
 }
 

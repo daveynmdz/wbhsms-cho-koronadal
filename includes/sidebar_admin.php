@@ -119,7 +119,7 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'patient_records' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-users"></i> Patient Records
         </a>
-        <a href="<?= $nav_base ?>management/admin/referrals/referrals_management.php"
+        <a href="<?= $nav_base ?>referrals/referrals_management.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-share"></i> Referrals Management
         </a>

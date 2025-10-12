@@ -49,19 +49,25 @@ error_log('DB Connection Status: MySQLi=' . ($conn ? 'Connected' : 'Failed') . '
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
-// Enforce staff assignment for today
-$assignment = getStaffAssignment($employee_id);
-if (!$assignment) {
-    // Not assigned today, block access
-    error_log('Doctor Dashboard: No active staff assignment for today.');
-    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'You are not assigned to any station today. Please contact the administrator.');
-    header('Location: ../auth/employee_login.php?not_assigned=1');
-    exit();
+// Check staff assignment for today (non-blocking)
+$assignment = null;
+$assignment_warning = '';
+try {
+    $assignment = getStaffAssignment($employee_id);
+    if (!$assignment) {
+        // Not assigned today, but allow access with warning
+        error_log('Doctor Dashboard: No active staff assignment for today - allowing access with warning.');
+        $assignment_warning = 'You are not assigned to any station today. Some queue management features may be limited. Please contact the administrator if you need station access.';
+    }
+} catch (Exception $e) {
+    // Staff assignment function failed, log error but continue
+    error_log('Doctor Dashboard: Staff assignment check failed: ' . $e->getMessage());
+    $assignment_warning = 'Unable to verify station assignment. Some features may be limited.';
 }
 
 // -------------------- Data bootstrap (Doctor Dashboard) --------------------
 $defaults = [
-    'name' => $_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name'],
+    'name' => trim(($_SESSION['employee_first_name'] ?? 'Unknown') . ' ' . ($_SESSION['employee_last_name'] ?? 'User')),
     'employee_number' => $_SESSION['employee_number'] ?? '-',
     'role' => $employee_role,
     'stats' => [
@@ -80,16 +86,18 @@ $defaults = [
 
 // Get doctor info from employees table
 try {
-    $stmt = $pdo->prepare('SELECT first_name, middle_name, last_name, employee_number, role FROM employees WHERE employee_id = ?');
-    $stmt->execute([$employee_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($row) {
-        $full_name = $row['first_name'];
-        if (!empty($row['middle_name'])) $full_name .= ' ' . $row['middle_name'];
-        $full_name .= ' ' . $row['last_name'];
-        $defaults['name'] = trim($full_name);
-        $defaults['employee_number'] = $row['employee_number'];
-        $defaults['role'] = $row['role'];
+    if ($pdo) {
+        $stmt = $pdo->prepare('SELECT first_name, middle_name, last_name, employee_number, role FROM employees WHERE employee_id = ?');
+        $stmt->execute([$employee_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $full_name = $row['first_name'];
+            if (!empty($row['middle_name'])) $full_name .= ' ' . $row['middle_name'];
+            $full_name .= ' ' . $row['last_name'];
+            $defaults['name'] = trim($full_name);
+            $defaults['employee_number'] = $row['employee_number'];
+            $defaults['role'] = $row['role'];
+        }
     }
 } catch (PDOException $e) {
     error_log("Doctor dashboard error: " . $e->getMessage());
@@ -97,22 +105,26 @@ try {
 
 // Dashboard Statistics
 try {
-    // Today's Appointments
-    $today = date('Y-m-d');
-    $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = ? AND doctor_id = ?');
-    $stmt->execute([$today, $employee_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    $defaults['stats']['today_appointments'] = $row['count'] ?? 0;
+    if ($pdo) {
+        // Today's Appointments
+        $today = date('Y-m-d');
+        $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = ? AND doctor_id = ?');
+        $stmt->execute([$today, $employee_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $defaults['stats']['today_appointments'] = $row['count'] ?? 0;
+    }
 } catch (PDOException $e) {
     // table might not exist yet; ignore
 }
 
 try {
-    // Pending Consultations
-    $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM appointments WHERE status = "scheduled" AND doctor_id = ?');
-    $stmt->execute([$employee_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    $defaults['stats']['pending_consultations'] = $row['count'] ?? 0;
+    if ($pdo) {
+        // Pending Consultations
+        $stmt = $pdo->prepare('SELECT COUNT(*) as count FROM appointments WHERE status = "scheduled" AND doctor_id = ?');
+        $stmt->execute([$employee_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $defaults['stats']['pending_consultations'] = $row['count'] ?? 0;
+    }
 } catch (PDOException $e) {
     // table might not exist yet; ignore
 }
@@ -775,7 +787,12 @@ try {
     <?php
     // Tell the sidebar which menu item to highlight
     $activePage = 'dashboard';
-    include $root_path . '/includes/sidebar_doctor.php';
+    $sidebar_path = $root_path . '/includes/sidebar_doctor.php';
+    if (file_exists($sidebar_path)) {
+        include $sidebar_path;
+    } else {
+        error_log('Doctor Dashboard: Sidebar file not found at ' . $sidebar_path);
+    }
     ?>
 
     <main class="content-wrapper">
@@ -795,6 +812,14 @@ try {
                 </a>
             </div>
         </section>
+        
+        <!-- Assignment Warning (if applicable) -->
+        <?php if (!empty($assignment_warning)): ?>
+        <section class="info-card" style="border-left-color: #ffc107; background: #fff3cd;">
+            <h2 style="color: #856404;"><i class="fas fa-exclamation-triangle"></i> Station Assignment Notice</h2>
+            <p style="color: #856404;"><?php echo htmlspecialchars($assignment_warning); ?></p>
+        </section>
+        <?php endif; ?>
         
         <!-- System Overview Card -->
         <section class="info-card">

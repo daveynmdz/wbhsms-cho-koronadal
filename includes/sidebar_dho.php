@@ -126,7 +126,7 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'clinical_encounters' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-notes-medical"></i> Clinical Encounters
         </a>
-        <a href="<?= $nav_base ?>management/dho/referrals_management.php"
+        <a href="<?= $nav_base ?>referrals/referrals_management.php"
             class="<?= $activePage === 'referrals' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-share"></i> Referral Management
         </a>

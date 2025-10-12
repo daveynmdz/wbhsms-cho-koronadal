@@ -46,14 +46,20 @@ error_log('DB Connection Status: MySQLi=' . ($conn ? 'Connected' : 'Failed') . '
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
-// Enforce staff assignment for today
-$assignment = getStaffAssignment($employee_id);
-if (!$assignment) {
-    // Not assigned today, block access
-    error_log('Nurse Dashboard: No active staff assignment for today.');
-    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'You are not assigned to any station today. Please contact the administrator.');
-    header('Location: ../auth/employee_login.php?not_assigned=1');
-    exit();
+// Check staff assignment for today (non-blocking)
+$assignment = null;
+$assignment_warning = '';
+try {
+    $assignment = getStaffAssignment($employee_id);
+    if (!$assignment) {
+        // Not assigned today, but allow access with warning
+        error_log('Nurse Dashboard: No active staff assignment for today - allowing access with warning.');
+        $assignment_warning = 'You are not assigned to any station today. Some queue management features may be limited. Please contact the administrator if you need station access.';
+    }
+} catch (Exception $e) {
+    // Staff assignment function failed, log error but continue
+    error_log('Nurse Dashboard: Staff assignment check failed: ' . $e->getMessage());
+    $assignment_warning = 'Unable to verify station assignment. Some features may be limited.';
 }
 
 // -------------------- Data bootstrap (Nurse Dashboard) --------------------
@@ -984,6 +990,14 @@ try {
                 </a>
             </div>
         </section>
+        
+        <!-- Assignment Warning (if applicable) -->
+        <?php if (!empty($assignment_warning)): ?>
+        <section class="info-card" style="border-left-color: #ffc107; background: #fff3cd;">
+            <h2 style="color: #856404;"><i class="fas fa-exclamation-triangle"></i> Station Assignment Notice</h2>
+            <p style="color: #856404;"><?php echo htmlspecialchars($assignment_warning); ?></p>
+        </section>
+        <?php endif; ?>
         
         <!-- System Overview Card -->
         <section class="info-card">
