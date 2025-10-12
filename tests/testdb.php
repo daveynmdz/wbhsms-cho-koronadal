@@ -1,39 +1,46 @@
 <?php
-// Set to 'local' or 'remote' to test each connection
-$test = 'remote'; // change to 'remote' to test remote server
+// Get test type from URL parameter, default to 'local'
+$test = isset($_GET['test']) && in_array($_GET['test'], ['local', 'remote']) ? $_GET['test'] : 'local';
 
-require_once __DIR__ . '/config/env.php';
+// Include the root config files with correct paths
+$root_path = dirname(__DIR__);
+require_once $root_path . '/config/env.php';
 
 $connection_status = '';
 $connection_type = '';
 $connection_details = array();
 
 if ($test === 'local') {
-    if (file_exists(__DIR__ . '/config/.env.local')) {
-        loadEnv(__DIR__ . '/config/.env.local');
-        $connection_type = 'LOCAL';
-    } else {
-        $connection_status = 'error';
-        $connection_type = 'LOCAL';
-        $error_message = '.env.local file not found';
-    }
+    $connection_type = 'LOCAL (XAMPP)';
+    // Force local environment variables for testing
+    putenv('DB_HOST=localhost');
+    putenv('DB_PORT=3306');
+    putenv('DB_DATABASE=wbhsms_database');
+    putenv('DB_USERNAME=root');
+    putenv('DB_PASSWORD=');
 } else {
-    if (file_exists(__DIR__ . '/config/.env')) {
-        loadEnv(__DIR__ . '/config/.env');
-        $connection_type = 'REMOTE';
+    $connection_type = 'REMOTE (PRODUCTION)';
+    // Load production settings from .env
+    if (file_exists($root_path . '/.env')) {
+        $lines = file($root_path . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos(trim($line), '#') === 0) continue;
+            if (!strpos($line, '=')) continue;
+            list($name, $value) = array_map('trim', explode('=', $line, 2));
+            putenv("$name=$value");
+        }
     } else {
         $connection_status = 'error';
-        $connection_type = 'REMOTE';
-        $error_message = '.env file not found';
+        $error_message = '.env file not found for production testing';
     }
 }
 
 if (empty($connection_status)) {
-    $host = isset($_ENV['DB_HOST']) ? $_ENV['DB_HOST'] : 'localhost';
-    $port = isset($_ENV['DB_PORT']) ? $_ENV['DB_PORT'] : '3306';
-    $db   = isset($_ENV['DB_NAME']) ? $_ENV['DB_NAME'] : '';
-    $user = isset($_ENV['DB_USER']) ? $_ENV['DB_USER'] : '';
-    $pass = isset($_ENV['DB_PASS']) ? $_ENV['DB_PASS'] : '';
+    $host = getenv('DB_HOST') ?: 'localhost';
+    $port = getenv('DB_PORT') ?: '3306';
+    $db   = getenv('DB_DATABASE') ?: 'wbhsms_database';
+    $user = getenv('DB_USERNAME') ?: 'root';
+    $pass = getenv('DB_PASSWORD') ?: '';
     $charset = 'utf8mb4';
 
     $connection_details = array(
@@ -41,6 +48,7 @@ if (empty($connection_status)) {
         'Port' => $port,
         'Database' => $db,
         'Username' => $user,
+        'Password' => $pass ? str_repeat('*', strlen($pass)) : '(empty)',
         'Charset' => $charset
     );
 
@@ -48,11 +56,16 @@ if (empty($connection_status)) {
 
     try {
         $pdo = new PDO($dsn, $user, $pass);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $connection_status = 'success';
         
         // Get additional database info
         $version = $pdo->query('SELECT VERSION()')->fetchColumn();
         $connection_details['MySQL Version'] = $version;
+        
+        // Test a simple query
+        $tables = $pdo->query("SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = '$db'")->fetchColumn();
+        $connection_details['Tables Found'] = $tables;
         
     } catch (PDOException $e) {
         $connection_status = 'error';
@@ -327,6 +340,19 @@ if (empty($connection_status)) {
             Testing <?php echo $connection_type; ?> Connection
         </div>
 
+        <!-- Test Switch Controls -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <div style="font-weight: 600; margin-bottom: 15px; color: #374151;">Switch Test Environment:</div>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <a href="?test=local" class="btn <?php echo $test === 'local' ? 'btn-primary' : 'btn-secondary'; ?>" style="font-size: 0.9rem; padding: 10px 20px;">
+                    <i class="fas fa-home"></i> Local (XAMPP)
+                </a>
+                <a href="?test=remote" class="btn <?php echo $test === 'remote' ? 'btn-primary' : 'btn-secondary'; ?>" style="font-size: 0.9rem; padding: 10px 20px;">
+                    <i class="fas fa-cloud"></i> Remote (Production)
+                </a>
+            </div>
+        </div>
+
         <div class="status-card <?php echo $connection_status === 'success' ? 'status-success' : 'status-error'; ?>">
             <div class="status-icon">
                 <?php if ($connection_status === 'success'): ?>
@@ -366,14 +392,14 @@ if (empty($connection_status)) {
         </div>
 
         <div class="actions">
-            <a href="index.php" class="btn btn-primary">
+            <a href="../index.php" class="btn btn-primary">
                 <i class="fas fa-home"></i> Back to Home
             </a>
-            <a href="testdb.php" class="btn btn-refresh">
+            <a href="?<?php echo http_build_query(['test' => $test]); ?>" class="btn btn-refresh">
                 <i class="fas fa-sync-alt"></i> Refresh Test
             </a>
-            <a href="pages/auth/patient_login.php" class="btn btn-secondary">
-                <i class="fas fa-user"></i> Patient Login
+            <a href="../pages/patient/login.php" class="btn btn-secondary">
+                <i class="fas fa-user"></i> Patient Portal
             </a>
         </div>
     </div>

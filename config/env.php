@@ -50,7 +50,9 @@ try {
     // Log error instead of outputting it to prevent headers issues
     error_log("Database connection failed: " . $e->getMessage());
     
-    // In production/deployment, you might want to show a generic error
-    // For now, we'll exit with the error to help with debugging
-    exit("Database connection failed. Please check your configuration.");
+    // Set $pdo to null so other parts of the application can handle gracefully
+    $pdo = null;
+    
+    // Store the error message for display if needed
+    $db_connection_error = $e->getMessage();
 }
