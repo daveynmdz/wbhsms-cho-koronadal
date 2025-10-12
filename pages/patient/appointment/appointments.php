@@ -1118,7 +1118,7 @@ try {
         <!-- Breadcrumb Navigation -->
         <div class="breadcrumb" style="margin-top: 50px;">
             <a href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-            <span> / </span>
+            <span> > </span>
             <span style="color: #0077b6; font-weight: 600;">My Appointments</span>
         </div>
 

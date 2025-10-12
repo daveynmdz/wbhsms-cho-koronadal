@@ -16,5 +16,5 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 clear_patient_session();
 
 // Redirect to login with a flag
-header('Location: ../auth/patient_login.php?logged_out=1');
+header('Location: patient_login.php?logged_out=1');
 exit;

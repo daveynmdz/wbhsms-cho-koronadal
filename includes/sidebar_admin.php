@@ -195,8 +195,48 @@ $nav_base = $base_path . 'pages/';
 </nav>
 
 <?php
-// Generate correct logout URL using the same base path calculation
-$logoutUrl = $base_path . 'pages/management/auth/employee_logout.php';
+// Generate correct logout URL with production-safe calculation
+$logoutUrl = '';
+
+// First, try to determine the correct path based on current location
+if (strpos($_SERVER['PHP_SELF'], '/pages/management/') !== false) {
+    // We're in a management page - use relative paths
+    if (strpos($_SERVER['PHP_SELF'], '/pages/management/admin/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/doctor/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/nurse/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/dho/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/bhw/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/cashier/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/laboratory_tech/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/pharmacist/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/management/records_officer/') !== false) {
+        // From role-specific dashboard pages (3 levels deep)
+        $logoutUrl = '../auth/employee_logout.php';
+    } else {
+        // From /pages/management/ directly (2 levels deep)
+        $logoutUrl = 'auth/employee_logout.php';
+    }
+} elseif (strpos($_SERVER['PHP_SELF'], '/pages/referrals/') !== false) {
+    // From centralized referrals pages
+    $logoutUrl = '../management/auth/employee_logout.php';
+} else {
+    // Fallback - use absolute path with dynamic base
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $host = $_SERVER['HTTP_HOST'];
+    $request_uri = $_SERVER['REQUEST_URI'];
+    
+    // Extract base path from REQUEST_URI
+    $uri_parts = explode('/', trim($request_uri, '/'));
+    $base_path = '';
+    
+    // Check if we're in a project subfolder (like local development)
+    if (count($uri_parts) > 0 && $uri_parts[0] && $uri_parts[0] !== 'pages') {
+        // Looks like we're in a subfolder (local development)
+        $base_path = '/' . $uri_parts[0];
+    }
+    
+    $logoutUrl = $base_path . '/pages/management/auth/employee_logout.php';
+}
 ?>
 
 <!-- Hidden logout form with CSRF protection -->

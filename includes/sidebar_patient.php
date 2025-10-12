@@ -76,14 +76,17 @@ if (preg_match('#^(.*?)/pages/#', $script_name, $matches)) {
     }
 }
 
-// Ensure base_path ends with / if it's not empty
-if ($base_path && !str_ends_with($base_path, '/')) {
-    $base_path .= '/';
+// Calculate navigation base for patient pages specifically
+if ($base_path) {
+    // Local development: /project-folder/pages/patient/
+    $nav_base = $base_path . '/pages/patient/';
+} else {
+    // Production deployment: /pages/patient/
+    $nav_base = '/pages/patient/';
 }
 
-$assets_path = $base_path . 'assets/css/sidebar.css';
-$vendor_path = $base_path . 'vendor/photo_controller.php';
-$nav_base = $base_path . '/';
+$assets_path = $base_path . '/assets/css/sidebar.css';
+$vendor_path = $base_path . '/vendor/photo_controller.php';
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="<?= $assets_path ?>">
@@ -167,8 +170,33 @@ $nav_base = $base_path . '/';
     </div>
 </nav>
 
+<?php
+// Generate correct logout URL based on current file location
+$logoutUrl = '';
+
+if (strpos($_SERVER['PHP_SELF'], '/pages/patient/') !== false) {
+    // Called from patient pages (most common case)
+    if (strpos($_SERVER['PHP_SELF'], '/pages/patient/appointment/') !== false || 
+        strpos($_SERVER['PHP_SELF'], '/pages/patient/billing/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/patient/laboratory/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/patient/prescription/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/patient/profile/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/patient/queueing/') !== false ||
+        strpos($_SERVER['PHP_SELF'], '/pages/patient/referrals/') !== false) {
+        // Called from subfolders within patient (3 levels deep)
+        $logoutUrl = '../auth/logout.php';
+    } else {
+        // Called from /pages/patient/ directly (2 levels deep)
+        $logoutUrl = 'auth/logout.php';
+    }
+} else {
+    // Fallback for other locations
+    $logoutUrl = '/pages/patient/auth/logout.php';
+}
+?>
+
 <!-- Hidden logout form -->
-<form id="logoutForm" action="<?= $nav_base ?>auth/logout.php" method="post" style="display:none;"></form>
+<form id="logoutForm" action="<?= $logoutUrl ?>" method="post" style="display:none;"></form>
 
 <!-- Logout Modal (can be styled via your site-wide CSS) -->
 <div id="logoutModal" class="modal-overlay" style="display:none;">
