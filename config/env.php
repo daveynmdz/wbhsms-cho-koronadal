@@ -27,6 +27,7 @@ if (!getenv('DB_HOST')) {
 }
 
 // Use getenv() to read variables — works in Coolify
+<?php
 $host = getenv('DB_HOST') ?: 'localhost';
 $port = getenv('DB_PORT') ?: '3306';
 $db   = getenv('DB_DATABASE') ?: 'default';
@@ -38,6 +39,14 @@ try {
     $pdo = new PDO($dsn, $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die("Database connection failed. Error: " . $e->getMessage());
+    echo "<h3>❌ Database connection failed.</h3>";
+    echo "<strong>Error Message:</strong> " . $e->getMessage() . "<br><br>";
+    echo "<strong>Debug Info:</strong><br>";
+    echo "Host: $host<br>";
+    echo "Port: $port<br>";
+    echo "Database: $db<br>";
+    echo "Username: $user<br>";
+    echo "Password: " . ($pass ? 'SET' : 'NOT SET') . "<br>";
+    die();
 }
 ?>
