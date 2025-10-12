@@ -1,8 +1,6 @@
 <?php
 // At the VERY TOP of your PHP file (before session_start or other code)
-$debug = ($_ENV['APP_DEBUG'] ?? getenv('AP                    <a href="scripts/setup/testdb.php" class="btn btn-secondary btn-large">
-                        <i class="fas fa-database"></i> Test Database Connection
-                    </a>EBUG') ?? '0') === '1';
+$debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
 ini_set('display_errors', $debug ? '1' : '0');
 ini_set('display_startup_errors', $debug ? '1' : '0');
 error_reporting(E_ALL); // log everything, just don't display in prod
@@ -20,9 +18,9 @@ require_once __DIR__ . '/vendor/autoload.php';
 include_once __DIR__ . '/config/env.php';
 // Try to load .env.local first; if not, load .env
 if (file_exists(__DIR__ . '/config/.env.local')) {
-    loadEnv(__DIR__ . '/config/.env.local');
+    loadEnvFile(__DIR__ . '/config/.env.local');
 } elseif (file_exists(__DIR__ . '/config/.env')) {
-    loadEnv(__DIR__ . '/config/.env');
+    loadEnvFile(__DIR__ . '/config/.env');
 }
 
 // --- End ENV Loader Section ---

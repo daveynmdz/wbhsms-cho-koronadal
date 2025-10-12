@@ -16,13 +16,18 @@ function loadEnvFile($envPath) {
     }
 }
 
-// Load .env only if not running in Docker
+// Load .env files - .env.local overrides .env for local development
 if (!getenv('DB_HOST')) {
     $root_dir = dirname(__DIR__);
+    
+    // Load production .env first
     if (file_exists($root_dir . '/.env')) {
         loadEnvFile($root_dir . '/.env');
-    } elseif (file_exists(__DIR__ . '/.env.local')) {
-        loadEnvFile(__DIR__ . '/.env.local');
+    }
+    
+    // Then load .env.local to override for local development
+    if (file_exists($root_dir . '/.env.local')) {
+        loadEnvFile($root_dir . '/.env.local');
     }
 }
 
