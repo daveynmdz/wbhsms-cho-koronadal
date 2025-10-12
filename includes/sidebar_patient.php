@@ -83,7 +83,7 @@ if ($base_path && !str_ends_with($base_path, '/')) {
 
 $assets_path = $base_path . 'assets/css/sidebar.css';
 $vendor_path = $base_path . 'vendor/photo_controller.php';
-$nav_base = $base_path . 'pages/patient/';
+$nav_base = $base_path . '/';
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="<?= $assets_path ?>">
