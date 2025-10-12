@@ -102,7 +102,9 @@ try {
     }
 
     // Begin transaction
+    $transaction_started = false;
     $conn->begin_transaction();
+    $transaction_started = true;
 
     // Update referral status to active
     $stmt = $conn->prepare("
@@ -174,7 +176,7 @@ try {
 
 } catch (Exception $e) {
     // Rollback transaction on error
-    if ($conn->inTransaction()) {
+    if (isset($transaction_started) && $transaction_started) {
         $conn->rollback();
     }
     
@@ -190,7 +192,7 @@ try {
     ]);
 } catch (Error $e) {
     // Handle PHP errors
-    if ($conn->inTransaction()) {
+    if (isset($transaction_started) && $transaction_started) {
         $conn->rollback();
     }
     
