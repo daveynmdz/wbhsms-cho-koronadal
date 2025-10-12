@@ -29,7 +29,7 @@ if (!getenv('DB_HOST')) {
 // Use getenv() to read variables — works in Coolify
 $host = getenv('DB_HOST') ?: 'localhost';
 $port = getenv('DB_PORT') ?: '3306';
-$db   = getenv('DB_DATABASE') ?: 'wbhsms_database';
+$db   = getenv('DB_DATABASE') ?: 'default';
 $user = getenv('DB_USERNAME') ?: 'mysql';
 $pass = getenv('DB_PASSWORD') ?: '';
 
@@ -38,13 +38,6 @@ try {
     $pdo = new PDO($dsn, $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    $error_msg = "Database connection failed. ";
-    if ($user === 'root' && empty($pass)) {
-        $error_msg .= "Make sure XAMPP MySQL is running and database '{$db}' exists. ";
-    } else {
-        $error_msg .= "Check environment variables and database credentials. ";
-    }
-    $error_msg .= "Error: " . $e->getMessage();
-    die($error_msg);
+    die("Database connection failed. Error: " . $e->getMessage());
 }
 ?>
