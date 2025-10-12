@@ -516,7 +516,7 @@
     }
 }
 
-/* Dark Mode Support (if needed) */
+/* Dark Mode Support (if needed) 
 @media (prefers-color-scheme: dark) {
     .profile-wrapper {
         background: #2d3436;
@@ -539,7 +539,7 @@
         background: #636e72;
         color: #ddd;
     }
-}
+}*/
 
 /* Accessibility Improvements */
 .form-input:focus,

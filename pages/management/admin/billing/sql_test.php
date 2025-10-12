@@ -157,6 +157,6 @@ echo "<hr>";
 echo "<h3>Quick Navigation</h3>";
 echo "<p><a href='../dashboard.php'>← Back to Admin Dashboard</a></p>";
 echo "<p><a href='billing_overview.php'>→ Try Billing Overview</a></p>";
-echo "<p><a href='../../cashier/billing/billing_management.php'>→ Try Billing Management</a></p>";
-echo "<p><a href='../../cashier/billing/print_receipt.php'>→ Try Print Receipt</a></p>";
+echo "<p><a href='../../billing/billing_management.php'>→ Try Billing Management</a></p>";
+echo "<p><a href='../../billing/print_receipt.php'>→ Try Print Receipt</a></p>";
 ?>

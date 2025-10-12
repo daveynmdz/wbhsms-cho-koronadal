@@ -1,12 +1,12 @@
 ﻿<?php
-// Billing Management Dashboard - Comprehensive Cashier Interface
-$root_path = dirname(dirname(dirname(dirname(__DIR__))));
+// Billing Management Dashboard - Comprehensive Billing Interface
+$root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/config/db.php';
 
 // Check if user is logged in and has cashier/admin privileges
 if (!is_employee_logged_in()) {
-    header("Location: ../../auth/employee_login.php");
+    header("Location: ../auth/employee_login.php");
     exit();
 }
 
@@ -80,8 +80,8 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Billing Management - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../../../assets/css/sidebar.css">
+    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
         .billing-management {
             margin-left: 300px;
@@ -115,15 +115,69 @@ try {
             letter-spacing: 1px;
         }
 
-        .page-header p {
-            margin: 0.5rem 0 0 0;
+        .breadcrumb {
+            background: none;
+            padding: 0;
+            margin: 0 0 1rem 0;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .breadcrumb a {
             color: #6c757d;
-            font-size: 1rem;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            color: #0077b6;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.7rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: #007BFF;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #16a085, #0f6b5c);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #0f6b5c, #0a4f44);
+            transform: translateY(-2px);
         }
 
         .quick-actions {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -167,7 +221,6 @@ try {
             margin: 0 0 0.5rem 0;
             color: #0077b6;
             font-weight: 600;
-            font-size: 1.1rem;
         }
 
         .action-content p {
@@ -200,17 +253,17 @@ try {
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.8rem;
             margin-bottom: 1.5rem;
         }
 
         .stat-card {
             background: white;
-            border-radius: 10px;
-            padding: 1.2rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 0.8rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 3px solid;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
@@ -236,33 +289,33 @@ try {
         .stat-icon {
             background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
-            width: 45px;
-            height: 45px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            margin-bottom: 0.8rem;
+            font-size: 1rem;
+            margin-bottom: 0.6rem;
         }
 
         .stat-content h3 {
-            margin: 0 0 0.3rem 0;
-            font-size: 0.95rem;
+            margin: 0 0 0.2rem 0;
+            font-size: 0.85rem;
             color: #495057;
             font-weight: 600;
         }
 
         .stat-value {
-            font-size: 1.6rem;
+            font-size: 1.3rem;
             font-weight: 700;
             color: #0077b6;
-            margin: 0.3rem 0;
+            margin: 0.2rem 0;
         }
 
         .stat-label {
             color: #6c757d;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             margin: 0;
         }
 
@@ -574,17 +627,33 @@ try {
     $activePage = 'billing';
     // Include appropriate sidebar based on user role
     if ($employee_role === 'admin') {
-        include '../../../../includes/sidebar_admin.php';
+        include '../../../includes/sidebar_admin.php';
     } else {
-        include '../../../../includes/sidebar_cashier.php';
+        include '../../../includes/sidebar_cashier.php';
     }
     ?>
 
     <section class="billing-management">
+        <!-- Breadcrumb Navigation -->
+        <div class="breadcrumb" style="margin-top: 50px;">
+            <?php if ($employee_role === 'admin'): ?>
+                <a href="../admin/dashboard.php"><i class="fas fa-home"></i> Admin Dashboard</a>
+            <?php else: ?>
+                <a href="../cashier/dashboard.php"><i class="fas fa-home"></i> Cashier Dashboard</a>
+            <?php endif; ?>
+            <span> / </span>
+            <span style="color: #0077b6; font-weight: 600;">Billing Management</span>
+        </div>
+
         <div class="page-header">
-            <div>
-                <h1><i class="fas fa-cash-register"></i> Billing Management</h1>
-                <p>Comprehensive <?php echo $employee_role === 'admin' ? 'administrative' : 'cashier'; ?> interface for billing and payment processing</p>
+            <h1><i class="fas fa-cash-register" style="margin-right: 0.5rem;"></i>Billing Management</h1>
+            <div class="action-buttons">
+                <a href="create_invoice.php" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Invoice
+                </a>
+                <a href="billing_reports.php" class="btn btn-secondary">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </a>
             </div>
         </div>
 
@@ -601,6 +670,62 @@ try {
                 <button type="button" class="btn-close" onclick="this.parentElement.remove();">&times;</button>
             </div>
         <?php endif; ?>
+
+        <!-- Billing System Statistics -->
+        <div class="section-container">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h2 class="section-title">Daily Overview</h2>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card collections">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #28a745, #1e7e34);">
+                        <i class="fas fa-cash-register"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Today's Collections</h3>
+                        <div class="stat-value">₱<?php echo number_format($today_stats['total_collected'], 2); ?></div>
+                        <div class="stat-label">collected today</div>
+                    </div>
+                </div>
+
+                <div class="stat-card transactions">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #007bff, #0056b3);">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Transactions Today</h3>
+                        <div class="stat-value"><?php echo $today_stats['transactions_today']; ?></div>
+                        <div class="stat-label">transactions</div>
+                    </div>
+                </div>
+
+                <div class="stat-card pending">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #dc3545, #c82333);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Pending Bills</h3>
+                        <div class="stat-value"><?php echo $pending_stats['pending_count']; ?></div>
+                        <div class="stat-label">unpaid invoices</div>
+                    </div>
+                </div>
+
+                <div class="stat-card pending">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #ffc107, #e0a800);">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Outstanding Amount</h3>
+                        <div class="stat-value">₱<?php echo number_format($pending_stats['pending_amount'], 2); ?></div>
+                        <div class="stat-label">total outstanding</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Quick Actions -->
         <div class="quick-actions">
@@ -658,53 +783,6 @@ try {
                 </div>
                 <i class="fas fa-arrow-right action-arrow"></i>
             </a>
-        </div>
-
-        <!-- Daily Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card collections">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #28a745, #1e7e34);">
-                    <i class="fas fa-cash-register"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>Today's Collections</h3>
-                    <div class="stat-value"><?php echo number_format($today_stats['total_collected'], 2); ?></div>
-                    <div class="stat-label">collected today</div>
-                </div>
-            </div>
-
-            <div class="stat-card transactions">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #007bff, #0056b3);">
-                    <i class="fas fa-exchange-alt"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>Transactions Today</h3>
-                    <div class="stat-value"><?php echo $today_stats['transactions_today']; ?></div>
-                    <div class="stat-label">transactions</div>
-                </div>
-            </div>
-
-            <div class="stat-card pending">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #dc3545, #c82333);">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>Pending Bills</h3>
-                    <div class="stat-value"><?php echo $pending_stats['pending_count']; ?></div>
-                    <div class="stat-label">unpaid invoices</div>
-                </div>
-            </div>
-
-            <div class="stat-card pending">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #ffc107, #e0a800);">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                </div>
-                <div class="stat-content">
-                    <h3>Outstanding Amount</h3>
-                    <div class="stat-value"><?php echo number_format($pending_stats['pending_amount'], 2); ?></div>
-                    <div class="stat-label">total outstanding</div>
-                </div>
-            </div>
         </div>
 
         <!-- Quick Patient Search -->

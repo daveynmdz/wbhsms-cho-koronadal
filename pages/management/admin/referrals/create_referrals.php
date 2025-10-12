@@ -323,10 +323,10 @@ try {
     <meta charset="UTF-8" />
     <title>Create Referral | CHO Koronadal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="../../../assets/css/topbar.css" />
-    <link rel="stylesheet" href="../../../assets/css/profile-edit-responsive.css" />
-    <link rel="stylesheet" href="../../../assets/css/profile-edit.css" />
-    <link rel="stylesheet" href="../../../assets/css/edit.css">
+    <link rel="stylesheet" href="../../../../assets/css/topbar.css" />
+    <link rel="stylesheet" href="../../../../assets/css/profile-edit-responsive.css" />
+    <link rel="stylesheet" href="../../../../assets/css/profile-edit.css" />
+    <link rel="stylesheet" href="../../../../assets/css/edit.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <style>
         .search-container {
@@ -1012,7 +1012,7 @@ try {
         ]);
         ?>
 
-        <div class="profile-wrapper">
+        <div class="profile-wrapper" style="margin: 0 200px;">
             <!-- Reminders Box -->
             <div class="reminders-box">
                 <strong>Reminders:</strong>
@@ -1853,7 +1853,7 @@ try {
                 document.getElementById('modalPatientId').textContent = patientId || '-';
                 
                 // Referral details
-                const referringFrom = <?= json_encode(htmlspecialchars($employee_facility_name ?: "Unknown Facility")) ?>;
+                const referringFrom = <?= json_encode($employee_facility_name ?: "Unknown Facility") ?>;
                 document.getElementById('modalReferringFrom').textContent = referringFrom;
                 
                 // Destination

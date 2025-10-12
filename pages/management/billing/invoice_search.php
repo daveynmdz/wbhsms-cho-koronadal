@@ -1,30 +1,23 @@
 ﻿<?php
 // Invoice Search - Advanced Search and Filtering Interface
-$root_path = dirname(dirname(dirname(dirname(__DIR__))));
+$root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/config/db.php';
 
 // Check if user is logged in and has cashier/admin privileges
 if (!is_employee_logged_in()) {
-    header("Location: ../../auth/employee_login.php");
+    header("Location: ../auth/employee_login.php");
     exit();
 }
 
 $employee_role = get_employee_session('role');
 if (!in_array($employee_role, ['cashier', 'admin'])) {
-    header("Location: ../../dashboard.php?error=Access denied");
+    header("Location: ../dashboard.php?error=Access denied");
     exit();
 }
 
 $employee_id = get_employee_session('employee_id');
 $employee_name = get_employee_session('first_name') . ' ' . get_employee_session('last_name');
-
-// Include appropriate sidebar based on user role
-if ($employee_role === 'admin') {
-    include '../../../../includes/sidebar_admin.php';
-} else {
-    include '../../../../includes/sidebar_cashier.php';
-}
 
 $message = isset($_GET['message']) ? htmlspecialchars($_GET['message']) : '';
 $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
@@ -69,9 +62,8 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Search - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../../../assets/css/sidebar.css">
-    <link rel="stylesheet" href="../../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
         .search-container {
             max-width: 1400px;
@@ -444,6 +436,16 @@ try {
     </style>
 </head>
 <body>
+    <?php
+    $activePage = 'billing';
+    // Include appropriate sidebar based on user role
+    if ($employee_role === 'admin') {
+        include '../../../includes/sidebar_admin.php';
+    } else {
+        include '../../../includes/sidebar_cashier.php';
+    }
+    ?>
+
 <div class="homepage">
     <div style="margin-left: 260px; padding: 20px; min-height: 100vh; background-color: #f5f5f5;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">

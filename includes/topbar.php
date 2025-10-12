@@ -118,7 +118,7 @@ function renderTopbar($options = []) {
                 </strong><br>
                 <small style="color: #ffffff;">{$role}</small>
             </div>
-            <img src="../../../vendor/photo_controller.php?{$photo_param}={$user_id}" alt="User Profile"
+            <img src="../../../../vendor/photo_controller.php?{$photo_param}={$user_id}" alt="User Profile"
                 class="topbar-userphoto"
                 onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';" />
         </div>

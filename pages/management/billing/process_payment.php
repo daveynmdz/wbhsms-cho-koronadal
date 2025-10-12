@@ -1,18 +1,18 @@
 ﻿<?php
 // Payment Processing - Real-time Payment with Change Calculation
-$root_path = dirname(dirname(dirname(dirname(__DIR__))));
+$root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/config/db.php';
 
 // Check if user is logged in and has cashier/admin privileges
 if (!is_employee_logged_in()) {
-    header("Location: ../../auth/employee_login.php");
+    header("Location: ../auth/employee_login.php");
     exit();
 }
 
 $employee_role = get_employee_session('role');
 if (!in_array($employee_role, ['cashier', 'admin'])) {
-    header("Location: ../../dashboard.php?error=Access denied");
+    header("Location: ../dashboard.php?error=Access denied");
     exit();
 }
 
@@ -80,9 +80,8 @@ $payment_methods = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Process Payment - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../../../assets/css/sidebar.css">
-    <link rel="stylesheet" href="../../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/sidebar.css">
     <style>
         .payment-management {
             margin-left: 260px;
@@ -614,6 +613,16 @@ $payment_methods = [
     </style>
 </head>
 <body>
+    <?php
+    $activePage = 'billing';
+    // Include appropriate sidebar based on user role
+    if ($employee_role === 'admin') {
+        include '../../../includes/sidebar_admin.php';
+    } else {
+        include '../../../includes/sidebar_cashier.php';
+    }
+    ?>
+
 <div class="homepage">
     <div class="payment-management">
         <div class="payment-header">

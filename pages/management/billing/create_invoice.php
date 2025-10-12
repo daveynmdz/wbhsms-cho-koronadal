@@ -1,30 +1,26 @@
 ﻿<?php
 // Invoice Creation - Multi-step Wizard
-$root_path = dirname(dirname(dirname(dirname(__DIR__))));
+$root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/config/db.php';
 
 // Check if user is logged in and has cashier/admin privileges
 if (!is_employee_logged_in()) {
-    header("Location: ../../auth/employee_login.php");
+    header("Location: ../auth/employee_login.php");
     exit();
 }
 
 $employee_role = get_employee_session('role');
 if (!in_array($employee_role, ['cashier', 'admin'])) {
-    header("Location: ../../dashboard.php?error=Access denied");
+    header("Location: ../dashboard.php?error=Access denied");
     exit();
 }
 
 $employee_id = get_employee_session('employee_id');
 $employee_name = get_employee_session('first_name') . ' ' . get_employee_session('last_name');
 
-// Include appropriate sidebar based on user role
-if ($employee_role === 'admin') {
-    include '../../../../includes/sidebar_admin.php';
-} else {
-    include '../../../../includes/sidebar_cashier.php';
-}
+// Include topbar function
+include '../../../includes/topbar.php';
 
 $message = isset($_GET['message']) ? htmlspecialchars($_GET['message']) : '';
 $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
@@ -36,408 +32,560 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Invoice - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../../../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../../../assets/css/topbar.css">
-    <link rel="stylesheet" href="../../../../assets/css/profile-edit.css">
+    <link rel="stylesheet" href="../../../assets/css/topbar.css">
+    <link rel="stylesheet" href="../../../assets/css/profile-edit-responsive.css">
+    <link rel="stylesheet" href="../../../assets/css/profile-edit.css">
+    <link rel="stylesheet" href="../../../assets/css/edit.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        .wizard-container {
-            max-width: 1000px;
-            margin: 0 auto;
+        .search-container {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .wizard-header {
-            background: #007bff;
-            color: white;
-            padding: 1.5rem;
-            text-align: center;
-        }
-        
-        .wizard-steps {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }
-        
-        .wizard-step {
-            flex: 1;
-            padding: 1rem;
-            text-align: center;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .wizard-step.active {
-            background: white;
-            color: #007bff;
-            font-weight: bold;
-        }
-        
-        .wizard-step.completed {
-            background: #28a745;
-            color: white;
-        }
-        
-        .wizard-step:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 0;
-            height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 20px solid #f8f9fa;
-        }
-        
-        .wizard-step.active:not(:last-child)::after {
-            border-top-color: white;
-        }
-        
-        .wizard-step.completed:not(:last-child)::after {
-            border-top-color: #28a745;
-        }
-        
-        .wizard-content {
-            padding: 2rem;
-        }
-        
-        .step-content {
-            display: none;
-        }
-        
-        .step-content.active {
-            display: block;
-        }
-        
-        .patient-search {
-            background: #f8f9fa;
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
         }
-        
-        .search-input {
-            display: flex;
+
+        .search-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+
+        .patient-table {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0077b6;
+        }
+
+        .patient-table table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            min-width: 600px;
+        }
+
+        .patient-table th,
+        .patient-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .patient-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #0077b6;
+        }
+
+        .patient-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .patient-checkbox {
+            width: 18px;
+            height: 18px;
+            margin-right: 0.5rem;
+        }
+
+        .invoice-form {
+            opacity: 0.5;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .invoice-form.enabled {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1rem;
             margin-bottom: 1rem;
         }
-        
-        .search-input input {
-            flex: 1;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
-        
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #0077b6;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #0077b6;
+            box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+        }
+
+        .selected-patient {
+            background: #d4edda !important;
+            border-left: 4px solid #28a745;
+        }
+
+        .empty-search {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.3s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 1rem;
-            transition: all 0.3s ease;
         }
-        
+
         .btn-primary {
-            background: #007bff;
+            background: linear-gradient(135deg, #0077b6, #023e8a);
             color: white;
         }
-        
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-outline {
-            background: transparent;
-            color: #007bff;
-            border: 1px solid #007bff;
-        }
-        
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-        
-        .patient-card {
-            background: white;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .patient-card:hover {
-            border-color: #007bff;
+
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #023e8a, #001d3d);
             transform: translateY(-2px);
         }
-        
-        .patient-card.selected {
-            border-color: #28a745;
-            background: #f8fff8;
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
         }
-        
-        .patient-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .patient-details h4 {
-            margin: 0 0 0.25rem 0;
-            color: #333;
-        }
-        
-        .patient-details p {
-            margin: 0;
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .service-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        
+
         .service-category {
             background: white;
-            border: 1px solid #dee2e6;
+            border: 2px solid #e9ecef;
             border-radius: 8px;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
-        
+
+        .service-category:hover {
+            border-color: #0077b6;
+            box-shadow: 0 2px 8px rgba(0, 119, 182, 0.1);
+        }
+
         .category-header {
-            background: #007bff;
+            background: linear-gradient(135deg, #0077b6, #023e8a);
             color: white;
             padding: 1rem;
-            font-weight: bold;
+            font-weight: 600;
         }
-        
+
         .service-list {
             padding: 1rem;
         }
-        
+
         .service-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem;
             border: 1px solid #eee;
-            border-radius: 4px;
+            border-radius: 6px;
             margin-bottom: 0.5rem;
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
+
         .service-item:hover {
             background: #f8f9fa;
+            border-color: #0077b6;
         }
-        
+
         .service-item.selected {
             background: #e3f2fd;
-            border-color: #007bff;
+            border-color: #0077b6;
+            border-width: 2px;
         }
-        
-        .service-info h5 {
-            margin: 0 0 0.25rem 0;
-            font-size: 0.9rem;
-        }
-        
-        .service-info p {
-            margin: 0;
-            font-size: 0.8rem;
-            color: #666;
-        }
-        
-        .service-price {
-            font-weight: bold;
-            color: #28a745;
-        }
-        
+
         .selected-services {
             background: #f8f9fa;
             border-radius: 8px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
+            border-left: 4px solid #28a745;
         }
-        
+
         .service-summary {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem;
             background: white;
-            border-radius: 4px;
+            border-radius: 6px;
             margin-bottom: 0.5rem;
+            border: 1px solid #dee2e6;
         }
-        
-        .summary-info h5 {
-            margin: 0;
-            font-size: 0.9rem;
+
+        .discount-section,
+        .philhealth-section {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #ffc107;
         }
-        
-        .summary-info p {
-            margin: 0;
-            font-size: 0.8rem;
-            color: #666;
+
+        .philhealth-section {
+            border-left-color: #007bff;
         }
-        
-        .summary-price {
-            font-weight: bold;
-            color: #333;
+
+        .calculation-summary {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #28a745;
         }
-        
-        .total-section {
-            background: #007bff;
-            color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1rem;
-        }
-        
+
         .total-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 0.5rem;
+            padding: 0.5rem 0;
         }
-        
-        .total-row:last-child {
-            margin-bottom: 0;
+
+        .total-row.grand-total {
+            border-top: 2px solid #0077b6;
+            padding-top: 1rem;
             font-size: 1.2rem;
-            font-weight: bold;
-            border-top: 1px solid rgba(255,255,255,0.3);
-            padding-top: 0.5rem;
+            font-weight: 700;
+            color: #0077b6;
         }
-        
-        .wizard-actions {
-            display: flex;
-            justify-content: space-between;
-            padding: 1.5rem;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-        }
-        
-        .discount-section {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
+
+        .alert {
             padding: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .philhealth-section {
-            background: #cce5ff;
-            border: 1px solid #99ccff;
             border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
             font-weight: 500;
         }
-        
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+
+        /* New Form Section Styles */
+        .service-selection {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .service-categories .category-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .category-tab {
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            color: #6c757d;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .category-tab.active {
+            color: #0077b6;
+            border-bottom-color: #0077b6;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .service-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            border-color: #0077b6;
+            box-shadow: 0 2px 8px rgba(0, 119, 182, 0.1);
+        }
+
+        .service-card.selected {
+            border-color: #28a745;
+            background: #f8fff9;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+        }
+
+        .service-card .service-info h5 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
             font-size: 1rem;
         }
-        
-        .checkbox-group {
+
+        .service-card .service-info p {
+            margin: 0 0 0.5rem 0;
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        .service-card .service-price {
+            font-weight: 700;
+            color: #0077b6;
+            font-size: 1.1rem;
+        }
+
+        .selected-service {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .selected-service .service-info {
+            flex: 1;
+        }
+
+        .selected-service .service-info h5 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.9rem;
+        }
+
+        .selected-service .service-info p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .selected-service .service-price {
+            font-weight: 600;
+            color: #0077b6;
+            margin-right: 0.5rem;
+        }
+
+        .remove-service {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .remove-service:hover {
+            background: #c82333;
+        }
+
+        .billing-calculation {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .calculation-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .calculation-table td {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .calculation-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .calculation-table .total-row {
+            border-top: 2px solid #0077b6;
+            border-bottom: none;
+        }
+
+        .calculation-table .total-row td {
+            border-bottom: none;
+            padding-top: 1rem;
+            font-size: 1.1rem;
+            color: #0077b6;
+        }
+
+        .invoice-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .patient-info-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .patient-info-card .patient-details h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+
+        .patient-info-card .patient-details p {
+            margin: 0.25rem 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .patient-status {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            margin-bottom: 1rem;
+            color: #28a745;
+            font-weight: 600;
         }
-        
-        .invoice-preview {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .invoice-header {
-            text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .invoice-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .invoice-items {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1.5rem;
-        }
-        
-        .invoice-items th,
-        .invoice-items td {
-            border: 1px solid #ddd;
-            padding: 0.5rem;
-            text-align: left;
-        }
-        
-        .invoice-items th {
-            background: #f8f9fa;
-            font-weight: bold;
-        }
-        
-        .invoice-totals {
-            margin-left: auto;
-            width: 300px;
-        }
-        
+
         @media (max-width: 768px) {
-            .wizard-steps {
-                flex-direction: column;
+            .service-selection {
+                grid-template-columns: 1fr;
             }
             
-            .wizard-step:not(:last-child)::after {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .category-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .invoice-actions {
+                flex-direction: column;
+            }
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f1b2b7;
+        }
+
+        .patient-card {
+            display: none;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .patient-card:hover {
+            border-color: #0077b6;
+            box-shadow: 0 2px 8px rgba(0, 119, 182, 0.1);
+        }
+
+        .patient-card.selected {
+            border-color: #28a745;
+            background: #f8fff8;
+        }
+
+        .patient-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .patient-card-name {
+            font-weight: 600;
+            color: #0077b6;
+            font-size: 1.1em;
+        }
+
+        .patient-card-checkbox {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 20px;
+            height: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .search-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .patient-table table {
                 display: none;
             }
             
-            .service-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .search-input {
-                flex-direction: column;
-            }
-            
-            .invoice-details {
-                grid-template-columns: 1fr;
+            .patient-card {
+                display: block;
             }
         }
     </style>
@@ -450,7 +598,130 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
             'user_type' => 'employee'
         ]); ?>
         
-        <div class="wizard-container">
+        <div class="profile-wrapper">
+            <div class="search-container">
+                <h2><i class="fas fa-file-invoice"></i> Create New Invoice</h2>
+                <p>Search for a patient and create their invoice</p>
+                
+                <div class="search-form">
+                    <div class="search-inputs">
+                        <input type="text" id="patientSearch" placeholder="Search by patient name, ID, or contact number">
+                        <button type="button" onclick="searchPatients()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="searchResults" class="patient-table" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Name</th>
+                                <th>Contact</th>
+                                <th>Barangay</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="searchTableBody">
+                            <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="invoice-form" id="invoiceForm" style="display: none;">
+                <form id="createInvoiceForm" action="process_invoice.php" method="POST">
+                    <input type="hidden" id="selectedPatientId" name="patient_id">
+                    
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-user"></i> Patient Information</h3>
+                        </div>
+                        <div class="patient-info" id="selectedPatientInfo">
+                            <!-- Patient details will be shown here -->
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-stethoscope"></i> Services</h3>
+                        </div>
+                        <div class="service-selection">
+                            <div class="service-categories">
+                                <div class="category-tabs">
+                                    <button type="button" class="category-tab active" data-category="all">All Services</button>
+                                    <button type="button" class="category-tab" data-category="consultation">Consultation</button>
+                                    <button type="button" class="category-tab" data-category="laboratory">Laboratory</button>
+                                    <button type="button" class="category-tab" data-category="pharmacy">Pharmacy</button>
+                                    <button type="button" class="category-tab" data-category="other">Other</button>
+                                </div>
+                                <div class="services-grid" id="servicesGrid">
+                                    <!-- Services will be loaded here -->
+                                </div>
+                            </div>
+                            
+                            <div class="selected-services">
+                                <h4>Selected Services:</h4>
+                                <div id="selectedServicesList">
+                                    <p>No services selected yet.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-calculator"></i> Billing Details</h3>
+                        </div>
+                        <div class="billing-calculation">
+                            <div class="discount-section">
+                                <h4><i class="fas fa-percentage"></i> Discounts</h4>
+                                <div class="form-group">
+                                    <label for="discountType">Discount Type</label>
+                                    <select id="discountType" class="form-control" onchange="calculateDiscount()">
+                                        <option value="none">No Discount</option>
+                                        <option value="senior">Senior Citizen (20%)</option>
+                                        <option value="pwd">PWD (20%)</option>
+                                        <option value="indigent">Indigent (50%)</option>
+                                        <option value="employee">Employee (30%)</option>
+                                        <option value="custom">Custom Amount</option>
+                                    </select>
+                                </div>
+                                
+                                <div id="customDiscountGroup" class="form-group" style="display: none;">
+                                    <label for="customDiscount">Custom Discount Amount</label>
+                                    <input type="number" id="customDiscount" class="form-control" min="0" step="0.01" onchange="calculateDiscount()">
+                                </div>
+                            </div>
+                            
+                            <div class="total-calculation">
+                                <table class="calculation-table">
+                                    <tr>
+                                        <td>Subtotal:</td>
+                                        <td>₱<span id="subtotal">0.00</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Discount:</td>
+                                        <td>-₱<span id="discountAmount">0.00</span></td>
+                                    </tr>
+                                    <tr class="total-row">
+                                        <td><strong>Total Amount:</strong></td>
+                                        <td><strong>₱<span id="totalAmount">0.00</span></strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div class="invoice-actions">
+                                <button type="button" class="btn-secondary" onclick="resetForm()">Reset</button>
+                                <button type="submit" class="btn-primary">Create Invoice</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+        <div class="wizard-container" style="display: none;">
             <div class="wizard-header">
                 <h2><i class="fas fa-file-invoice"></i> Create New Invoice</h2>
                 <p>Multi-step wizard for creating patient invoices</p>
@@ -603,6 +874,7 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                     <i class="fas fa-check"></i> Create Invoice
                 </button>
             </div>
+            </div>
         </div>
     </section>
     
@@ -617,10 +889,19 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
             loadServiceCatalog();
             
             // Real-time patient search
-            document.getElementById('patientSearchInput').addEventListener('input', function() {
+            document.getElementById('patientSearch').addEventListener('input', function() {
                 if (this.value.length >= 2) {
                     searchPatients();
                 }
+            });
+            
+            // Category tab handlers
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    filterServicesByCategory(this.dataset.category);
+                });
             });
         });
         
@@ -638,35 +919,29 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
             }
         }
         
-        function displayServiceCatalog() {
-            const container = document.getElementById('serviceCategories');
-            const categories = {};
+        function displayServiceCatalog(category = 'all') {
+            const container = document.getElementById('servicesGrid');
             
-            // Group services by category
-            servicesCatalog.forEach(service => {
-                const category = service.category || 'General Services';
-                if (!categories[category]) {
-                    categories[category] = [];
-                }
-                categories[category].push(service);
-            });
+            let filteredServices = servicesCatalog;
+            if (category !== 'all') {
+                filteredServices = servicesCatalog.filter(service => 
+                    (service.category || 'other').toLowerCase() === category.toLowerCase()
+                );
+            }
             
-            container.innerHTML = Object.keys(categories).map(category => `
-                <div class="service-category">
-                    <div class="category-header">${category}</div>
-                    <div class="service-list">
-                        ${categories[category].map(service => `
-                            <div class="service-item" onclick="toggleService(${service.service_item_id})" data-service-id="${service.service_item_id}">
-                                <div class="service-info">
-                                    <h5>${service.service_name}</h5>
-                                    <p>${service.description || 'No description'}</p>
-                                </div>
-                                <div class="service-price">${Number(service.price).toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
-                            </div>
-                        `).join('')}
+            container.innerHTML = filteredServices.map(service => `
+                <div class="service-card" onclick="toggleService(${service.service_item_id})" data-service-id="${service.service_item_id}">
+                    <div class="service-info">
+                        <h5>${service.service_name}</h5>
+                        <p>${service.description || 'No description'}</p>
                     </div>
+                    <div class="service-price">₱${Number(service.price).toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
                 </div>
             `).join('');
+        }
+        
+        function filterServicesByCategory(category) {
+            displayServiceCatalog(category);
         }
         
         function toggleService(serviceId) {
@@ -684,7 +959,6 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
             }
             
             updateSelectedServicesDisplay();
-            updateWizardButtonState();
         }
         
         function updateSelectedServicesDisplay() {
@@ -696,12 +970,15 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
             }
             
             container.innerHTML = selectedServices.map(service => `
-                <div class="service-summary">
-                    <div class="summary-info">
+                <div class="selected-service">
+                    <div class="service-info">
                         <h5>${service.service_name}</h5>
                         <p>${service.description || 'No description'}</p>
                     </div>
-                    <div class="summary-price">${Number(service.price).toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                    <div class="service-price">₱${Number(service.price).toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
+                    <button type="button" class="remove-service" onclick="removeService(${service.service_item_id})">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
             `).join('');
             
@@ -709,10 +986,10 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
         }
         
         async function searchPatients() {
-            const searchTerm = document.getElementById('patientSearchInput').value.trim();
+            const searchTerm = document.getElementById('patientSearch').value.trim();
             
             if (searchTerm.length < 2) {
-                document.getElementById('patientResults').innerHTML = '';
+                document.getElementById('searchResults').style.display = 'none';
                 return;
             }
             
@@ -720,60 +997,72 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 const response = await fetch(`../../../../api/billing/management/search_invoices.php?search=${encodeURIComponent(searchTerm)}&patients_only=1`);
                 const result = await response.json();
                 
-                const container = document.getElementById('patientResults');
+                const container = document.getElementById('searchTableBody');
+                const searchResults = document.getElementById('searchResults');
                 
                 if (result.success && result.data.length > 0) {
                     container.innerHTML = result.data.map(patient => `
-                        <div class="patient-card" onclick="selectPatient(${patient.patient_id}, '${patient.patient_name}', '${patient.phone}', '${patient.email}')">
-                            <div class="patient-info">
-                                <div class="patient-details">
-                                    <h4>${patient.patient_name}</h4>
-                                    <p>ID: ${patient.patient_id}  Phone: ${patient.phone || 'N/A'}  Email: ${patient.email || 'N/A'}</p>
-                                </div>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                        </div>
+                        <tr>
+                            <td>${patient.patient_id}</td>
+                            <td>${patient.patient_name}</td>
+                            <td>${patient.phone || 'N/A'}</td>
+                            <td>${patient.barangay || 'N/A'}</td>
+                            <td>
+                                <button type="button" class="btn-primary" onclick="selectPatient(${patient.patient_id}, '${patient.patient_name}', '${patient.phone}', '${patient.email}', '${patient.barangay}')">
+                                    Select
+                                </button>
+                            </td>
+                        </tr>
                     `).join('');
+                    searchResults.style.display = 'block';
                 } else {
-                    container.innerHTML = '<p>No patients found matching your search.</p>';
+                    container.innerHTML = '<tr><td colspan="5">No patients found matching your search.</td></tr>';
+                    searchResults.style.display = 'block';
                 }
             } catch (error) {
                 console.error('Search error:', error);
-                document.getElementById('patientResults').innerHTML = '<p style="color: #dc3545;">Search failed. Please try again.</p>';
+                document.getElementById('searchTableBody').innerHTML = '<tr><td colspan="5" style="color: #dc3545;">Search failed. Please try again.</td></tr>';
+                document.getElementById('searchResults').style.display = 'block';
             }
         }
         
-        function selectPatient(patientId, patientName, phone, email) {
+        function selectPatient(patientId, patientName, phone, email, barangay) {
             selectedPatient = {
                 patient_id: patientId,
                 patient_name: patientName,
                 phone: phone,
-                email: email
+                email: email,
+                barangay: barangay
             };
             
-            // Remove selection from all patient cards
-            document.querySelectorAll('.patient-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            // Add selection to clicked card
-            event.target.closest('.patient-card').classList.add('selected');
+            // Set hidden input
+            document.getElementById('selectedPatientId').value = patientId;
             
             // Show selected patient info
-            document.getElementById('selectedPatientInfo').style.display = 'block';
-            document.getElementById('selectedPatientCard').innerHTML = `
-                <div class="patient-card selected">
-                    <div class="patient-info">
-                        <div class="patient-details">
-                            <h4>${patientName}</h4>
-                            <p>ID: ${patientId}  Phone: ${phone || 'N/A'}  Email: ${email || 'N/A'}</p>
-                        </div>
+            document.getElementById('selectedPatientInfo').innerHTML = `
+                <div class="patient-info-card">
+                    <div class="patient-details">
+                        <h4><i class="fas fa-user"></i> ${patientName}</h4>
+                        <p><strong>Patient ID:</strong> ${patientId}</p>
+                        <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${email || 'N/A'}</p>
+                        <p><strong>Barangay:</strong> ${barangay || 'N/A'}</p>
+                    </div>
+                    <div class="patient-status">
                         <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        <span>Selected</span>
                     </div>
                 </div>
             `;
             
-            updateWizardButtonState();
+            // Show invoice form
+            document.getElementById('invoiceForm').style.display = 'block';
+            
+            // Hide search results
+            document.getElementById('searchResults').style.display = 'none';
+            
+            // Clear search input
+            document.getElementById('patientSearch').value = '';
         }
         
         function calculateDiscount() {
@@ -827,30 +1116,23 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
             
             if (discountType === 'senior' || discountType === 'pwd') {
                 discount = subtotal * 0.20;
+            } else if (discountType === 'indigent') {
+                discount = subtotal * 0.50;
+            } else if (discountType === 'employee') {
+                discount = subtotal * 0.30;
             } else if (discountType === 'custom') {
                 discount = Number(document.getElementById('customDiscount').value) || 0;
             }
             
-            let philHealthAmount = 0;
-            if (document.getElementById('philHealthCovered').checked) {
-                philHealthAmount = Number(document.getElementById('philHealthAmount').value) || 0;
-            }
-            
-            let total = subtotal - discount - philHealthAmount;
-            
-            // Full exemption
-            if (document.getElementById('fullExemption').checked) {
-                total = 0;
-            }
+            let total = subtotal - discount;
             
             // Ensure total is not negative
             total = Math.max(0, total);
             
             // Update display
-            document.getElementById('subtotalAmount').textContent = `${subtotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
-            document.getElementById('discountAmount').textContent = `${discount.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
-            document.getElementById('philHealthDisplayAmount').textContent = `${philHealthAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
-            document.getElementById('totalAmount').textContent = `${total.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+            document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+            document.getElementById('discountAmount').textContent = discount.toFixed(2);
+            document.getElementById('totalAmount').textContent = total.toFixed(2);
         }
         
         function generateInvoicePreview() {
@@ -1092,6 +1374,46 @@ $error = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : '';
                 console.error('Error creating invoice:', error);
                 alert('Failed to create invoice. Please try again.');
             }
+        }
+        
+        function removeService(serviceId) {
+            selectedServices = selectedServices.filter(s => s.service_item_id != serviceId);
+            
+            // Update service card visual state
+            const serviceElement = document.querySelector(`[data-service-id="${serviceId}"]`);
+            if (serviceElement) {
+                serviceElement.classList.remove('selected');
+            }
+            
+            updateSelectedServicesDisplay();
+        }
+        
+        function resetForm() {
+            // Reset patient selection
+            selectedPatient = null;
+            document.getElementById('selectedPatientId').value = '';
+            document.getElementById('selectedPatientInfo').innerHTML = '';
+            document.getElementById('invoiceForm').style.display = 'none';
+            
+            // Reset search
+            document.getElementById('patientSearch').value = '';
+            document.getElementById('searchResults').style.display = 'none';
+            
+            // Reset services
+            selectedServices = [];
+            updateSelectedServicesDisplay();
+            
+            // Reset service cards
+            document.querySelectorAll('.service-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Reset discount
+            document.getElementById('discountType').value = 'none';
+            document.getElementById('customDiscountGroup').style.display = 'none';
+            document.getElementById('customDiscount').value = '';
+            
+            calculateTotal();
         }
         
         // Auto-dismiss alerts after 5 seconds

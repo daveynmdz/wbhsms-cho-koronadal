@@ -108,12 +108,6 @@ try {
             letter-spacing: 1px;
         }
 
-        .page-header p {
-            margin: 0.5rem 0 0 0;
-            color: #6c757d;
-            font-size: 1rem;
-        }
-
         .breadcrumb {
             background: none;
             padding: 0;
@@ -176,7 +170,7 @@ try {
 
         .quick-actions {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -220,7 +214,6 @@ try {
             margin: 0 0 0.5rem 0;
             color: #0077b6;
             font-weight: 600;
-            font-size: 1.1rem;
         }
 
         .action-content p {
@@ -237,17 +230,17 @@ try {
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.8rem;
             margin-bottom: 1.5rem;
         }
 
         .stat-card {
             background: white;
-            border-radius: 10px;
-            padding: 1.2rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 0.8rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 3px solid;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
@@ -277,33 +270,33 @@ try {
         .stat-icon {
             background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
-            width: 45px;
-            height: 45px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            margin-bottom: 0.8rem;
+            font-size: 1rem;
+            margin-bottom: 0.6rem;
         }
 
         .stat-content h3 {
-            margin: 0 0 0.3rem 0;
-            font-size: 0.95rem;
+            margin: 0 0 0.2rem 0;
+            font-size: 0.85rem;
             color: #495057;
             font-weight: 600;
         }
 
         .stat-number {
-            font-size: 1.6rem;
+            font-size: 1.3rem;
             font-weight: 700;
             color: #0077b6;
-            margin: 0.3rem 0;
+            margin: 0.2rem 0;
         }
 
         .stat-label {
             color: #6c757d;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             margin: 0;
         }
 
@@ -450,15 +443,12 @@ try {
         </div>
 
         <div class="page-header">
-            <div class="header-left">
-                <h1><i class="fas fa-file-invoice-dollar" style="margin-right: 0.5rem;"></i>Billing System Overview</h1>
-                <p>Comprehensive financial overview and management dashboard</p>
-            </div>
+            <h1><i class="fas fa-file-invoice-dollar" style="margin-right: 0.5rem;"></i>Billing System Overview</h1>
             <div class="action-buttons">
-                <a href="../../cashier/billing/billing_management.php" class="btn btn-primary">
+                <a href="../../billing/billing_management.php" class="btn btn-primary">
                     <i class="fas fa-tachometer-alt"></i> Full Billing Dashboard
                 </a>
-                <a href="../../cashier/billing/billing_reports.php" class="btn btn-secondary">
+                <a href="../../billing/billing_reports.php" class="btn btn-secondary">
                     <i class="fas fa-chart-bar"></i> Financial Reports
                 </a>
             </div>
@@ -534,61 +524,53 @@ try {
             </div>
         </div>
 
-        <!-- Quick Actions Section -->
-        <div class="section-container">
-            <div class="section-header">
-                <div class="section-icon">
-                    <i class="fas fa-bolt"></i>
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="../../billing/billing_management.php" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-tachometer-alt"></i>
                 </div>
-                <h2 class="section-title">Quick Actions</h2>
-            </div>
-            
-            <div class="quick-actions">
-                <a href="../../cashier/billing/billing_management.php" class="action-card">
-                    <div class="action-icon">
-                        <i class="fas fa-tachometer-alt"></i>
-                    </div>
-                    <div class="action-content">
-                        <h3>Billing Dashboard</h3>
-                        <p>Access full billing management system</p>
-                    </div>
-                    <i class="fas fa-arrow-right action-arrow"></i>
-                </a>
-
-                <a href="../../cashier/billing/create_invoice.php" class="action-card">
-                    <div class="action-icon">
-                        <i class="fas fa-plus-circle"></i>
-                    </div>
-                    <div class="action-content">
-                        <h3>Create Invoice</h3>
-                        <p>Generate new patient invoices</p>
-                    </div>
-                    <i class="fas fa-arrow-right action-arrow"></i>
-                </a>
-
-                <a href="../../cashier/billing/process_payment.php" class="action-card">
-                    <div class="action-icon">
-                        <i class="fas fa-credit-card"></i>
-                    </div>
-                    <div class="action-content">
-                        <h3>Process Payment</h3>
-                        <p>Handle patient payments and receipts</p>
-                    </div>
-                    <i class="fas fa-arrow-right action-arrow"></i>
-                </a>
-
-                <a href="../../cashier/billing/invoice_search.php" class="action-card">
-                    <div class="action-icon">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <div class="action-content">
-                        <h3>Search Invoices</h3>
-                        <p>Find and manage existing invoices</p>
-                    </div>
-                    <i class="fas fa-arrow-right action-arrow"></i>
+                <div class="action-content">
+                    <h3>Billing Dashboard</h3>
+                    <p>Access full billing management system</p>
+                </div>
+                <i class="fas fa-arrow-right action-arrow"></i>
             </a>
 
-            <a href="../../cashier/billing/billing_reports.php" class="action-card">
+            <a href="../../billing/create_invoice.php" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Create Invoice</h3>
+                    <p>Generate new patient invoices</p>
+                </div>
+                <i class="fas fa-arrow-right action-arrow"></i>
+            </a>
+
+            <a href="../../billing/process_payment.php" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Process Payment</h3>
+                    <p>Handle patient payments and receipts</p>
+                </div>
+                <i class="fas fa-arrow-right action-arrow"></i>
+            </a>
+
+            <a href="../../billing/invoice_search.php" class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Search Invoices</h3>
+                    <p>Find and manage existing invoices</p>
+                </div>
+                <i class="fas fa-arrow-right action-arrow"></i>
+            </a>
+
+            <a href="../../billing/billing_reports.php" class="action-card">
                 <div class="action-icon">
                     <i class="fas fa-chart-bar"></i>
                 </div>
@@ -599,7 +581,7 @@ try {
                 <i class="fas fa-arrow-right action-arrow"></i>
             </a>
 
-            <a href="../../cashier/billing/print_receipt.php" class="action-card">
+            <a href="../../billing/print_receipt.php" class="action-card">
                 <div class="action-icon">
                     <i class="fas fa-print"></i>
                 </div>
@@ -608,8 +590,7 @@ try {
                     <p>Reprint receipts and manage printing</p>
                 </div>
                 <i class="fas fa-arrow-right action-arrow"></i>
-                </a>
-            </div>
+            </a>
         </div>
 
         <!-- Recent Payment Activity -->
