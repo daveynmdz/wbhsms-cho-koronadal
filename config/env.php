@@ -27,11 +27,13 @@ if (!getenv('DB_HOST')) {
 }
 
 // Use getenv() to read variables — works in Coolify
-$host = getenv('DB_HOST') ?: 'localhost';
-$port = getenv('DB_PORT') ?: '3306';
-$db   = getenv('DB_DATABASE') ?: 'default';
-$user = getenv('DB_USERNAME') ?: 'mysql';
-$pass = getenv('DB_PASSWORD') ?: '';
+echo "<pre>";
+echo "DB_HOST: " . getenv('DB_HOST') . PHP_EOL;
+echo "DB_PORT: " . getenv('DB_PORT') . PHP_EOL;
+echo "DB_DATABASE: " . getenv('DB_DATABASE') . PHP_EOL;
+echo "DB_USERNAME: " . getenv('DB_USERNAME') . PHP_EOL;
+echo "DB_PASSWORD: " . (getenv('DB_PASSWORD') ? 'SET' : 'NOT SET') . PHP_EOL;
+echo "</pre>";
 
 try {
     $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
