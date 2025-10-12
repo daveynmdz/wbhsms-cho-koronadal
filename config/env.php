@@ -27,7 +27,6 @@ if (!getenv('DB_HOST')) {
 }
 
 // Use getenv() to read variables — works in Coolify
-<?php
 $host = getenv('DB_HOST') ?: 'localhost';
 $port = getenv('DB_PORT') ?: '3306';
 $db   = getenv('DB_DATABASE') ?: 'default';
