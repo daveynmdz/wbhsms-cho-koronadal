@@ -27,8 +27,8 @@ if (file_exists($root_dir . '/.env')) {
 $host = $_ENV['DB_HOST'] ?? 'localhost';
 $port = $_ENV['DB_PORT'] ?? '3306';
 $db   = $_ENV['DB_NAME'] ?? 'wbhsms_database';
-$user = $_ENV['DB_USER'] ?? 'root';  // XAMPP default
-$pass = $_ENV['DB_PASS'] ?? '';      // XAMPP default (no password)
+$user = $_ENV['DB_USERNAME'] ?? 'root';  // XAMPP default
+$pass = $_ENV['DB_PASSWORD'] ?? '';      // XAMPP default (no password)
 
 try {
     $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
