@@ -1,47 +1,50 @@
 <?php
 /**
  * Environment Configuration for WBHSMS CHO Koronadal
- * XAMPP-optimized database connection
+ * Coolify-compatible with fallback to .env
  */
 
-function loadEnv($envPath) {
+// Optional: load from .env if running locally
+function loadEnvFile($envPath) {
     if (!file_exists($envPath)) return;
     $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         if (strpos(trim($line), '#') === 0) continue; // ignore comments
         if (!strpos($line, '=')) continue; // skip invalid lines
         list($name, $value) = array_map('trim', explode('=', $line, 2));
-        $_ENV[$name] = $value;
+        putenv("$name=$value");  // Set it for getenv()
     }
 }
 
-// Load environment variables - prioritize root .env for simplicity
-$root_dir = dirname(__DIR__);
-if (file_exists($root_dir . '/.env')) {
-    loadEnv($root_dir . '/.env');
-} elseif (file_exists(__DIR__ . '/.env.local')) {
-    loadEnv(__DIR__ . '/.env.local');
+// Load .env only if not running in Docker
+if (!getenv('DB_HOST')) {
+    $root_dir = dirname(__DIR__);
+    if (file_exists($root_dir . '/.env')) {
+        loadEnvFile($root_dir . '/.env');
+    } elseif (file_exists(__DIR__ . '/.env.local')) {
+        loadEnvFile(__DIR__ . '/.env.local');
+    }
 }
 
-// Database configuration with XAMPP-friendly defaults
-$host = $_ENV['DB_HOST'] ?? 'localhost';
-$port = $_ENV['DB_PORT'] ?? '3306';
-$db   = $_ENV['DB_NAME'] ?? 'wbhsms_database';
-$user = $_ENV['DB_USERNAME'] ?? 'root';  // XAMPP default
-$pass = $_ENV['DB_PASSWORD'] ?? '';      // XAMPP default (no password)
+// Use getenv() to read variables — works in Coolify
+$host = getenv('DB_HOST') ?: 'localhost';
+$port = getenv('DB_PORT') ?: '3306';
+$db   = getenv('DB_DATABASE') ?: 'wbhsms_database';
+$user = getenv('DB_USERNAME') ?: 'mysql';
+$pass = getenv('DB_PASSWORD') ?: '';
 
 try {
     $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
     $pdo = new PDO($dsn, $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    // Provide helpful error message for XAMPP users
     $error_msg = "Database connection failed. ";
     if ($user === 'root' && empty($pass)) {
         $error_msg .= "Make sure XAMPP MySQL is running and database '{$db}' exists. ";
+    } else {
+        $error_msg .= "Check environment variables and database credentials. ";
     }
     $error_msg .= "Error: " . $e->getMessage();
     die($error_msg);
 }
-
 ?>
