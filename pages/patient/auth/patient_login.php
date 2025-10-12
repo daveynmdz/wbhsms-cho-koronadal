@@ -1,4 +1,18 @@
 <?php
+// Start output bufferif (isset($_GET['logged_out'])) {
+    $_SESSION['flash'] = ['type' => 'success', 'msg' => 'You've signed out successfully.'];
+    ob_clean(); // Clear output buffer before redirect
+    header('Location: patient_login.php'); // clean URL (PRG)
+    exit;
+}
+if (isset($_GET['expired'])) {
+    $_SESSION['flash'] = ['type' => 'error', 'msg' => 'Your session expired. Please log in again.'];
+    ob_clean(); // Clear output buffer before redirect
+    header('Location: patient_login.php'); // clean URL (PRG)
+    exit;
+}vent headers already sent errors
+ob_start();
+
 // Main entry point for the website
 // At the VERY TOP of your PHP file (before session_start or other code)
 $debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
@@ -18,6 +32,7 @@ include_once $root_path . '/config/db.php';
 
 // If already logged in, redirect to dashboard
 if (is_patient_logged_in()) {
+    ob_clean(); // Clear output buffer before redirect
     header('Location: ../dashboard.php');
     exit;
 }
@@ -115,6 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['login_time'] = time();
                 
                 // Redirect to patient dashboard
+                ob_clean(); // Clear output buffer before redirect
                 header('Location: ../dashboard.php');
                 exit;
             } else {
@@ -139,6 +155,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $sessionFlash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 $flash = $sessionFlash ?: (!empty($error) ? ['type' => 'error', 'msg' => $error] : null);
+
+// Clear any remaining output buffer before rendering HTML
+ob_end_clean();
+ob_start();
 ?>
 
 <!DOCTYPE html>
