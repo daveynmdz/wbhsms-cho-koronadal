@@ -26,7 +26,7 @@ if (!getenv('DB_HOST')) {
     }
 }
 
-// Use getenv() to read variables — works in Coolify
+
 $host = getenv('DB_HOST') ?: 'localhost';
 $port = getenv('DB_PORT') ?: '3306';
 $db   = getenv('DB_DATABASE') ?: 'wbhsms_database';
@@ -34,19 +34,20 @@ $user = getenv('DB_USERNAME') ?: 'root';
 $pass = getenv('DB_PASSWORD') ?: '';
 
 echo "<pre>";
-echo "DB_HOST: " . getenv('DB_HOST') . PHP_EOL;
-echo "DB_PORT: " . getenv('DB_PORT') . PHP_EOL;
-echo "DB_DATABASE: " . getenv('DB_DATABASE') . PHP_EOL;
-echo "DB_USERNAME: " . getenv('DB_USERNAME') . PHP_EOL;
-echo "DB_PASSWORD: " . (getenv('DB_PASSWORD') ? 'SET' : 'NOT SET') . PHP_EOL;
+echo "DB_HOST: $host\n";
+echo "DB_PORT: $port\n";
+echo "DB_DATABASE: $db\n";
+echo "DB_USERNAME: $user\n";
+echo "DB_PASSWORD: " . ($pass ? 'SET' : 'NOT SET') . "\n";
 echo "</pre>";
 
 try {
     $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
     $pdo = new PDO($dsn, $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    echo "<p style='color: green;'>
 } catch (PDOException $e) {
-    echo "<h3>❌ Database connection failed.</h3>";
+    echo "<h3>Database connection failed.</h3>";
     echo "<strong>Error Message:</strong> " . $e->getMessage() . "<br><br>";
     echo "<strong>Debug Info:</strong><br>";
     echo "Host: $host<br>";
