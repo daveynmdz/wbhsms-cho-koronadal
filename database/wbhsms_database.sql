@@ -2,9 +2,9 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Oct 12, 2025 at 09:56 AM
--- Server version: 10.4.32-MariaDB
+-- Host: 31.97.106.60:3307
+-- Generation Time: Oct 13, 2025 at 05:27 AM
+-- Server version: 8.4.6
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -28,11 +28,11 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `allergies` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `allergen` varchar(100) DEFAULT NULL,
-  `reaction` varchar(100) DEFAULT NULL,
-  `severity` varchar(30) DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `allergen` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `reaction` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `severity` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -49,18 +49,18 @@ INSERT INTO `allergies` (`id`, `patient_id`, `allergen`, `reaction`, `severity`)
 --
 
 CREATE TABLE `appointments` (
-  `appointment_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `facility_id` int(10) UNSIGNED NOT NULL,
-  `referral_id` int(10) UNSIGNED DEFAULT NULL,
-  `service_id` int(10) UNSIGNED DEFAULT NULL,
+  `appointment_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `facility_id` int UNSIGNED NOT NULL,
+  `referral_id` int UNSIGNED DEFAULT NULL,
+  `service_id` int UNSIGNED DEFAULT NULL,
   `scheduled_date` date NOT NULL,
   `scheduled_time` time NOT NULL,
-  `status` enum('confirmed','completed','cancelled','checked_in') DEFAULT 'confirmed',
-  `cancellation_reason` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `qr_code_path` longblob DEFAULT NULL COMMENT 'QR code image data stored as binary BLOB'
+  `status` enum('confirmed','completed','cancelled','checked_in') COLLATE utf8mb4_unicode_ci DEFAULT 'confirmed',
+  `cancellation_reason` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `qr_code_path` longblob COMMENT 'QR code image data stored as binary BLOB'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -91,7 +91,7 @@ INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `refe
 (33, 7, 1, 13, 1, '2025-10-07', '16:00:00', 'cancelled', 'TESTING IF IT WORKS OR NOT', '2025-10-07 06:54:22', '2025-10-10 03:26:15', 0x89504e470d0a1a0a0000000d4948445200000128000001280103000000d1c9fe5a00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000116494441546881edd4c18ec430080350feffa79969c184246da51e2af960461b45cdcb1e10b1994af56979d47f73fc8e4d6ec789545758dd634debb69c4be5ea8e2f892f4ea47675fe610c6b28a56e543cd1ba2275a7aa8d79a92ecce752b13abe6dbf3c91eaaa0adf3cdb6a97251564c078b152372ae62d584b360775a9493559f70c5d95da544d9ef763436b5dea422de9b6bf5ea9de3ec69c60554d52e504ab7af16aa5a01873825591e604ab6a922a2758d58b572b05c59813ac8a34275855935439c1aa5ebc5a2928c69c2055cb287adfe65da9a646575baaa1c9e35f485533b1b6478b17ebd555a91167396f8f2927b5294c63ee4dea519de7317953da492d2ad7eaed927652b3aae9ebf7aaad528b52a93eab1f2bea6788758f97dc0000000049454e44ae426082),
 (34, 7, 1, 14, 1, '2025-10-07', '16:00:00', 'completed', NULL, '2025-10-07 07:51:36', '2025-10-07 08:02:08', NULL),
 (35, 7, 1, 15, 1, '2025-10-07', '16:00:00', 'cancelled', 'sasasasasasa', '2025-10-07 07:54:53', '2025-10-10 03:32:13', NULL),
-(36, 7, 1, NULL, 1, '2025-10-12', '14:00:00', 'cancelled', 'dadsddasdsdsa', '2025-10-12 03:03:24', '2025-10-12 04:21:22', NULL);
+(43, 7, 1, 16, 1, '2025-10-13', '15:00:00', 'confirmed', NULL, '2025-10-13 03:23:58', '2025-10-13 03:24:00', '');
 
 -- --------------------------------------------------------
 
@@ -100,23 +100,23 @@ INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `refe
 --
 
 CREATE TABLE `appointment_logs` (
-  `log_id` int(10) UNSIGNED NOT NULL,
-  `appointment_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `action` enum('created','confirmed','cancelled','completed','rescheduled','updated') NOT NULL,
-  `old_status` varchar(20) DEFAULT NULL,
-  `new_status` varchar(20) DEFAULT NULL,
+  `log_id` int UNSIGNED NOT NULL,
+  `appointment_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `action` enum('created','confirmed','cancelled','completed','rescheduled','updated') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `old_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `new_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `old_scheduled_date` date DEFAULT NULL,
   `new_scheduled_date` date DEFAULT NULL,
   `old_scheduled_time` time DEFAULT NULL,
   `new_scheduled_time` time DEFAULT NULL,
-  `reason` text DEFAULT NULL,
-  `notes` text DEFAULT NULL,
-  `created_by_type` enum('patient','employee','system') NOT NULL DEFAULT 'patient',
-  `created_by_id` int(10) UNSIGNED DEFAULT NULL,
-  `ip_address` varchar(45) DEFAULT NULL,
-  `user_agent` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `reason` text COLLATE utf8mb4_unicode_ci,
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `created_by_type` enum('patient','employee','system') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'patient',
+  `created_by_id` int UNSIGNED DEFAULT NULL,
+  `ip_address` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `user_agent` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -138,8 +138,7 @@ INSERT INTO `appointment_logs` (`log_id`, `appointment_id`, `patient_id`, `actio
 (12, 34, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:51:36'),
 (13, 35, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:54:53'),
 (14, 33, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'TESTING IF IT WORKS OR NOT', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:26:15'),
-(15, 35, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'sasasasasasa', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:32:13'),
-(16, 36, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'dadsddasdsdsa', NULL, 'employee', 1, NULL, NULL, '2025-10-12 04:21:22');
+(15, 35, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'sasasasasasa', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:32:13');
 
 -- --------------------------------------------------------
 
@@ -148,15 +147,15 @@ INSERT INTO `appointment_logs` (`log_id`, `appointment_id`, `patient_id`, `actio
 --
 
 CREATE TABLE `assignment_logs` (
-  `log_id` int(10) UNSIGNED NOT NULL,
-  `schedule_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED NOT NULL,
-  `station_id` int(10) UNSIGNED NOT NULL,
-  `action_type` enum('created','updated','ended','deactivated','reactivated','reassigned') NOT NULL,
+  `log_id` int UNSIGNED NOT NULL,
+  `schedule_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED NOT NULL,
+  `station_id` int UNSIGNED NOT NULL,
+  `action_type` enum('created','updated','ended','deactivated','reactivated','reassigned') COLLATE utf8mb4_unicode_ci NOT NULL,
   `action_date` date NOT NULL,
-  `performed_by` int(10) UNSIGNED DEFAULT NULL,
-  `notes` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `performed_by` int UNSIGNED DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -166,7 +165,8 @@ CREATE TABLE `assignment_logs` (
 INSERT INTO `assignment_logs` (`log_id`, `schedule_id`, `employee_id`, `station_id`, `action_type`, `action_date`, `performed_by`, `notes`, `created_at`) VALUES
 (1, 1, 86, 16, '', '2025-10-05', 1, 'Assignment temporarily deactivated', '2025-10-05 18:29:07'),
 (2, 1, 86, 16, '', '2025-10-05', 1, 'Assignment ended on 2025-10-05', '2025-10-05 18:46:53'),
-(3, 1, 86, 16, '', '2025-10-05', 1, 'Assignment temporarily deactivated', '2025-10-05 18:47:00');
+(3, 1, 86, 16, '', '2025-10-05', 1, 'Assignment temporarily deactivated', '2025-10-05 18:47:00'),
+(4, 1, 86, 16, 'ended', '2025-10-13', 1, 'Assignment ended on 2025-10-13', '2025-10-13 01:49:40');
 
 -- --------------------------------------------------------
 
@@ -175,18 +175,18 @@ INSERT INTO `assignment_logs` (`log_id`, `schedule_id`, `employee_id`, `station_
 --
 
 CREATE TABLE `assignment_schedules` (
-  `schedule_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED NOT NULL,
-  `station_id` int(10) UNSIGNED NOT NULL,
+  `schedule_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED NOT NULL,
+  `station_id` int UNSIGNED NOT NULL,
   `start_date` date NOT NULL,
   `end_date` date DEFAULT NULL,
-  `assignment_type` enum('permanent','temporary') DEFAULT 'permanent',
+  `assignment_type` enum('permanent','temporary') COLLATE utf8mb4_unicode_ci DEFAULT 'permanent',
   `shift_start_time` time DEFAULT '08:00:00',
   `shift_end_time` time DEFAULT '17:00:00',
-  `assigned_by` int(10) UNSIGNED DEFAULT NULL,
-  `assigned_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `is_active` tinyint(1) DEFAULT 1,
-  `notes` text DEFAULT NULL
+  `assigned_by` int UNSIGNED DEFAULT NULL,
+  `assigned_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) DEFAULT '1',
+  `notes` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -194,7 +194,7 @@ CREATE TABLE `assignment_schedules` (
 --
 
 INSERT INTO `assignment_schedules` (`schedule_id`, `employee_id`, `station_id`, `start_date`, `end_date`, `assignment_type`, `shift_start_time`, `shift_end_time`, `assigned_by`, `assigned_at`, `is_active`, `notes`) VALUES
-(1, 86, 16, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 18:47:08', 1, NULL),
+(1, 86, 16, '2025-10-05', '2025-10-12', 'permanent', '08:00:00', '17:00:00', 1, '2025-10-13 01:49:40', 1, NULL),
 (2, 75, 1, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 15:01:17', 1, NULL),
 (3, 3, 2, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 15:01:25', 1, NULL),
 (4, 75, 3, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 15:01:31', 0, NULL),
@@ -210,7 +210,8 @@ INSERT INTO `assignment_schedules` (`schedule_id`, `employee_id`, `station_id`, 
 (14, 85, 12, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 17:42:10', 1, NULL),
 (15, 89, 10, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 17:55:22', 1, NULL),
 (16, 87, 6, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 17:55:31', 1, NULL),
-(17, 90, 3, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 17:55:41', 1, NULL);
+(17, 90, 3, '2025-10-05', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-05 17:55:41', 1, NULL),
+(21, 86, 16, '2025-10-13', NULL, 'permanent', '08:00:00', '17:00:00', 1, '2025-10-13 01:49:46', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -219,15 +220,15 @@ INSERT INTO `assignment_schedules` (`schedule_id`, `employee_id`, `station_id`, 
 --
 
 CREATE TABLE `barangay` (
-  `barangay_id` int(10) UNSIGNED NOT NULL,
-  `barangay_name` varchar(100) NOT NULL,
-  `district_id` int(10) UNSIGNED NOT NULL,
-  `city` varchar(100) NOT NULL DEFAULT 'Koronadal City',
-  `province` varchar(100) NOT NULL DEFAULT 'South Cotabato',
-  `zip_code` varchar(10) NOT NULL DEFAULT '9506',
-  `status` enum('active','inactive') DEFAULT 'active',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `barangay_id` int UNSIGNED NOT NULL,
+  `barangay_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `district_id` int UNSIGNED NOT NULL,
+  `city` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Koronadal City',
+  `province` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'South Cotabato',
+  `zip_code` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '9506',
+  `status` enum('active','inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -270,21 +271,18 @@ INSERT INTO `barangay` (`barangay_id`, `barangay_name`, `district_id`, `city`, `
 --
 
 CREATE TABLE `billing` (
-  `billing_id` int(10) UNSIGNED NOT NULL,
-  `visit_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `billing_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `total_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `net_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `paid_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `payment_status` enum('unpaid','partial','paid','exempted','cancelled') DEFAULT 'unpaid',
-  `notes` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `philhealth_coverage` decimal(10,2) DEFAULT 0.00,
-  `receipt_id` int(10) UNSIGNED DEFAULT NULL,
-  `processed_by` int(10) UNSIGNED DEFAULT NULL
+  `billing_id` int UNSIGNED NOT NULL,
+  `visit_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `billing_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `discount_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `net_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `paid_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `payment_status` enum('unpaid','partial','paid','exempted','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'unpaid',
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -294,13 +292,13 @@ CREATE TABLE `billing` (
 --
 
 CREATE TABLE `billing_items` (
-  `billing_item_id` int(10) UNSIGNED NOT NULL,
-  `billing_id` int(10) UNSIGNED NOT NULL,
-  `service_item_id` int(10) UNSIGNED NOT NULL,
+  `billing_item_id` int UNSIGNED NOT NULL,
+  `billing_id` int UNSIGNED NOT NULL,
+  `service_item_id` int UNSIGNED NOT NULL,
   `item_price` decimal(10,2) NOT NULL,
-  `quantity` int(10) UNSIGNED NOT NULL DEFAULT 1,
+  `quantity` int UNSIGNED NOT NULL DEFAULT '1',
   `subtotal` decimal(10,2) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -310,11 +308,11 @@ CREATE TABLE `billing_items` (
 --
 
 CREATE TABLE `chronic_illnesses` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `illness` varchar(100) DEFAULT NULL,
-  `year_diagnosed` year(4) DEFAULT NULL,
-  `management` varchar(100) DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `illness` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `year_diagnosed` year DEFAULT NULL,
+  `management` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -332,19 +330,19 @@ INSERT INTO `chronic_illnesses` (`id`, `patient_id`, `illness`, `year_diagnosed`
 --
 
 CREATE TABLE `consultations` (
-  `consultation_id` int(10) UNSIGNED NOT NULL,
-  `visit_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `attending_employee_id` int(10) UNSIGNED NOT NULL,
-  `consultation_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `chief_complaint` text DEFAULT NULL,
-  `diagnosis` text DEFAULT NULL,
-  `treatment_plan` text DEFAULT NULL,
+  `consultation_id` int UNSIGNED NOT NULL,
+  `visit_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `attending_employee_id` int UNSIGNED NOT NULL,
+  `consultation_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `chief_complaint` text COLLATE utf8mb4_unicode_ci,
+  `diagnosis` text COLLATE utf8mb4_unicode_ci,
+  `treatment_plan` text COLLATE utf8mb4_unicode_ci,
   `follow_up_date` date DEFAULT NULL,
-  `remarks` text DEFAULT NULL,
-  `consultation_status` enum('ongoing','completed','awaiting_lab_results','awaiting_followup','cancelled') DEFAULT 'ongoing',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `remarks` text COLLATE utf8mb4_unicode_ci,
+  `consultation_status` enum('ongoing','completed','awaiting_lab_results','awaiting_followup','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'ongoing',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -354,12 +352,12 @@ CREATE TABLE `consultations` (
 --
 
 CREATE TABLE `current_medications` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `medication` varchar(100) DEFAULT NULL,
-  `dosage` varchar(50) DEFAULT NULL,
-  `frequency` varchar(50) DEFAULT NULL,
-  `prescribed_by` varchar(100) DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `medication` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dosage` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `frequency` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `prescribed_by` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -377,20 +375,20 @@ INSERT INTO `current_medications` (`id`, `patient_id`, `medication`, `dosage`, `
 -- (See below for the actual view)
 --
 CREATE TABLE `current_station_assignments` (
-`assignment_id` int(10) unsigned
-,`employee_id` int(10) unsigned
+`assigned_date` date
+,`assignment_id` int unsigned
+,`assignment_type` enum('permanent','temporary')
+,`created_at` timestamp
+,`employee_id` int unsigned
 ,`employee_name` varchar(152)
+,`end_date` date
 ,`role_name` varchar(50)
-,`station_id` int(10) unsigned
+,`shift_end_time` time
+,`shift_start_time` time
+,`station_id` int unsigned
 ,`station_name` varchar(100)
 ,`station_type` enum('checkin','triage','billing','consultation','lab','pharmacy','document')
-,`assigned_date` date
-,`end_date` date
-,`assignment_type` enum('permanent','temporary')
-,`shift_start_time` time
-,`shift_end_time` time
 ,`status` enum('active','inactive')
-,`created_at` timestamp
 );
 
 -- --------------------------------------------------------
@@ -400,13 +398,13 @@ CREATE TABLE `current_station_assignments` (
 --
 
 CREATE TABLE `districts` (
-  `district_id` int(10) UNSIGNED NOT NULL,
-  `district_name` varchar(100) NOT NULL,
-  `district_code` varchar(20) NOT NULL,
-  `city` varchar(100) DEFAULT 'Koronadal City',
-  `status` enum('active','inactive') DEFAULT 'active',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `district_id` int UNSIGNED NOT NULL,
+  `district_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `district_code` varchar(20) COLLATE utf8mb4_general_ci NOT NULL,
+  `city` varchar(100) COLLATE utf8mb4_general_ci DEFAULT 'Koronadal City',
+  `status` enum('active','inactive') COLLATE utf8mb4_general_ci DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -425,15 +423,15 @@ INSERT INTO `districts` (`district_id`, `district_name`, `district_code`, `city`
 --
 
 CREATE TABLE `emergency_contact` (
-  `contact_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `emergency_first_name` varchar(50) NOT NULL,
-  `emergency_middle_name` varchar(50) DEFAULT NULL,
-  `emergency_last_name` varchar(50) NOT NULL,
-  `emergency_relationship` varchar(50) NOT NULL,
-  `emergency_contact_number` varchar(20) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `contact_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `emergency_first_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `emergency_middle_name` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `emergency_last_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `emergency_relationship` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `emergency_contact_number` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -451,29 +449,29 @@ INSERT INTO `emergency_contact` (`contact_id`, `patient_id`, `emergency_first_na
 --
 
 CREATE TABLE `employees` (
-  `employee_id` int(10) UNSIGNED NOT NULL,
-  `employee_number` varchar(20) DEFAULT NULL,
-  `first_name` varchar(50) NOT NULL,
-  `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `contact_num` varchar(20) DEFAULT NULL,
-  `role_id` int(10) UNSIGNED NOT NULL,
-  `facility_id` int(10) UNSIGNED NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `status` enum('active','inactive','on_leave','retired') DEFAULT 'active',
-  `license_number` varchar(50) DEFAULT NULL,
+  `employee_id` int UNSIGNED NOT NULL,
+  `employee_number` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `first_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `middle_name` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contact_num` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `role_id` int UNSIGNED NOT NULL,
+  `facility_id` int UNSIGNED NOT NULL,
+  `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('active','inactive','on_leave','retired') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `license_number` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `birth_date` date DEFAULT NULL,
-  `gender` enum('male','female','other') DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `gender` enum('male','female','other') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `last_login` datetime DEFAULT NULL,
-  `failed_login_attempts` int(11) DEFAULT 0,
+  `failed_login_attempts` int DEFAULT '0',
   `locked_until` datetime DEFAULT NULL,
   `password_changed_at` datetime DEFAULT NULL,
-  `must_change_password` tinyint(1) DEFAULT 0,
-  `two_factor_enabled` tinyint(1) DEFAULT 0,
-  `two_factor_secret` varchar(255) DEFAULT NULL
+  `must_change_password` tinyint(1) DEFAULT '0',
+  `two_factor_enabled` tinyint(1) DEFAULT '0',
+  `two_factor_secret` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -546,28 +544,28 @@ INSERT INTO `employees` (`employee_id`, `employee_number`, `first_name`, `middle
 -- (See below for the actual view)
 --
 CREATE TABLE `employee_details` (
-`employee_id` int(10) unsigned
-,`employee_number` varchar(20)
-,`full_name` varchar(152)
-,`first_name` varchar(50)
-,`middle_name` varchar(50)
-,`last_name` varchar(50)
-,`email` varchar(100)
+`birth_date` date
 ,`contact_num` varchar(20)
-,`status` enum('active','inactive','on_leave','retired')
-,`license_number` varchar(50)
-,`birth_date` date
-,`gender` enum('male','female','other')
-,`last_login` datetime
-,`failed_login_attempts` int(11)
-,`locked_until` datetime
-,`must_change_password` tinyint(1)
-,`two_factor_enabled` tinyint(1)
-,`role_name` varchar(50)
-,`role_description` varchar(255)
+,`created_at` timestamp
+,`email` varchar(100)
+,`employee_id` int unsigned
+,`employee_number` varchar(20)
 ,`facility_name` varchar(100)
 ,`facility_type` varchar(50)
-,`created_at` timestamp
+,`failed_login_attempts` int
+,`first_name` varchar(50)
+,`full_name` varchar(152)
+,`gender` enum('male','female','other')
+,`last_login` datetime
+,`last_name` varchar(50)
+,`license_number` varchar(50)
+,`locked_until` datetime
+,`middle_name` varchar(50)
+,`must_change_password` tinyint(1)
+,`role_description` varchar(255)
+,`role_name` varchar(50)
+,`status` enum('active','inactive','on_leave','retired')
+,`two_factor_enabled` tinyint(1)
 ,`updated_at` timestamp
 );
 
@@ -578,14 +576,14 @@ CREATE TABLE `employee_details` (
 --
 
 CREATE TABLE `employee_sessions` (
-  `session_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED NOT NULL,
-  `session_token` varchar(255) NOT NULL,
-  `ip_address` varchar(45) DEFAULT NULL,
-  `user_agent` text DEFAULT NULL,
-  `last_activity` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `is_active` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `session_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED NOT NULL,
+  `session_token` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `ip_address` varchar(45) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `user_agent` text COLLATE utf8mb4_general_ci,
+  `last_activity` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `expires_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -596,17 +594,17 @@ CREATE TABLE `employee_sessions` (
 --
 
 CREATE TABLE `facilities` (
-  `facility_id` int(10) UNSIGNED NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `type` varchar(50) NOT NULL,
-  `barangay_id` int(10) UNSIGNED NOT NULL,
-  `district_id` int(10) UNSIGNED DEFAULT NULL,
-  `district` varchar(50) NOT NULL,
-  `is_main` tinyint(1) DEFAULT 0,
-  `parent_facility_id` int(10) UNSIGNED DEFAULT NULL,
-  `status` enum('active','inactive') DEFAULT 'active',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `facility_id` int UNSIGNED NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `barangay_id` int UNSIGNED NOT NULL,
+  `district_id` int UNSIGNED DEFAULT NULL,
+  `district` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_main` tinyint(1) DEFAULT '0',
+  `parent_facility_id` int UNSIGNED DEFAULT NULL,
+  `status` enum('active','inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -652,8 +650,8 @@ INSERT INTO `facilities` (`facility_id`, `name`, `type`, `barangay_id`, `distric
 --
 
 CREATE TABLE `facility_services` (
-  `facility_id` int(10) UNSIGNED NOT NULL,
-  `service_id` int(10) UNSIGNED NOT NULL
+  `facility_id` int UNSIGNED NOT NULL,
+  `service_id` int UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -662,14 +660,6 @@ CREATE TABLE `facility_services` (
 
 INSERT INTO `facility_services` (`facility_id`, `service_id`) VALUES
 (1, 1),
-(1, 2),
-(1, 3),
-(1, 4),
-(1, 5),
-(1, 6),
-(1, 7),
-(1, 8),
-(1, 9),
 (2, 1),
 (3, 1),
 (4, 1),
@@ -698,7 +688,15 @@ INSERT INTO `facility_services` (`facility_id`, `service_id`) VALUES
 (27, 1),
 (28, 1),
 (29, 1),
-(30, 1);
+(30, 1),
+(1, 2),
+(1, 3),
+(1, 4),
+(1, 5),
+(1, 6),
+(1, 7),
+(1, 8),
+(1, 9);
 
 -- --------------------------------------------------------
 
@@ -707,12 +705,12 @@ INSERT INTO `facility_services` (`facility_id`, `service_id`) VALUES
 --
 
 CREATE TABLE `family_history` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `family_member` varchar(50) DEFAULT NULL,
-  `condition` varchar(100) DEFAULT NULL,
-  `age_diagnosed` int(11) DEFAULT NULL,
-  `current_status` varchar(30) DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `family_member` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `condition` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `age_diagnosed` int DEFAULT NULL,
+  `current_status` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -731,16 +729,16 @@ INSERT INTO `family_history` (`id`, `patient_id`, `family_member`, `condition`, 
 --
 
 CREATE TABLE `feedback_answers` (
-  `answer_id` int(10) UNSIGNED NOT NULL,
-  `visit_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED DEFAULT NULL,
-  `service_id` int(10) UNSIGNED DEFAULT NULL,
-  `facility_id` int(10) UNSIGNED DEFAULT NULL,
-  `question_id` int(10) UNSIGNED NOT NULL,
-  `choice_id` int(10) UNSIGNED DEFAULT NULL,
-  `answer_text` text DEFAULT NULL,
-  `answered_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `answer_id` int UNSIGNED NOT NULL,
+  `visit_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED DEFAULT NULL,
+  `service_id` int UNSIGNED DEFAULT NULL,
+  `facility_id` int UNSIGNED DEFAULT NULL,
+  `question_id` int UNSIGNED NOT NULL,
+  `choice_id` int UNSIGNED DEFAULT NULL,
+  `answer_text` text COLLATE utf8mb4_unicode_ci,
+  `answered_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -750,11 +748,11 @@ CREATE TABLE `feedback_answers` (
 --
 
 CREATE TABLE `feedback_questions` (
-  `question_id` int(10) UNSIGNED NOT NULL,
-  `question_text` varchar(255) NOT NULL,
-  `question_type` enum('text','rating','choice','yesno') NOT NULL,
-  `is_active` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `question_id` int UNSIGNED NOT NULL,
+  `question_text` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `question_type` enum('text','rating','choice','yesno') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -764,11 +762,11 @@ CREATE TABLE `feedback_questions` (
 --
 
 CREATE TABLE `feedback_question_choices` (
-  `choice_id` int(10) UNSIGNED NOT NULL,
-  `question_id` int(10) UNSIGNED NOT NULL,
-  `choice_text` varchar(100) NOT NULL,
-  `choice_value` varchar(50) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `choice_id` int UNSIGNED NOT NULL,
+  `question_id` int UNSIGNED NOT NULL,
+  `choice_text` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `choice_value` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -778,13 +776,13 @@ CREATE TABLE `feedback_question_choices` (
 --
 
 CREATE TABLE `immunizations` (
-  `id` int(11) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `vaccine` varchar(100) NOT NULL,
-  `year_received` year(4) DEFAULT NULL,
-  `doses_completed` int(11) DEFAULT 0,
-  `status` enum('Complete','Incomplete','Pending','Unknown') DEFAULT 'Unknown',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `vaccine` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `year_received` year DEFAULT NULL,
+  `doses_completed` int DEFAULT '0',
+  `status` enum('Complete','Incomplete','Pending','Unknown') COLLATE utf8mb4_unicode_ci DEFAULT 'Unknown',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -802,20 +800,20 @@ INSERT INTO `immunizations` (`id`, `patient_id`, `vaccine`, `year_received`, `do
 --
 
 CREATE TABLE `lab_orders` (
-  `lab_order_id` int(10) UNSIGNED NOT NULL,
-  `appointment_id` int(10) UNSIGNED NOT NULL,
-  `consultation_id` int(10) UNSIGNED DEFAULT NULL,
-  `visit_id` int(10) UNSIGNED DEFAULT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `ordered_by_employee_id` int(10) UNSIGNED DEFAULT NULL,
-  `order_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `test_type` varchar(128) NOT NULL,
-  `status` enum('pending','in_progress','completed','cancelled') DEFAULT 'pending',
-  `result` text DEFAULT NULL,
+  `lab_order_id` int UNSIGNED NOT NULL,
+  `appointment_id` int UNSIGNED NOT NULL,
+  `consultation_id` int UNSIGNED DEFAULT NULL,
+  `visit_id` int UNSIGNED DEFAULT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `ordered_by_employee_id` int UNSIGNED DEFAULT NULL,
+  `order_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `test_type` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('pending','in_progress','completed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
+  `result` text COLLATE utf8mb4_unicode_ci,
   `result_date` datetime DEFAULT NULL,
-  `remarks` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `remarks` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -825,12 +823,12 @@ CREATE TABLE `lab_orders` (
 --
 
 CREATE TABLE `lifestyle_information` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `smoking_status` varchar(50) DEFAULT NULL,
-  `alcohol_intake` varchar(100) DEFAULT NULL,
-  `physical_act` varchar(100) DEFAULT NULL,
-  `diet_habit` varchar(255) DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `smoking_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `alcohol_intake` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `physical_act` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `diet_habit` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -849,13 +847,13 @@ INSERT INTO `lifestyle_information` (`id`, `patient_id`, `smoking_status`, `alco
 --
 
 CREATE TABLE `password_reset_tokens` (
-  `token_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED NOT NULL,
-  `token` varchar(255) NOT NULL,
+  `token_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED NOT NULL,
+  `token` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
   `expires_at` datetime NOT NULL,
   `used_at` datetime DEFAULT NULL,
-  `created_by` int(10) UNSIGNED NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_by` int UNSIGNED NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -865,11 +863,11 @@ CREATE TABLE `password_reset_tokens` (
 --
 
 CREATE TABLE `past_medical_conditions` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `condition` varchar(100) DEFAULT NULL,
-  `year_diagnosed` year(4) DEFAULT NULL,
-  `status` varchar(30) DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `condition` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `year_diagnosed` year DEFAULT NULL,
+  `status` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -886,28 +884,28 @@ INSERT INTO `past_medical_conditions` (`id`, `patient_id`, `condition`, `year_di
 --
 
 CREATE TABLE `patients` (
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `username` varchar(10) DEFAULT NULL,
-  `first_name` varchar(50) NOT NULL,
-  `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) NOT NULL,
-  `suffix` varchar(15) DEFAULT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `username` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `first_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `middle_name` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `last_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `suffix` varchar(15) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `date_of_birth` date NOT NULL,
-  `sex` enum('Male','Female','Other') NOT NULL,
-  `contact_number` varchar(20) DEFAULT NULL,
-  `email` varchar(100) DEFAULT NULL,
-  `barangay_id` int(10) UNSIGNED NOT NULL,
-  `isPWD` tinyint(1) DEFAULT 0,
-  `pwd_id_number` varchar(30) DEFAULT NULL,
-  `isPhilHealth` tinyint(1) DEFAULT 0,
-  `philhealth_type` enum('Indigent','Sponsored','Lifetime Member','Senior Citizen','PWD','Employed Private','Employed Government','Individual Paying','OFW') DEFAULT NULL,
-  `philhealth_id_number` varchar(30) DEFAULT NULL,
-  `isSenior` tinyint(1) DEFAULT 0,
-  `senior_citizen_id` varchar(30) DEFAULT NULL,
-  `password_hash` varchar(255) NOT NULL,
-  `status` enum('active','inactive') DEFAULT 'active',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `sex` enum('Male','Female','Other') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contact_number` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `barangay_id` int UNSIGNED NOT NULL,
+  `isPWD` tinyint(1) DEFAULT '0',
+  `pwd_id_number` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `isPhilHealth` tinyint(1) DEFAULT '0',
+  `philhealth_type` enum('Indigent','Sponsored','Lifetime Member','Senior Citizen','PWD','Employed Private','Employed Government','Individual Paying','OFW') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `philhealth_id_number` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `isSenior` tinyint(1) DEFAULT '0',
+  `senior_citizen_id` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('active','inactive') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -955,19 +953,19 @@ INSERT INTO `patients` (`patient_id`, `username`, `first_name`, `middle_name`, `
 --
 
 CREATE TABLE `patient_flags` (
-  `flag_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `appointment_id` int(10) UNSIGNED DEFAULT NULL,
-  `flag_type` enum('false_senior','false_philhealth','false_pwd','false_patient_booked','other') NOT NULL,
-  `remarks` text DEFAULT NULL,
-  `created_by_type` enum('employee','admin','system') NOT NULL DEFAULT 'employee',
-  `created_by_id` int(10) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `is_resolved` tinyint(1) NOT NULL DEFAULT 0,
+  `flag_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `appointment_id` int UNSIGNED DEFAULT NULL,
+  `flag_type` enum('false_senior','false_philhealth','false_pwd','false_patient_booked','other') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `remarks` text COLLATE utf8mb4_unicode_ci,
+  `created_by_type` enum('employee','admin','system') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'employee',
+  `created_by_id` int UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_resolved` tinyint(1) NOT NULL DEFAULT '0',
   `resolved_at` datetime DEFAULT NULL,
-  `resolved_by_type` enum('employee','admin','system') DEFAULT NULL,
-  `resolved_by_id` int(10) UNSIGNED DEFAULT NULL,
-  `resolution_notes` text DEFAULT NULL
+  `resolved_by_type` enum('employee','admin','system') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `resolved_by_id` int UNSIGNED DEFAULT NULL,
+  `resolution_notes` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -977,13 +975,13 @@ CREATE TABLE `patient_flags` (
 --
 
 CREATE TABLE `permissions` (
-  `permission_id` int(10) UNSIGNED NOT NULL,
-  `permission_key` varchar(100) NOT NULL,
-  `permission_name` varchar(255) NOT NULL,
-  `category` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `permission_id` int UNSIGNED NOT NULL,
+  `permission_key` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `permission_name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `category` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1043,14 +1041,14 @@ INSERT INTO `permissions` (`permission_id`, `permission_key`, `permission_name`,
 --
 
 CREATE TABLE `personal_information` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `blood_type` varchar(5) DEFAULT NULL,
-  `civil_status` varchar(20) DEFAULT NULL,
-  `religion` varchar(50) DEFAULT NULL,
-  `occupation` varchar(50) DEFAULT NULL,
-  `street` varchar(100) DEFAULT NULL,
-  `profile_photo` longblob DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `blood_type` varchar(5) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `civil_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `religion` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `occupation` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `street` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `profile_photo` longblob
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1070,16 +1068,16 @@ INSERT INTO `personal_information` (`id`, `patient_id`, `blood_type`, `civil_sta
 --
 
 CREATE TABLE `prescribed_medications` (
-  `prescribed_medication_id` int(10) UNSIGNED NOT NULL,
-  `prescription_id` int(10) UNSIGNED NOT NULL,
-  `medication_name` varchar(128) NOT NULL,
-  `dosage` varchar(64) NOT NULL,
-  `frequency` varchar(64) DEFAULT NULL,
-  `duration` varchar(32) DEFAULT NULL,
-  `instructions` text DEFAULT NULL,
-  `status` enum('active','dispensed','cancelled') DEFAULT 'active',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `prescribed_medication_id` int UNSIGNED NOT NULL,
+  `prescription_id` int UNSIGNED NOT NULL,
+  `medication_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dosage` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `frequency` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `duration` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `instructions` text COLLATE utf8mb4_unicode_ci,
+  `status` enum('active','dispensed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1089,17 +1087,17 @@ CREATE TABLE `prescribed_medications` (
 --
 
 CREATE TABLE `prescriptions` (
-  `prescription_id` int(10) UNSIGNED NOT NULL,
-  `consultation_id` int(10) UNSIGNED DEFAULT NULL,
-  `appointment_id` int(10) UNSIGNED NOT NULL,
-  `visit_id` int(10) UNSIGNED DEFAULT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `prescribed_by_employee_id` int(10) UNSIGNED DEFAULT NULL,
-  `prescription_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `status` enum('active','dispensed','cancelled') DEFAULT 'active',
-  `remarks` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `prescription_id` int UNSIGNED NOT NULL,
+  `consultation_id` int UNSIGNED DEFAULT NULL,
+  `appointment_id` int UNSIGNED NOT NULL,
+  `visit_id` int UNSIGNED DEFAULT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `prescribed_by_employee_id` int UNSIGNED DEFAULT NULL,
+  `prescription_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('active','dispensed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `remarks` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1109,11 +1107,11 @@ CREATE TABLE `prescriptions` (
 --
 
 CREATE TABLE `queue_counters` (
-  `counter_id` int(10) UNSIGNED NOT NULL,
+  `counter_id` int UNSIGNED NOT NULL,
   `counter_date` date NOT NULL,
-  `counter_hour` varchar(8) NOT NULL,
-  `patient_type` enum('normal','priority','emergency') NOT NULL,
-  `current_value` int(10) UNSIGNED NOT NULL DEFAULT 0
+  `counter_hour` varchar(8) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `patient_type` enum('normal','priority','emergency') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `current_value` int UNSIGNED NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1123,25 +1121,25 @@ CREATE TABLE `queue_counters` (
 --
 
 CREATE TABLE `queue_entries` (
-  `queue_entry_id` int(10) UNSIGNED NOT NULL,
-  `visit_id` int(10) UNSIGNED NOT NULL,
-  `appointment_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `service_id` int(10) UNSIGNED NOT NULL,
-  `queue_type` enum('triage','consultation','lab','prescription','billing','document') NOT NULL,
-  `station_id` int(10) UNSIGNED DEFAULT NULL,
-  `queue_number` int(10) UNSIGNED DEFAULT NULL,
-  `queue_code` varchar(20) DEFAULT NULL,
-  `priority_level` enum('normal','priority','emergency') DEFAULT 'normal',
-  `status` enum('waiting','in_progress','skipped','done','cancelled','no_show') DEFAULT 'waiting',
-  `time_in` datetime DEFAULT current_timestamp(),
+  `queue_entry_id` int UNSIGNED NOT NULL,
+  `visit_id` int UNSIGNED NOT NULL,
+  `appointment_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `service_id` int UNSIGNED NOT NULL,
+  `queue_type` enum('triage','consultation','lab','prescription','billing','document') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `station_id` int UNSIGNED DEFAULT NULL,
+  `queue_number` int UNSIGNED DEFAULT NULL,
+  `queue_code` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `priority_level` enum('normal','priority','emergency') COLLATE utf8mb4_unicode_ci DEFAULT 'normal',
+  `status` enum('waiting','in_progress','skipped','done','cancelled','no_show') COLLATE utf8mb4_unicode_ci DEFAULT 'waiting',
+  `time_in` datetime DEFAULT CURRENT_TIMESTAMP,
   `time_started` datetime DEFAULT NULL,
   `time_completed` datetime DEFAULT NULL,
-  `waiting_time` int(10) UNSIGNED DEFAULT NULL,
-  `turnaround_time` int(10) UNSIGNED DEFAULT NULL,
-  `remarks` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `waiting_time` int UNSIGNED DEFAULT NULL,
+  `turnaround_time` int UNSIGNED DEFAULT NULL,
+  `remarks` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1157,7 +1155,8 @@ INSERT INTO `queue_entries` (`queue_entry_id`, `visit_id`, `appointment_id`, `pa
 (6, 6, 33, 7, 1, 'triage', 2, 3, '07A-003', 'normal', 'done', '2025-10-07 15:17:42', '2025-10-07 15:18:06', '2025-10-07 15:18:56', 0, 1, 'Called to station', '2025-10-07 07:17:42', '2025-10-07 07:18:56'),
 (7, 7, 34, 7, 1, 'consultation', 5, 2, '071025-04P-002', 'normal', 'done', '2025-10-07 15:51:36', '2025-10-07 15:58:29', '2025-10-07 16:02:08', 6, 10, 'Visit completed: ', '2025-10-07 07:51:36', '2025-10-07 08:02:08'),
 (8, 8, 35, 7, 1, 'consultation', 5, 3, '071025-04P-003', 'normal', 'in_progress', '2025-10-07 15:54:53', '2025-10-07 15:59:30', NULL, 4, NULL, 'Called to station', '2025-10-07 07:54:53', '2025-10-07 07:59:30'),
-(9, 9, 35, 7, 1, 'triage', 2, 6, '07A-006', 'normal', 'done', '2025-10-07 15:55:21', '2025-10-07 15:56:02', '2025-10-07 15:56:54', 0, 1, 'Called to station', '2025-10-07 07:55:21', '2025-10-07 07:56:54');
+(9, 9, 35, 7, 1, 'triage', 2, 6, '07A-006', 'normal', 'done', '2025-10-07 15:55:21', '2025-10-07 15:56:02', '2025-10-07 15:56:54', 0, 1, 'Called to station', '2025-10-07 07:55:21', '2025-10-07 07:56:54'),
+(10, 10, 43, 7, 1, 'consultation', 1, 1, '131025-03P-001', 'normal', 'waiting', '2025-10-13 03:23:59', NULL, NULL, NULL, NULL, NULL, '2025-10-13 03:23:59', '2025-10-13 03:23:59');
 
 -- --------------------------------------------------------
 
@@ -1166,14 +1165,14 @@ INSERT INTO `queue_entries` (`queue_entry_id`, `visit_id`, `appointment_id`, `pa
 --
 
 CREATE TABLE `queue_logs` (
-  `queue_log_id` int(10) UNSIGNED NOT NULL,
-  `queue_entry_id` int(10) UNSIGNED NOT NULL,
-  `action` enum('created','status_changed','moved','reinstated','cancelled','skipped') NOT NULL,
-  `old_status` enum('waiting','in_progress','skipped','done','cancelled','no_show') DEFAULT NULL,
-  `new_status` enum('waiting','in_progress','skipped','done','cancelled','no_show') NOT NULL,
-  `remarks` varchar(255) DEFAULT NULL,
-  `performed_by` int(10) UNSIGNED DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `queue_log_id` int UNSIGNED NOT NULL,
+  `queue_entry_id` int UNSIGNED NOT NULL,
+  `action` enum('created','status_changed','moved','reinstated','cancelled','skipped') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `old_status` enum('waiting','in_progress','skipped','done','cancelled','no_show') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `new_status` enum('waiting','in_progress','skipped','done','cancelled','no_show') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `remarks` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `performed_by` int UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1199,7 +1198,8 @@ INSERT INTO `queue_logs` (`queue_log_id`, `queue_entry_id`, `action`, `old_statu
 (16, 9, 'status_changed', 'in_progress', 'done', '', 1, '2025-10-07 07:56:54'),
 (17, 7, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:58:29'),
 (18, 8, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:59:30'),
-(19, 7, 'status_changed', 'in_progress', 'done', 'Visit completed - no further treatment needed: ', 1, '2025-10-07 08:02:08');
+(19, 7, 'status_changed', 'in_progress', 'done', 'Visit completed - no further treatment needed: ', 1, '2025-10-07 08:02:08'),
+(20, 10, 'created', NULL, 'waiting', 'Queue created with code: 131025-03P-001', NULL, '2025-10-13 03:23:59');
 
 -- --------------------------------------------------------
 
@@ -1208,16 +1208,16 @@ INSERT INTO `queue_logs` (`queue_log_id`, `queue_entry_id`, `action`, `old_statu
 --
 
 CREATE TABLE `receipts` (
-  `receipt_id` int(10) UNSIGNED NOT NULL,
-  `billing_id` int(10) UNSIGNED NOT NULL,
-  `receipt_number` varchar(50) NOT NULL,
-  `payment_date` datetime NOT NULL DEFAULT current_timestamp(),
+  `receipt_id` int UNSIGNED NOT NULL,
+  `billing_id` int UNSIGNED NOT NULL,
+  `receipt_number` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `payment_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `amount_paid` decimal(10,2) NOT NULL,
-  `payment_method` varchar(50) DEFAULT NULL,
-  `received_by_employee_id` int(10) UNSIGNED DEFAULT NULL,
-  `notes` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `payment_method` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `received_by_employee_id` int UNSIGNED DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1227,42 +1227,44 @@ CREATE TABLE `receipts` (
 --
 
 CREATE TABLE `referrals` (
-  `referral_id` int(10) UNSIGNED NOT NULL,
-  `referral_num` varchar(20) DEFAULT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `referring_facility_id` int(10) UNSIGNED NOT NULL,
-  `referred_to_facility_id` int(10) UNSIGNED DEFAULT NULL,
-  `external_facility_name` varchar(255) DEFAULT NULL,
-  `vitals_id` int(10) UNSIGNED DEFAULT NULL,
-  `service_id` int(10) UNSIGNED DEFAULT NULL,
-  `destination_type` enum('barangay_center','district_office','city_office','external') DEFAULT 'barangay_center',
-  `referral_reason` text DEFAULT NULL,
-  `referred_by` int(10) UNSIGNED DEFAULT NULL,
-  `referral_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `status` enum('active','accepted','cancelled','issued') DEFAULT 'active',
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `referral_id` int UNSIGNED NOT NULL,
+  `referral_num` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `referring_facility_id` int UNSIGNED NOT NULL,
+  `referred_to_facility_id` int UNSIGNED DEFAULT NULL,
+  `external_facility_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `vitals_id` int UNSIGNED DEFAULT NULL,
+  `service_id` int UNSIGNED DEFAULT NULL,
+  `destination_type` enum('barangay_center','district_office','city_office','external') COLLATE utf8mb4_unicode_ci DEFAULT 'barangay_center',
+  `referral_reason` text COLLATE utf8mb4_unicode_ci,
+  `referred_by` int UNSIGNED DEFAULT NULL,
+  `referral_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('active','accepted','cancelled','issued') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `notes` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `referrals`
 --
 
-INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring_facility_id`, `referred_to_facility_id`, `external_facility_name`, `vitals_id`, `service_id`, `destination_type`, `referral_reason`, `referred_by`, `referral_date`, `status`, `updated_at`) VALUES
-(1, 'REF-20250925-0001', 7, 1, NULL, 'sassasa', 1, NULL, 'external', 'Needs lambing; kulang sa aruga\n\nRequested Service: sadaffasdf', 1, '2025-09-25 15:32:52', 'issued', '2025-09-28 11:17:15'),
-(2, 'REF-20250927-0001', 7, 4, 1, '', 2, 1, 'city_office', 'Need doctor\'s consultation.', 10, '2025-09-27 18:10:43', 'accepted', '2025-09-30 07:44:51'),
-(3, 'REF-20250927-0002', 33, 5, 1, '', 3, 1, 'city_office', 'Needs doctor check-up', 46, '2025-09-27 18:33:23', 'cancelled', '2025-09-30 08:35:39'),
-(4, 'REF-20250927-0003', 35, 2, 1, '', 4, 1, 'city_office', 'Need doctor\'s consultation', 8, '2025-09-27 19:06:16', 'cancelled', '2025-09-30 08:35:39'),
-(5, 'REF-20250927-0004', 15, 22, 3, '', 5, 1, 'district_office', 'Need proper check-up', 63, '2025-09-27 19:08:26', 'cancelled', '2025-09-30 08:35:39'),
-(6, 'REF-20250928-0001', 26, 1, 3, '', 6, 6, 'district_office', 'gbjn', 1, '2025-09-28 23:13:47', 'cancelled', '2025-10-02 08:06:36'),
-(7, 'REF-20250930-0001', 37, 22, 1, '', 7, NULL, 'city_office', 'Need doctor\'s consultation', 63, '2025-09-30 16:38:18', 'cancelled', '2025-10-04 00:58:31'),
-(8, 'REF-20250930-0002', 37, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s consultation', 1, '2025-09-30 16:41:14', 'accepted', '2025-09-30 08:42:00'),
-(9, 'REF-20251002-0001', 13, 1, 2, '', NULL, 1, 'district_office', 'Doctor\'s Check-up', 1, '2025-10-02 16:10:06', 'cancelled', '2025-10-04 11:39:55'),
-(10, 'REF-20251004-0001', 38, 1, 1, '', NULL, 1, 'city_office', 'Hypoglycemic', 1, '2025-10-04 13:04:30', 'cancelled', '2025-10-04 05:09:25'),
-(11, 'REF-20251004-0002', 38, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s Consultation', 1, '2025-10-04 13:11:14', 'cancelled', '2025-10-06 15:05:12'),
-(12, 'REF-20251004-0003', 7, 1, 1, '', NULL, 1, 'city_office', 'Check Up', 1, '2025-10-04 21:59:22', 'accepted', '2025-10-05 23:52:13'),
-(13, 'REF-20251007-0001', 7, 1, 1, '', NULL, 1, 'city_office', 'Need check-up', 1, '2025-10-07 14:51:39', 'accepted', '2025-10-07 06:54:38'),
-(14, 'REF-20251007-0002', 7, 1, 1, '', NULL, 1, 'city_office', 'afd', 1, '2025-10-07 15:50:58', 'accepted', '2025-10-07 07:51:58'),
-(15, 'REF-20251007-0003', 7, 1, 1, '', 8, 1, 'city_office', 'Need Doctor Checkup', 1, '2025-10-07 15:52:44', 'cancelled', '2025-10-10 01:22:54');
+INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring_facility_id`, `referred_to_facility_id`, `external_facility_name`, `vitals_id`, `service_id`, `destination_type`, `referral_reason`, `referred_by`, `referral_date`, `status`, `updated_at`, `notes`) VALUES
+(1, 'REF-20250925-0001', 7, 1, NULL, 'sassasa', 1, NULL, 'external', 'Needs lambing; kulang sa aruga\n\nRequested Service: sadaffasdf', 1, '2025-09-25 15:32:52', 'issued', '2025-09-28 11:17:15', NULL),
+(2, 'REF-20250927-0001', 7, 4, 1, '', 2, 1, 'city_office', 'Need doctor\'s consultation.', 10, '2025-09-27 18:10:43', 'accepted', '2025-09-30 07:44:51', NULL),
+(3, 'REF-20250927-0002', 33, 5, 1, '', 3, 1, 'city_office', 'Needs doctor check-up', 46, '2025-09-27 18:33:23', 'cancelled', '2025-09-30 08:35:39', NULL),
+(4, 'REF-20250927-0003', 35, 2, 1, '', 4, 1, 'city_office', 'Need doctor\'s consultation', 8, '2025-09-27 19:06:16', 'cancelled', '2025-09-30 08:35:39', NULL),
+(5, 'REF-20250927-0004', 15, 22, 3, '', 5, 1, 'district_office', 'Need proper check-up', 63, '2025-09-27 19:08:26', 'cancelled', '2025-09-30 08:35:39', NULL),
+(6, 'REF-20250928-0001', 26, 1, 3, '', 6, 6, 'district_office', 'gbjn', 1, '2025-09-28 23:13:47', 'cancelled', '2025-10-02 08:06:36', NULL),
+(7, 'REF-20250930-0001', 37, 22, 1, '', 7, NULL, 'city_office', 'Need doctor\'s consultation', 63, '2025-09-30 16:38:18', 'cancelled', '2025-10-04 00:58:31', NULL),
+(8, 'REF-20250930-0002', 37, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s consultation', 1, '2025-09-30 16:41:14', 'accepted', '2025-09-30 08:42:00', NULL),
+(9, 'REF-20251002-0001', 13, 1, 2, '', NULL, 1, 'district_office', 'Doctor\'s Check-up', 1, '2025-10-02 16:10:06', 'cancelled', '2025-10-04 11:39:55', NULL),
+(10, 'REF-20251004-0001', 38, 1, 1, '', NULL, 1, 'city_office', 'Hypoglycemic', 1, '2025-10-04 13:04:30', 'cancelled', '2025-10-04 05:09:25', NULL),
+(11, 'REF-20251004-0002', 38, 1, 1, '', NULL, 1, 'city_office', 'Doctor\'s Consultation', 1, '2025-10-04 13:11:14', 'cancelled', '2025-10-06 15:05:12', NULL),
+(12, 'REF-20251004-0003', 7, 1, 1, '', NULL, 1, 'city_office', 'Check Up', 1, '2025-10-04 21:59:22', 'accepted', '2025-10-05 23:52:13', NULL),
+(13, 'REF-20251007-0001', 7, 1, 1, '', NULL, 1, 'city_office', 'Need check-up', 1, '2025-10-07 14:51:39', 'accepted', '2025-10-07 06:54:38', NULL),
+(14, 'REF-20251007-0002', 7, 1, 1, '', NULL, 1, 'city_office', 'afd', 1, '2025-10-07 15:50:58', 'accepted', '2025-10-07 07:51:58', NULL),
+(15, 'REF-20251007-0003', 7, 1, 1, '', 8, 1, 'city_office', 'Need Doctor Checkup', 1, '2025-10-07 15:52:44', 'cancelled', '2025-10-10 01:22:54', NULL),
+(16, 'REF-20251012-0001', 7, 1, 1, '', 9, 1, 'city_office', 'Need Doctor Check-up', 1, '2025-10-12 14:15:13', 'accepted', '2025-10-13 03:23:59', 'Used for appointment #APT-00000043');
 
 -- --------------------------------------------------------
 
@@ -1271,14 +1273,14 @@ INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring
 --
 
 CREATE TABLE `referral_logs` (
-  `log_id` int(10) UNSIGNED NOT NULL,
-  `referral_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED NOT NULL,
-  `action` varchar(50) NOT NULL,
-  `reason` text DEFAULT NULL,
-  `previous_status` varchar(50) DEFAULT NULL,
-  `new_status` varchar(50) DEFAULT NULL,
-  `timestamp` datetime NOT NULL DEFAULT current_timestamp()
+  `log_id` int UNSIGNED NOT NULL,
+  `referral_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED NOT NULL,
+  `action` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `reason` text COLLATE utf8mb4_unicode_ci,
+  `previous_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `new_status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1302,9 +1304,9 @@ INSERT INTO `referral_logs` (`log_id`, `referral_id`, `employee_id`, `action`, `
 --
 
 CREATE TABLE `roles` (
-  `role_id` int(10) UNSIGNED NOT NULL,
-  `role_name` varchar(50) NOT NULL,
-  `description` varchar(255) DEFAULT NULL
+  `role_id` int UNSIGNED NOT NULL,
+  `role_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1329,14 +1331,14 @@ INSERT INTO `roles` (`role_id`, `role_name`, `description`) VALUES
 --
 
 CREATE TABLE `role_permissions` (
-  `permission_id` int(10) UNSIGNED NOT NULL,
-  `role_id` int(10) UNSIGNED NOT NULL,
-  `module_name` varchar(100) NOT NULL,
-  `can_view` tinyint(1) DEFAULT 0,
-  `can_add` tinyint(1) DEFAULT 0,
-  `can_edit` tinyint(1) DEFAULT 0,
-  `can_delete` tinyint(1) DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `permission_id` int UNSIGNED NOT NULL,
+  `role_id` int UNSIGNED NOT NULL,
+  `module_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `can_view` tinyint(1) DEFAULT '0',
+  `can_add` tinyint(1) DEFAULT '0',
+  `can_edit` tinyint(1) DEFAULT '0',
+  `can_delete` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1346,10 +1348,10 @@ CREATE TABLE `role_permissions` (
 --
 
 CREATE TABLE `services` (
-  `service_id` int(10) UNSIGNED NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `is_billable` tinyint(1) NOT NULL DEFAULT 0
+  `service_id` int UNSIGNED NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `is_billable` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1375,13 +1377,13 @@ INSERT INTO `services` (`service_id`, `name`, `description`, `is_billable`) VALU
 --
 
 CREATE TABLE `service_items` (
-  `item_id` int(11) UNSIGNED NOT NULL,
-  `service_id` int(10) UNSIGNED NOT NULL,
-  `item_name` varchar(150) NOT NULL,
+  `item_id` int UNSIGNED NOT NULL,
+  `service_id` int UNSIGNED NOT NULL,
+  `item_name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `price_php` decimal(10,2) NOT NULL,
-  `unit` varchar(50) DEFAULT 'per service',
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `effective_date` date DEFAULT curdate()
+  `unit` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'per service',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `effective_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1420,15 +1422,15 @@ INSERT INTO `service_items` (`item_id`, `service_id`, `item_name`, `price_php`, 
 --
 
 CREATE TABLE `stations` (
-  `station_id` int(10) UNSIGNED NOT NULL,
-  `station_name` varchar(100) NOT NULL,
-  `service_id` int(10) UNSIGNED NOT NULL,
-  `station_type` enum('checkin','triage','billing','consultation','lab','pharmacy','document') DEFAULT 'consultation',
-  `station_number` int(10) UNSIGNED DEFAULT 1,
-  `is_active` tinyint(1) DEFAULT 1,
-  `is_open` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `station_id` int UNSIGNED NOT NULL,
+  `station_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `service_id` int UNSIGNED NOT NULL,
+  `station_type` enum('checkin','triage','billing','consultation','lab','pharmacy','document') COLLATE utf8mb4_unicode_ci DEFAULT 'consultation',
+  `station_number` int UNSIGNED DEFAULT '1',
+  `is_active` tinyint(1) DEFAULT '1',
+  `is_open` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1460,22 +1462,22 @@ INSERT INTO `stations` (`station_id`, `station_name`, `service_id`, `station_typ
 --
 
 CREATE TABLE `station_assignments` (
-  `assignment_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED NOT NULL,
-  `station_id` int(10) UNSIGNED NOT NULL,
+  `assignment_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED NOT NULL,
+  `station_id` int UNSIGNED NOT NULL,
   `assigned_date` date NOT NULL,
-  `assignment_type` enum('permanent','temporary') DEFAULT 'permanent',
+  `assignment_type` enum('permanent','temporary') COLLATE utf8mb4_general_ci DEFAULT 'permanent',
   `shift_start_time` time DEFAULT '08:00:00',
   `shift_end_time` time DEFAULT '17:00:00',
   `end_date` date DEFAULT NULL,
-  `notes` text DEFAULT NULL,
-  `assigned_by` int(10) UNSIGNED NOT NULL,
-  `removed_by` int(10) UNSIGNED DEFAULT NULL,
-  `removal_reason` varchar(255) DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_general_ci,
+  `assigned_by` int UNSIGNED NOT NULL,
+  `removed_by` int UNSIGNED DEFAULT NULL,
+  `removal_reason` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `removed_at` datetime DEFAULT NULL,
-  `status` enum('active','inactive') DEFAULT 'active',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `status` enum('active','inactive') COLLATE utf8mb4_general_ci DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1485,11 +1487,11 @@ CREATE TABLE `station_assignments` (
 --
 
 CREATE TABLE `surgical_history` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `surgery` varchar(100) DEFAULT NULL,
-  `year` year(4) DEFAULT NULL,
-  `hospital` varchar(100) DEFAULT NULL
+  `id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `surgery` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `year` year DEFAULT NULL,
+  `hospital` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1508,12 +1510,12 @@ INSERT INTO `surgical_history` (`id`, `patient_id`, `surgery`, `year`, `hospital
 --
 
 CREATE TABLE `user_activity_logs` (
-  `log_id` int(10) UNSIGNED NOT NULL,
-  `admin_id` int(10) UNSIGNED NOT NULL,
-  `employee_id` int(10) UNSIGNED DEFAULT NULL,
-  `action_type` enum('create','update','deactivate','password_reset','role_change') NOT NULL,
-  `description` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `log_id` int UNSIGNED NOT NULL,
+  `admin_id` int UNSIGNED NOT NULL,
+  `employee_id` int UNSIGNED DEFAULT NULL,
+  `action_type` enum('create','update','deactivate','password_reset','role_change') COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1523,20 +1525,20 @@ CREATE TABLE `user_activity_logs` (
 --
 
 CREATE TABLE `visits` (
-  `visit_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `facility_id` int(10) UNSIGNED NOT NULL,
-  `appointment_id` int(10) UNSIGNED DEFAULT NULL,
-  `vitals_id` int(10) UNSIGNED DEFAULT NULL,
+  `visit_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `facility_id` int UNSIGNED NOT NULL,
+  `appointment_id` int UNSIGNED DEFAULT NULL,
+  `vitals_id` int UNSIGNED DEFAULT NULL,
   `visit_date` date NOT NULL,
   `time_in` datetime DEFAULT NULL,
   `time_out` datetime DEFAULT NULL,
-  `attending_employee_id` int(10) UNSIGNED DEFAULT NULL,
-  `remarks` text DEFAULT NULL,
-  `visit_status` enum('ongoing','completed','cancelled') DEFAULT 'ongoing',
-  `attendance_status` enum('early','on_time','late','no_show','left_early') DEFAULT 'on_time',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `attending_employee_id` int UNSIGNED DEFAULT NULL,
+  `remarks` text COLLATE utf8mb4_unicode_ci,
+  `visit_status` enum('ongoing','completed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'ongoing',
+  `attendance_status` enum('early','on_time','late','no_show','left_early') COLLATE utf8mb4_unicode_ci DEFAULT 'on_time',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1553,7 +1555,7 @@ INSERT INTO `visits` (`visit_id`, `patient_id`, `facility_id`, `appointment_id`,
 (7, 7, 1, 34, NULL, '2025-10-07', NULL, '2025-10-07 16:02:08', 1, 'Visit completed: ', 'completed', 'on_time', '2025-10-07 07:51:36', '2025-10-07 08:02:08'),
 (8, 7, 1, 35, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:54:53', '2025-10-07 07:54:53'),
 (9, 7, 1, 35, NULL, '2025-10-07', '2025-10-07 15:55:21', NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:55:21', '2025-10-07 07:55:21'),
-(10, 7, 1, NULL, NULL, '2025-10-12', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-12 03:08:04', '2025-10-12 03:08:04');
+(10, 7, 1, 43, NULL, '2025-10-13', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-13 03:23:59', '2025-10-13 03:23:59');
 
 -- --------------------------------------------------------
 
@@ -1562,19 +1564,19 @@ INSERT INTO `visits` (`visit_id`, `patient_id`, `facility_id`, `appointment_id`,
 --
 
 CREATE TABLE `vitals` (
-  `vitals_id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
-  `systolic_bp` int(11) DEFAULT NULL,
-  `diastolic_bp` int(11) DEFAULT NULL,
-  `heart_rate` int(11) DEFAULT NULL,
-  `respiratory_rate` int(11) DEFAULT NULL,
+  `vitals_id` int UNSIGNED NOT NULL,
+  `patient_id` int UNSIGNED NOT NULL,
+  `systolic_bp` int DEFAULT NULL,
+  `diastolic_bp` int DEFAULT NULL,
+  `heart_rate` int DEFAULT NULL,
+  `respiratory_rate` int DEFAULT NULL,
   `temperature` decimal(4,2) DEFAULT NULL,
   `weight` decimal(5,2) DEFAULT NULL,
   `height` decimal(5,2) DEFAULT NULL,
   `bmi` decimal(5,2) DEFAULT NULL,
-  `recorded_by` int(10) UNSIGNED DEFAULT NULL,
-  `recorded_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `remarks` text DEFAULT NULL
+  `recorded_by` int UNSIGNED DEFAULT NULL,
+  `recorded_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `remarks` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1589,7 +1591,8 @@ INSERT INTO `vitals` (`vitals_id`, `patient_id`, `systolic_bp`, `diastolic_bp`, 
 (5, 15, 80, 70, 72, 18, 36.00, 60.00, 160.00, 23.00, 63, '2025-09-27 19:08:26', 'Kabado bente'),
 (6, 26, 90, 40, 75, 45, 45.00, 111.00, 202.00, 27.00, 1, '2025-09-28 23:13:47', ''),
 (7, 37, 120, 80, NULL, NULL, 36.00, 70.00, 175.00, 22.00, 63, '2025-09-30 16:38:18', ''),
-(8, 7, NULL, NULL, NULL, NULL, 37.00, NULL, NULL, NULL, 1, '2025-10-07 15:52:44', 'Feverish');
+(8, 7, NULL, NULL, NULL, NULL, 37.00, NULL, NULL, NULL, 1, '2025-10-07 15:52:44', 'Feverish'),
+(9, 7, NULL, NULL, NULL, NULL, 36.00, 70.00, 170.00, 24.00, 1, '2025-10-12 14:15:13', '');
 
 -- --------------------------------------------------------
 
@@ -1598,7 +1601,7 @@ INSERT INTO `vitals` (`vitals_id`, `patient_id`, `systolic_bp`, `diastolic_bp`, 
 --
 DROP TABLE IF EXISTS `current_station_assignments`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `current_station_assignments`  AS SELECT `sa`.`assignment_id` AS `assignment_id`, `sa`.`employee_id` AS `employee_id`, `ed`.`full_name` AS `employee_name`, `ed`.`role_name` AS `role_name`, `sa`.`station_id` AS `station_id`, `s`.`station_name` AS `station_name`, `s`.`station_type` AS `station_type`, `sa`.`assigned_date` AS `assigned_date`, `sa`.`end_date` AS `end_date`, `sa`.`assignment_type` AS `assignment_type`, `sa`.`shift_start_time` AS `shift_start_time`, `sa`.`shift_end_time` AS `shift_end_time`, `sa`.`status` AS `status`, `sa`.`created_at` AS `created_at` FROM ((`station_assignments` `sa` join `employee_details` `ed` on(`sa`.`employee_id` = `ed`.`employee_id`)) join `stations` `s` on(`sa`.`station_id` = `s`.`station_id`)) WHERE `sa`.`status` = 'active' AND (`sa`.`end_date` is null OR `sa`.`end_date` >= curdate()) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `current_station_assignments`  AS SELECT `sa`.`assignment_id` AS `assignment_id`, `sa`.`employee_id` AS `employee_id`, `ed`.`full_name` AS `employee_name`, `ed`.`role_name` AS `role_name`, `sa`.`station_id` AS `station_id`, `s`.`station_name` AS `station_name`, `s`.`station_type` AS `station_type`, `sa`.`assigned_date` AS `assigned_date`, `sa`.`end_date` AS `end_date`, `sa`.`assignment_type` AS `assignment_type`, `sa`.`shift_start_time` AS `shift_start_time`, `sa`.`shift_end_time` AS `shift_end_time`, `sa`.`status` AS `status`, `sa`.`created_at` AS `created_at` FROM ((`station_assignments` `sa` join `employee_details` `ed` on((`sa`.`employee_id` = `ed`.`employee_id`))) join `stations` `s` on((`sa`.`station_id` = `s`.`station_id`))) WHERE ((`sa`.`status` = 'active') AND ((`sa`.`end_date` is null) OR (`sa`.`end_date` >= now()))) ;
 
 -- --------------------------------------------------------
 
@@ -1607,7 +1610,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `employee_details`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `employee_details`  AS SELECT `e`.`employee_id` AS `employee_id`, `e`.`employee_number` AS `employee_number`, concat(`e`.`first_name`,' ',coalesce(`e`.`middle_name`,''),' ',`e`.`last_name`) AS `full_name`, `e`.`first_name` AS `first_name`, `e`.`middle_name` AS `middle_name`, `e`.`last_name` AS `last_name`, `e`.`email` AS `email`, `e`.`contact_num` AS `contact_num`, `e`.`status` AS `status`, `e`.`license_number` AS `license_number`, `e`.`birth_date` AS `birth_date`, `e`.`gender` AS `gender`, `e`.`last_login` AS `last_login`, `e`.`failed_login_attempts` AS `failed_login_attempts`, `e`.`locked_until` AS `locked_until`, `e`.`must_change_password` AS `must_change_password`, `e`.`two_factor_enabled` AS `two_factor_enabled`, `r`.`role_name` AS `role_name`, `r`.`description` AS `role_description`, `f`.`name` AS `facility_name`, `f`.`type` AS `facility_type`, `e`.`created_at` AS `created_at`, `e`.`updated_at` AS `updated_at` FROM ((`employees` `e` left join `roles` `r` on(`e`.`role_id` = `r`.`role_id`)) left join `facilities` `f` on(`e`.`facility_id` = `f`.`facility_id`)) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `employee_details`  AS SELECT `e`.`employee_id` AS `employee_id`, `e`.`employee_number` AS `employee_number`, concat(`e`.`first_name`,' ',coalesce(`e`.`middle_name`,''),' ',`e`.`last_name`) AS `full_name`, `e`.`first_name` AS `first_name`, `e`.`middle_name` AS `middle_name`, `e`.`last_name` AS `last_name`, `e`.`email` AS `email`, `e`.`contact_num` AS `contact_num`, `e`.`status` AS `status`, `e`.`license_number` AS `license_number`, `e`.`birth_date` AS `birth_date`, `e`.`gender` AS `gender`, `e`.`last_login` AS `last_login`, `e`.`failed_login_attempts` AS `failed_login_attempts`, `e`.`locked_until` AS `locked_until`, `e`.`must_change_password` AS `must_change_password`, `e`.`two_factor_enabled` AS `two_factor_enabled`, `r`.`role_name` AS `role_name`, `r`.`description` AS `role_description`, `f`.`name` AS `facility_name`, `f`.`type` AS `facility_type`, `e`.`created_at` AS `created_at`, `e`.`updated_at` AS `updated_at` FROM ((`employees` `e` left join `roles` `r` on((`e`.`role_id` = `r`.`role_id`))) left join `facilities` `f` on((`e`.`facility_id` = `f`.`facility_id`))) ;
 
 --
 -- Indexes for dumped tables
@@ -1689,19 +1692,14 @@ ALTER TABLE `barangay`
 ALTER TABLE `billing`
   ADD PRIMARY KEY (`billing_id`),
   ADD KEY `idx_billing_visit_id` (`visit_id`),
-  ADD KEY `idx_billing_patient_id` (`patient_id`),
-  ADD KEY `fk_billing_processed_by` (`processed_by`),
-  ADD KEY `idx_billing_payment_status` (`payment_status`),
-  ADD KEY `idx_billing_date` (`billing_date`),
-  ADD KEY `idx_billing_receipt_id` (`receipt_id`);
+  ADD KEY `idx_billing_patient_id` (`patient_id`);
 
 --
 -- Indexes for table `billing_items`
 --
 ALTER TABLE `billing_items`
   ADD PRIMARY KEY (`billing_item_id`),
-  ADD KEY `fk_billing_items_service_item` (`service_item_id`),
-  ADD KEY `idx_billing_items_billing_id` (`billing_id`);
+  ADD KEY `fk_billing_items_service_item` (`service_item_id`);
 
 --
 -- Indexes for table `chronic_illnesses`
@@ -2072,283 +2070,283 @@ ALTER TABLE `vitals`
 -- AUTO_INCREMENT for table `allergies`
 --
 ALTER TABLE `allergies`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `appointment_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `appointment_logs`
 --
 ALTER TABLE `appointment_logs`
-  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `assignment_logs`
 --
 ALTER TABLE `assignment_logs`
-  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `assignment_schedules`
 --
 ALTER TABLE `assignment_schedules`
-  MODIFY `schedule_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `schedule_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `barangay`
 --
 ALTER TABLE `barangay`
-  MODIFY `barangay_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `barangay_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `billing`
 --
 ALTER TABLE `billing`
-  MODIFY `billing_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `billing_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `billing_items`
 --
 ALTER TABLE `billing_items`
-  MODIFY `billing_item_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `billing_item_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `chronic_illnesses`
 --
 ALTER TABLE `chronic_illnesses`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
-  MODIFY `consultation_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `consultation_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `current_medications`
 --
 ALTER TABLE `current_medications`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `districts`
 --
 ALTER TABLE `districts`
-  MODIFY `district_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `district_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `emergency_contact`
 --
 ALTER TABLE `emergency_contact`
-  MODIFY `contact_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `contact_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `employees`
 --
 ALTER TABLE `employees`
-  MODIFY `employee_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+  MODIFY `employee_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
 
 --
 -- AUTO_INCREMENT for table `employee_sessions`
 --
 ALTER TABLE `employee_sessions`
-  MODIFY `session_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `session_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `facilities`
 --
 ALTER TABLE `facilities`
-  MODIFY `facility_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `facility_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT for table `family_history`
 --
 ALTER TABLE `family_history`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `feedback_answers`
 --
 ALTER TABLE `feedback_answers`
-  MODIFY `answer_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `answer_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `feedback_questions`
 --
 ALTER TABLE `feedback_questions`
-  MODIFY `question_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `question_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `feedback_question_choices`
 --
 ALTER TABLE `feedback_question_choices`
-  MODIFY `choice_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `choice_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `immunizations`
 --
 ALTER TABLE `immunizations`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `lab_orders`
 --
 ALTER TABLE `lab_orders`
-  MODIFY `lab_order_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `lab_order_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `lifestyle_information`
 --
 ALTER TABLE `lifestyle_information`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `password_reset_tokens`
 --
 ALTER TABLE `password_reset_tokens`
-  MODIFY `token_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `token_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `past_medical_conditions`
 --
 ALTER TABLE `past_medical_conditions`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `patient_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `patient_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `patient_flags`
 --
 ALTER TABLE `patient_flags`
-  MODIFY `flag_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `flag_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `permission_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `permission_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `personal_information`
 --
 ALTER TABLE `personal_information`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `prescribed_medications`
 --
 ALTER TABLE `prescribed_medications`
-  MODIFY `prescribed_medication_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `prescribed_medication_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `prescription_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `prescription_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `queue_counters`
 --
 ALTER TABLE `queue_counters`
-  MODIFY `counter_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `counter_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `queue_entries`
 --
 ALTER TABLE `queue_entries`
-  MODIFY `queue_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `queue_entry_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `queue_logs`
 --
 ALTER TABLE `queue_logs`
-  MODIFY `queue_log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `queue_log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `receipts`
 --
 ALTER TABLE `receipts`
-  MODIFY `receipt_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `receipt_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `referrals`
 --
 ALTER TABLE `referrals`
-  MODIFY `referral_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `referral_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `referral_logs`
 --
 ALTER TABLE `referral_logs`
-  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `role_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `role_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `role_permissions`
 --
 ALTER TABLE `role_permissions`
-  MODIFY `permission_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `permission_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `service_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `service_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `service_items`
 --
 ALTER TABLE `service_items`
-  MODIFY `item_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `item_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `stations`
 --
 ALTER TABLE `stations`
-  MODIFY `station_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `station_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `station_assignments`
 --
 ALTER TABLE `station_assignments`
-  MODIFY `assignment_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `assignment_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `surgical_history`
 --
 ALTER TABLE `surgical_history`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `user_activity_logs`
 --
 ALTER TABLE `user_activity_logs`
-  MODIFY `log_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `visits`
 --
 ALTER TABLE `visits`
-  MODIFY `visit_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `visit_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `vitals`
 --
 ALTER TABLE `vitals`
-  MODIFY `vitals_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `vitals_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Constraints for dumped tables
@@ -2404,15 +2402,12 @@ ALTER TABLE `barangay`
 --
 ALTER TABLE `billing`
   ADD CONSTRAINT `fk_billing_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_billing_processed_by` FOREIGN KEY (`processed_by`) REFERENCES `employees` (`employee_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_billing_receipt` FOREIGN KEY (`receipt_id`) REFERENCES `receipts` (`receipt_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_billing_visit` FOREIGN KEY (`visit_id`) REFERENCES `visits` (`visit_id`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `billing_items`
 --
 ALTER TABLE `billing_items`
-  ADD CONSTRAINT `fk_billing_items_billing` FOREIGN KEY (`billing_id`) REFERENCES `billing` (`billing_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_billing_items_service_item` FOREIGN KEY (`service_item_id`) REFERENCES `service_items` (`item_id`) ON UPDATE CASCADE;
 
 --

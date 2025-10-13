@@ -2093,49 +2093,55 @@ try {
                 `;
             }
 
-            // Prepare queue information display
-            let queueInfoHtml = '';
-            if (data.has_queue && data.queue_number) {
-                queueInfoHtml = `
+            // Prepare QR code display
+            let qrCodeHtml = '';
+            if (data.qr_generated && data.qr_verification_code) {
+                qrCodeHtml = `
                     <div class="summary-section">
                         <div class="summary-title">
-                            <i class="fas fa-list-ol"></i>
-                            Queue Information
+                            <i class="fas fa-qrcode"></i>
+                            QR Code for Check-in
                         </div>
-                        <div class="summary-grid">
-                            <div class="summary-item">
-                                <div class="summary-label">Queue Number</div>
-                                <div class="summary-value highlight" style="font-size: 1.3rem; color: #0077b6; font-weight: bold;">#${data.queue_number}</div>
+                        <div style="text-align: center; padding: 1rem;">
+                            <div class="qr-code-container" style="background: white; padding: 1rem; border-radius: 10px; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                                <div id="qr-code-placeholder" style="width: 200px; height: 200px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                                    <div style="text-align: center; color: #6c757d;">
+                                        <i class="fas fa-qrcode" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                                        <div style="font-size: 0.9rem;">QR Code Generated</div>
+                                        <div style="font-size: 0.8rem;">Loading...</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="summary-item">
-                                <div class="summary-label">Queue Type</div>
-                                <div class="summary-value">${data.queue_type ? data.queue_type.charAt(0).toUpperCase() + data.queue_type.slice(1) : 'Consultation'}</div>
+                            <div style="margin-top: 1rem;">
+                                <div class="summary-item">
+                                    <div class="summary-label">Verification Code</div>
+                                    <div class="summary-value" style="font-family: monospace; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; font-weight: bold;">${data.qr_verification_code}</div>
+                                </div>
                             </div>
-                            <div class="summary-item">
-                                <div class="summary-label">Priority Level</div>
-                                <div class="summary-value">${data.priority_level === 'priority' ? '⭐ Priority' : '👤 Regular'}</div>
-                            </div>
-                            <div class="summary-item">
-                                <div class="summary-label">Status</div>
-                                <div class="summary-value">Waiting</div>
+                            <div style="margin-top: 1rem; font-size: 0.9rem; color: #6c757d;">
+                                <i class="fas fa-info-circle"></i> 
+                                Present this QR code at check-in for instant verification
                             </div>
                         </div>
                     </div>
                 `;
-            } else if (data.has_queue === false) {
-                queueInfoHtml = `
+            } else if (data.qr_generated === false) {
+                qrCodeHtml = `
                     <div class="summary-section">
                         <div class="summary-title">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Queue Status
+                            <i class="fas fa-qrcode"></i>
+                            QR Code Status
                         </div>
                         <div class="alert alert-warning" style="margin: 0;">
-                            <i class="fas fa-info-circle"></i>
-                            ${data.queue_message || 'Queue number could not be assigned'}
+                            <i class="fas fa-exclamation-triangle"></i>
+                            ${data.qr_message || 'QR code could not be generated'}
                         </div>
                     </div>
                 `;
             }
+
+            // Note: Queue information is NOT displayed during booking
+            // Queue codes are only assigned during check-in process
 
             detailsContainer.innerHTML = `
                 <div style="text-align: center; margin-bottom: 1.5rem;">
@@ -2158,7 +2164,7 @@ try {
                             ${emailStatusHtml}
                         </div>
                     </div>
-                    ${queueInfoHtml}
+                    ${qrCodeHtml}
                 </div>
 
                 ${!data.email_sent ? `
@@ -2179,12 +2185,19 @@ try {
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
                     <strong>Important:</strong> Please bring a valid ID and your appointment reference when you visit the facility. 
-                    ${data.has_queue && data.queue_number ? `Present your queue number <strong>#${data.queue_number}</strong> for faster check-in. ` : ''}
+                    Present your QR code at check-in for faster processing. 
                     If you have a referral, please also bring your referral document.
                 </div>
             `;
 
             modal.style.display = 'block';
+            
+            // Load QR code if available
+            if (data.qr_generated && data.appointment_db_id) {
+                setTimeout(() => {
+                    loadQRCodeForAppointment(data.appointment_db_id);
+                }, 500);
+            }
         }
 
         function showWarningModal(title, message, type = 'warning') {
@@ -2356,6 +2369,59 @@ try {
                 closeAllModals();
             }
         });
+
+        // QR Code loading function
+        function loadQRCodeForAppointment(appointmentId) {
+            const qrPlaceholder = document.getElementById('qr-code-placeholder');
+            if (!qrPlaceholder) return;
+            
+            // Update placeholder to show loading
+            qrPlaceholder.innerHTML = `
+                <div style="text-align: center; color: #6c757d;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                    <div style="font-size: 0.9rem;">Loading QR Code...</div>
+                </div>
+            `;
+            
+            // Fetch QR code
+            fetch(`get_qr_code.php?appointment_id=${appointmentId}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.qr_image) {
+                    // Display the QR code
+                    qrPlaceholder.innerHTML = `
+                        <img src="data:image/png;base64,${data.qr_image}" 
+                             alt="Appointment QR Code" 
+                             style="width: 180px; height: 180px; border: 1px solid #dee2e6; border-radius: 4px;">
+                    `;
+                } else {
+                    // Show error message
+                    qrPlaceholder.innerHTML = `
+                        <div style="text-align: center; color: #dc3545;">
+                            <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                            <div style="font-size: 0.9rem;">QR Code Unavailable</div>
+                            <div style="font-size: 0.8rem;">${data.message || 'Could not load QR code'}</div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading QR code:', error);
+                qrPlaceholder.innerHTML = `
+                    <div style="text-align: center; color: #dc3545;">
+                        <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                        <div style="font-size: 0.9rem;">QR Code Unavailable</div>
+                        <div style="font-size: 0.8rem;">Network error</div>
+                    </div>
+                `;
+            });
+        }
     </script>
 
     <style>

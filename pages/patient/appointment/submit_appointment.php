@@ -364,56 +364,8 @@ try {
         $stmt->close();
     }
     
-    // Commit transaction BEFORE creating queue entry
+    // Commit transaction
     $conn->commit();
-    
-    // Create queue entry for ALL appointments (BHC, DHO, CHO) - AFTER appointment is committed
-    $queue_result = null;
-    $queue_service = new QueueManagementService($pdo);
-    
-    // Determine priority level based on patient information
-    $priority_level = 'normal';
-    if ($patient_info['isPWD'] || $patient_info['isSenior']) {
-        $priority_level = 'priority';
-    }
-    
-    // Determine queue type based on facility type
-    $queue_type_map = [
-        'bhc' => 'consultation',     // Barangay Health Center - general consultation
-        'dho' => 'consultation',     // District Health Office - consultation with referral
-        'cho' => 'consultation'      // City Health Office - specialized consultation
-    ];
-    $queue_type = $queue_type_map[$facility_type] ?? 'consultation';
-    
-    // Create queue entry for all appointment types
-    $queue_result = $queue_service->createQueueEntry(
-        $appointment_id, 
-        $patient_id, 
-        $service_id, 
-        $queue_type, 
-        $priority_level, 
-        null // Patient-initiated, so performed_by is null
-    );
-    
-    if (!$queue_result['success']) {
-        // If queue creation fails due to slot being full, still allow appointment
-        if (strpos($queue_result['error'], 'Time slot is full') !== false) {
-            error_log("Queue creation failed for appointment $appointment_id: Time slot full");
-            $queue_result = [
-                'success' => false,
-                'error' => 'Time slot full - appointment created but no queue number assigned',
-                'queue_number' => null
-            ];
-        } else {
-            // Log the error but don't fail the appointment
-            error_log("Queue creation failed for appointment $appointment_id: " . $queue_result['error']);
-            $queue_result = [
-                'success' => false,
-                'error' => 'Queue entry creation failed - appointment created successfully',
-                'queue_number' => null
-            ];
-        }
-    }
     
     // Generate QR code for appointment
     error_log("DEBUG: Generating QR code for appointment $appointment_id");
@@ -454,7 +406,6 @@ try {
                 $appointment_date, 
                 $appointment_time, 
                 $referral_id,
-                $queue_result,  // Pass queue information to email function
                 $qr_result      // Pass QR information to email function
             );
         }
@@ -486,25 +437,6 @@ try {
         $response['qr_message'] = isset($qr_result) ? $qr_result['error'] : 'QR generation not attempted';
     }
     
-    // Add queue information for all appointments
-    if ($queue_result && $queue_result['success']) {
-        $response['queue_number'] = $queue_result['queue_number'];
-        $response['queue_type'] = $queue_result['queue_type'];
-        $response['priority_level'] = $queue_result['priority_level'];
-        $response['visit_id'] = $queue_result['visit_id'] ?? null;
-        $response['has_queue'] = true;
-        $response['queue_message'] = 'Queue number assigned successfully';
-    } else {
-        $response['has_queue'] = false;
-        if ($queue_result) {
-            $response['queue_message'] = $queue_result['error'] ?? 'Failed to assign queue number';
-            $response['queue_number'] = null;
-        } else {
-            $response['queue_message'] = 'Queue system not available';
-            $response['queue_number'] = null;
-        }
-    }
-    
     echo json_encode($response);
     
 } catch (Exception $e) {
@@ -524,7 +456,7 @@ try {
 $conn->close();
 
 // Function to send appointment confirmation email using the same pattern as OTP emails
-function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $facility_name, $service, $appointment_date, $appointment_time, $referral_id = null, $queue_result = null, $qr_result = null) {
+function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $facility_name, $service, $appointment_date, $appointment_time, $referral_id = null, $qr_result = null) {
     try {
         // Get referral information if available
         $referral_num = '';
@@ -545,28 +477,8 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
         $formatted_date = date('F j, Y (l)', strtotime($appointment_date));
         $formatted_time = date('g:i A', strtotime($appointment_time . ':00'));
 
-        // Prepare queue information for email
-        $queue_info_html = '';
-        $queue_info_text = '';
-        
-        if ($queue_result && $queue_result['success'] && isset($queue_result['queue_number'])) {
-            $priority_display = ($queue_result['priority_level'] === 'priority') ? 'Priority' : 'Regular';
-            $queue_info_html = '
-                        <tr style="border-bottom: 1px solid #e9ecef;">
-                            <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">Queue Number:</td>
-                            <td style="padding: 12px 0; color: #333; font-weight: bold; font-size: 16px; color: #0077b6;">#' . htmlspecialchars($queue_result['queue_number'], ENT_QUOTES, 'UTF-8') . '</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #e9ecef;">
-                            <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">Queue Type:</td>
-                            <td style="padding: 12px 0; color: #333;">' . htmlspecialchars(ucfirst($queue_result['queue_type']), ENT_QUOTES, 'UTF-8') . '</td>
-                        </tr>
-                        <tr' . (!empty($referral_num) ? ' style="border-bottom: 1px solid #e9ecef;"' : '') . '>
-                            <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">Priority Level:</td>
-                            <td style="padding: 12px 0; color: #333;">' . htmlspecialchars($priority_display, ENT_QUOTES, 'UTF-8') . '</td>
-                        </tr>';
-            
-            $queue_info_text = "\nQueue Number: #{$queue_result['queue_number']}\nQueue Type: " . ucfirst($queue_result['queue_type']) . "\nPriority Level: {$priority_display}";
-        }
+        // Note: Queue information is NOT included in appointment confirmation emails
+        // Queue codes are only assigned during check-in process
 
         // Prepare QR code information for email
         $qr_info_html = '';
@@ -672,12 +584,7 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
                 
                 <div style="background: #0077b6; color: white; padding: 10px 15px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; margin-bottom: 20px;">
                     📋 Appointment ID: ' . htmlspecialchars($appointment_num, ENT_QUOTES, 'UTF-8') . '
-                </div>' . 
-                ($queue_result && $queue_result['success'] ? '
-                
-                <div style="background: #28a745; color: white; padding: 10px 15px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; margin-bottom: 20px; margin-left: 10px;">
-                    🎫 Queue Number: #' . htmlspecialchars($queue_result['queue_number'], ENT_QUOTES, 'UTF-8') . '
-                </div>' : '') . '
+                </div>
                 
                 <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0; border-left: 5px solid #0077b6;">
                     <h3 style="margin: 0 0 15px 0; color: #0077b6; font-size: 20px;">Appointment Details</h3>
@@ -702,7 +609,6 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
                             <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">Appointment Time:</td>
                             <td style="padding: 12px 0; color: #333;">' . htmlspecialchars($formatted_time, ENT_QUOTES, 'UTF-8') . '</td>
                         </tr>' . 
-                        $queue_info_html .
                         $qr_info_html .
                         (!empty($referral_num) ? '
                         <tr>
@@ -725,7 +631,6 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
                     <ul style="margin: 0; padding-left: 20px; color: #155724;">
                         <li><strong>Valid Government-issued ID</strong></li>
                         <li><strong>This appointment confirmation</strong></li>' .
-                        ($queue_result && $queue_result['success'] ? '<li><strong>Queue Number: #' . htmlspecialchars($queue_result['queue_number'], ENT_QUOTES, 'UTF-8') . '</strong> (show this when you arrive)</li>' : '') .
                         (!empty($referral_num) ? '<li><strong>Original referral document</strong></li>' : '') . '
                         <li><strong>PhilHealth card</strong> (if applicable)</li>
                         <li><strong>Previous medical records</strong> (if relevant)</li>
@@ -767,7 +672,6 @@ Healthcare Facility: {$facility_name}
 Service Type: {$service}
 Appointment Date: {$formatted_date}
 Appointment Time: {$formatted_time}" .
-$queue_info_text .
 $qr_info_text .
 (!empty($referral_num) ? "\nReferral Number: #{$referral_num}" : "") . "
 
@@ -775,8 +679,7 @@ IMPORTANT REMINDERS:
 • Please arrive 15 minutes before your appointment time
 • Bring a valid government-issued ID
 • Bring this appointment confirmation" .
-($queue_result && $queue_result['success'] ? "\n• Present your queue number: #{$queue_result['queue_number']}" : "") . "
-• Present your referral document (if applicable)
+"• Present your referral document (if applicable)
 • Bring your PhilHealth card (if applicable)
 
 CONTACT INFORMATION:

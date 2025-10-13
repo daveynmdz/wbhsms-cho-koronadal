@@ -100,6 +100,38 @@ try {
             'estimated_minutes' => max(1, $wait_result['waiting_ahead'] * 5) // 5 min average per patient
         ];
     }
+
+    // Get latest CHO appointment with QR code (facility_id = 1)
+    $latest_cho_appointment = null;
+    try {
+        $cho_query = "
+            SELECT 
+                a.appointment_id,
+                a.scheduled_date,
+                a.scheduled_time,
+                a.status,
+                a.qr_code_path,
+                a.qr_verification_code,
+                f.name as facility_name,
+                s.name as service_name
+            FROM appointments a
+            JOIN facilities f ON a.facility_id = f.facility_id
+            LEFT JOIN services s ON a.service_id = s.service_id
+            WHERE a.patient_id = ? 
+                AND a.facility_id = 1 
+                AND a.status IN ('confirmed', 'completed')
+            ORDER BY a.created_at DESC
+            LIMIT 1
+        ";
+        
+        $stmt = $pdo->prepare($cho_query);
+        $stmt->execute([$patient_id]);
+        $latest_cho_appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+    } catch (Exception $e) {
+        error_log("Error fetching CHO appointment: " . $e->getMessage());
+    }
+
 } catch (Exception $e) {
     error_log("Queue status error: " . $e->getMessage());
     $error_message = "Unable to retrieve queue status. Please try again.";
@@ -110,6 +142,12 @@ function formatQueueCode($queue_data)
 {
     if (!$queue_data) return '';
 
+    // Use the actual queue_code from the database if available
+    if (!empty($queue_data['queue_code'])) {
+        return $queue_data['queue_code'];
+    }
+
+    // Fallback to generated format for legacy entries
     $time_prefix = date('H', strtotime($queue_data['time_in']));
     $time_suffix = date('H', strtotime($queue_data['time_in'])) < 12 ? 'A' : 'P';
     $priority_indicator = $queue_data['priority_level'] === 'priority' ? 'P' : 'R';
@@ -691,6 +729,45 @@ $activePage = 'queue_status';
             box-shadow: var(--cho-shadow-lg);
         }
 
+        .queue-dashboard-container .info-card h4 {
+            margin: 0 0 1rem 0;
+            color: var(--cho-primary);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .queue-dashboard-container .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .queue-dashboard-container .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .queue-dashboard-container .summary-label {
+            font-size: 0.9rem;
+            color: var(--cho-secondary);
+            font-weight: 600;
+        }
+
+        .queue-dashboard-container .summary-value {
+            font-size: 1rem;
+            color: var(--cho-primary-dark);
+            font-weight: 500;
+        }
+
+        .queue-dashboard-container .summary-value.highlight {
+            font-weight: 700;
+            color: var(--cho-primary);
+            font-size: 1.1rem;
+        }
+
         .queue-dashboard-container .wait-time-display {
             font-size: 2rem;
             font-weight: bold;
@@ -1022,6 +1099,89 @@ $activePage = 'queue_status';
                                 <a href="../appointment/appointments.php/" class="btn btn-primary">
                                     <i class="fas fa-calendar-alt"></i> View My Appointments
                                 </a>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Latest CHO Appointment Section -->
+                <?php if ($latest_cho_appointment): ?>
+                    <div class="dashboard-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <i class="fas fa-hospital"></i>
+                                Latest CHO Appointment
+                            </div>
+                        </div>
+                        <div class="section-body">
+                            <div class="info-cards">
+                                <div class="info-card">
+                                    <h4><i class="fas fa-ticket-alt"></i> Appointment Details</h4>
+                                    <div class="summary-grid">
+                                        <div class="summary-item">
+                                            <div class="summary-label">Appointment ID</div>
+                                            <div class="summary-value highlight">APT-<?php echo str_pad($latest_cho_appointment['appointment_id'], 8, '0', STR_PAD_LEFT); ?></div>
+                                        </div>
+                                        <div class="summary-item">
+                                            <div class="summary-label">Facility</div>
+                                            <div class="summary-value"><?php echo htmlspecialchars($latest_cho_appointment['facility_name']); ?></div>
+                                        </div>
+                                        <div class="summary-item">
+                                            <div class="summary-label">Service</div>
+                                            <div class="summary-value"><?php echo htmlspecialchars($latest_cho_appointment['service_name'] ?? 'General Consultation'); ?></div>
+                                        </div>
+                                        <div class="summary-item">
+                                            <div class="summary-label">Scheduled Date</div>
+                                            <div class="summary-value"><?php echo date('F j, Y (l)', strtotime($latest_cho_appointment['scheduled_date'])); ?></div>
+                                        </div>
+                                        <div class="summary-item">
+                                            <div class="summary-label">Scheduled Time</div>
+                                            <div class="summary-value"><?php echo date('g:i A', strtotime($latest_cho_appointment['scheduled_time'])); ?></div>
+                                        </div>
+                                        <div class="summary-item">
+                                            <div class="summary-label">Status</div>
+                                            <div class="summary-value" style="color: <?php echo $latest_cho_appointment['status'] === 'confirmed' ? '#28a745' : '#17a2b8'; ?>;">
+                                                <i class="fas fa-<?php echo $latest_cho_appointment['status'] === 'confirmed' ? 'check-circle' : 'clock'; ?>"></i>
+                                                <?php echo ucfirst($latest_cho_appointment['status']); ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <?php if ($latest_cho_appointment['qr_code_path']): ?>
+                                    <div class="info-card">
+                                        <h4><i class="fas fa-qrcode"></i> QR Code for Check-in</h4>
+                                        <div style="text-align: center; padding: 1rem;">
+                                            <div class="qr-code-container" style="background: white; padding: 1rem; border-radius: 10px; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                                                <img src="data:image/png;base64,<?php echo base64_encode($latest_cho_appointment['qr_code_path']); ?>" 
+                                                     alt="Appointment QR Code" 
+                                                     style="width: 180px; height: 180px; border: 1px solid #dee2e6; border-radius: 4px;">
+                                            </div>
+                                            <?php if ($latest_cho_appointment['qr_verification_code']): ?>
+                                                <div style="margin-top: 1rem;">
+                                                    <div class="summary-item">
+                                                        <div class="summary-label">Verification Code</div>
+                                                        <div class="summary-value" style="font-family: monospace; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; font-weight: bold;">
+                                                            <?php echo htmlspecialchars($latest_cho_appointment['qr_verification_code']); ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endif; ?>
+                                            <div style="margin-top: 1rem; font-size: 0.9rem; color: #6c757d;">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Present this QR code at check-in for instant verification
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="info-card">
+                                        <h4><i class="fas fa-qrcode"></i> QR Code Status</h4>
+                                        <div class="alert alert-warning" style="margin: 0;">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            QR code not available for this appointment
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
