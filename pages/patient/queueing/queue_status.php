@@ -101,40 +101,44 @@ try {
         ];
     }
 
-    // Get latest CHO appointment with QR code (facility_id = 1)
-    $latest_cho_appointment = null;
-    try {
-        $cho_query = "
-            SELECT 
-                a.appointment_id,
-                a.scheduled_date,
-                a.scheduled_time,
-                a.status,
-                a.qr_code_path,
-                a.qr_verification_code,
-                f.name as facility_name,
-                s.name as service_name
-            FROM appointments a
-            JOIN facilities f ON a.facility_id = f.facility_id
-            LEFT JOIN services s ON a.service_id = s.service_id
-            WHERE a.patient_id = ? 
-                AND a.facility_id = 1 
-                AND a.status IN ('confirmed', 'completed')
-            ORDER BY a.created_at DESC
-            LIMIT 1
-        ";
-        
-        $stmt = $pdo->prepare($cho_query);
-        $stmt->execute([$patient_id]);
-        $latest_cho_appointment = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-    } catch (Exception $e) {
-        error_log("Error fetching CHO appointment: " . $e->getMessage());
-    }
-
 } catch (Exception $e) {
     error_log("Queue status error: " . $e->getMessage());
     $error_message = "Unable to retrieve queue status. Please try again.";
+}
+
+// Initialize latest CHO appointment variable outside try block
+if (!isset($latest_cho_appointment)) {
+    $latest_cho_appointment = null;
+}
+
+// Get latest CHO appointment with QR code (facility_id = 1)
+try {
+    $cho_query = "
+        SELECT 
+            a.appointment_id,
+            a.scheduled_date,
+            a.scheduled_time,
+            a.status,
+            a.qr_code_path,
+            f.name as facility_name,
+            s.name as service_name
+        FROM appointments a
+        JOIN facilities f ON a.facility_id = f.facility_id
+        LEFT JOIN services s ON a.service_id = s.service_id
+        WHERE a.patient_id = ? 
+            AND a.facility_id = 1 
+            AND a.status IN ('confirmed', 'completed', 'checked_in')
+        ORDER BY a.created_at DESC
+        LIMIT 1
+    ";
+    
+    $stmt = $pdo->prepare($cho_query);
+    $stmt->execute([$patient_id]);
+    $latest_cho_appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+} catch (Exception $e) {
+    error_log("Error fetching CHO appointment: " . $e->getMessage());
+    $latest_cho_appointment = null;
 }
 
 // Generate queue code with time-priority format

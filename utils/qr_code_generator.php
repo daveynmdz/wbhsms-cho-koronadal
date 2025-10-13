@@ -115,14 +115,28 @@ class QRCodeGenerator {
                 return $stmt->execute([$qr_image_data, $appointment_id]);
                 
             } elseif ($connection instanceof mysqli) {
-                // MySQLi version
+                // MySQLi version - fix for binary data
                 $stmt = $connection->prepare("
                     UPDATE appointments 
                     SET qr_code_path = ? 
                     WHERE appointment_id = ?
                 ");
-                $stmt->bind_param("bi", $qr_image_data, $appointment_id);
-                return $stmt->execute();
+                
+                if (!$stmt) {
+                    error_log("Prepare failed: " . $connection->error);
+                    return false;
+                }
+                
+                // Bind parameters - use 's' for string data and 'i' for integer
+                $stmt->bind_param("si", $qr_image_data, $appointment_id);
+                $result = $stmt->execute();
+                
+                if (!$result) {
+                    error_log("Execute failed: " . $stmt->error);
+                }
+                
+                $stmt->close();
+                return $result;
                 
             } else {
                 throw new Exception('Unsupported database connection type');

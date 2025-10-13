@@ -483,9 +483,13 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
         // Prepare QR code information for email
         $qr_info_html = '';
         $qr_info_text = '';
-        $has_qr_image = false;
+        $qr_image_cid = '';
+        $qr_image_path = '';
+        $qr_verification_code = '';
         
         if ($qr_result && $qr_result['success']) {
+            $qr_verification_code = $qr_result['verification_code'] ?? 'N/A';
+            
             // Get QR code from database
             global $conn;
             $stmt = $conn->prepare("SELECT qr_code_path FROM appointments WHERE appointment_id = ?");
@@ -498,9 +502,27 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
             $stmt->close();
             
             if ($appointment_data && $appointment_data['qr_code_path']) {
-                $has_qr_image = true;
-                $qr_verification_code = $qr_result['verification_code'] ?? 'N/A';
+                $qr_image_cid = 'qr_code_' . $appointment_id;
+                $qr_image_path = $appointment_data['qr_code_path'];
                 
+                $qr_info_html = '
+                        <tr style="border-bottom: 1px solid #e9ecef;">
+                            <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">QR Code:</td>
+                            <td style="padding: 12px 0; text-align: center;">
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 2px solid #0077b6;">
+                                    <img src="cid:' . $qr_image_cid . '" alt="QR Code for Check-in" style="max-width: 150px; height: auto; display: block; margin: 0 auto;"/>
+                                    <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">Scan this QR code at the facility for check-in</p>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr' . (!empty($referral_num) ? ' style="border-bottom: 1px solid #e9ecef;"' : '') . '>
+                            <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">Verification Code:</td>
+                            <td style="padding: 12px 0; color: #333; font-family: monospace; background: #f8f9fa; padding: 8px; border-radius: 4px;">' . htmlspecialchars($qr_verification_code, ENT_QUOTES, 'UTF-8') . '</td>
+                        </tr>';
+                
+                $qr_info_text = "\nQR Code: Available for seamless check-in\nVerification Code: {$qr_verification_code}";
+            } else {
+                // QR data exists but no QR image path
                 $qr_info_html = '
                         <tr style="border-bottom: 1px solid #e9ecef;">
                             <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">QR Code:</td>
@@ -695,42 +717,10 @@ This is an automated message. Please do not reply to this email.
 © " . date('Y') . " CHO Koronadal. All rights reserved.";
 
         // Embed QR code if available
-        if ($has_qr_image && isset($appointment_data['qr_code_path'])) {
+        if (!empty($qr_image_path)) {
             try {
-                // Create temporary file for QR code
-                $temp_qr_file = tempnam(sys_get_temp_dir(), 'qr_appointment_');
-                file_put_contents($temp_qr_file, $appointment_data['qr_code_path']);
-                
                 // Add QR code as embedded image
-                $mail->addEmbeddedImage($temp_qr_file, 'qr_code', 'appointment_qr.png', 'base64', 'image/png');
-                
-                // Update email body to include QR code display
-                $qr_section = '
-                <div style="background: #f8f9fa; border: 2px dashed #6c757d; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-                    <h4 style="margin: 0 0 15px 0; color: #495057;">📱 Your QR Code for Check-in</h4>
-                    <img src="cid:qr_code" alt="Appointment QR Code" style="max-width: 200px; height: auto; border: 1px solid #dee2e6; border-radius: 4px;">
-                    <p style="margin: 15px 0 5px 0; color: #6c757d; font-size: 14px;">
-                        <strong>Scan this QR code at the check-in station for instant verification</strong>
-                    </p>
-                    <p style="margin: 0; color: #6c757d; font-size: 12px;">
-                        Verification Code: <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; border-radius: 3px;">' . htmlspecialchars($qr_verification_code, ENT_QUOTES, 'UTF-8') . '</span>
-                    </p>
-                </div>';
-                
-                // Insert QR section before the contact information
-                $mail->Body = str_replace(
-                    '<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">',
-                    $qr_section . '<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">',
-                    $mail->Body
-                );
-                
-                // Clean up temp file after sending
-                register_shutdown_function(function() use ($temp_qr_file) {
-                    if (file_exists($temp_qr_file)) {
-                        unlink($temp_qr_file);
-                    }
-                });
-                
+                $mail->addEmbeddedImage($qr_image_path, $qr_image_cid, 'appointment_qr.png', 'base64', 'image/png');
             } catch (Exception $qr_e) {
                 error_log("Failed to embed QR code in email: " . $qr_e->getMessage());
                 // Continue without QR code if embedding fails
