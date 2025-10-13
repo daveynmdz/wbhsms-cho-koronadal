@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Start output buffering immediately to prevent any header issues
 ob_start();
 
@@ -31,9 +31,20 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // If user is not logged in, redirect to login
 if (!is_patient_logged_in()) {
-    ob_clean(); // Clear output buffer before redirect
-    header("Location: ../auth/patient_login.php");
-    exit();
+    // Clear any output buffer content
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Check if headers can still be sent
+    if (!headers_sent()) {
+        header("Location: ../auth/patient_login.php");
+        exit();
+    } else {
+        // Fallback if headers already sent
+        echo '<script>window.location.href = "../auth/patient_login.php";</script>';
+        exit();
+    }
 }
 
 $patient_id = get_patient_session('patient_id');

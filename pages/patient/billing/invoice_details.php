@@ -35,9 +35,20 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Authentication check
 if (!is_patient_logged_in()) {
-    ob_clean(); // Clear output buffer before redirect
-    header("Location: ../auth/patient_login.php");
-    exit();
+    // Clear any output buffer content
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Check if headers can still be sent
+    if (!headers_sent()) {
+        header("Location: ../auth/patient_login.php");
+        exit();
+    } else {
+        // Fallback if headers already sent
+        echo '<script>window.location.href = "../auth/patient_login.php";</script>';
+        exit();
+    }
 }
 
 // Get billing ID from URL
