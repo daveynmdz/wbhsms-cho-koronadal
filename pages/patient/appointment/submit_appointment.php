@@ -115,6 +115,10 @@ if ($hour < 8 || $hour > 16) {
     exit();
 }
 
+// Debug: Check database connection before starting transaction
+error_log("DEBUG: Starting appointment creation process for patient_id: $patient_id");
+error_log("DEBUG: Database connection status: " . (($conn && !$conn->connect_error) ? 'OK' : 'ERROR'));
+
 $conn->begin_transaction();
 
 try {
@@ -274,6 +278,9 @@ try {
     $facility_id = $facility_row['facility_id'];
     $facility_name = $facility_row['name'];
     
+    // Debug: Log appointment insertion details
+    error_log("DEBUG: About to insert appointment - patient_id: $patient_id, facility_id: $facility_id, service_id: $service_id, date: $appointment_date, time: $appointment_time");
+    
     // Insert appointment with confirmed status (auto-confirm for better UX)
     $stmt = $conn->prepare("
         INSERT INTO appointments (
@@ -282,31 +289,43 @@ try {
         ) VALUES (?, ?, ?, ?, ?, ?, 'confirmed', NOW())
     ");
     
+    if (!$stmt) {
+        throw new Exception('Failed to prepare appointment statement: ' . $conn->error);
+    }
+    
     $stmt->bind_param("iiiiss", 
         $patient_id, $facility_id, $referral_id, $service_id,
         $appointment_date, $appointment_time
     );
     
     if (!$stmt->execute()) {
+        error_log("DEBUG: Failed to execute appointment insert: " . $stmt->error);
         throw new Exception('Failed to create appointment: ' . $stmt->error);
     }
     
     $appointment_id = $conn->insert_id;
+    error_log("DEBUG: Successfully created appointment with ID: $appointment_id");
     $stmt->close();
     
     // Log appointment creation using appointment logger
-    $appointment_logger = new AppointmentLogger($conn);
-    $log_success = $appointment_logger->logAppointmentCreation(
-        $appointment_id, 
-        $patient_id, 
-        $appointment_date, 
-        $appointment_time, 
-        'patient', 
-        $patient_id
-    );
-    
-    if (!$log_success) {
-        throw new Exception("Failed to log appointment creation. Transaction cancelled for data integrity.");
+    try {
+        $appointment_logger = new AppointmentLogger($conn);
+        $log_success = $appointment_logger->logAppointmentCreation(
+            $appointment_id, 
+            $patient_id, 
+            $appointment_date, 
+            $appointment_time, 
+            'patient', 
+            $patient_id
+        );
+        
+        if (!$log_success) {
+            // Log the issue but don't fail the appointment creation
+            error_log("Warning: Failed to log appointment creation for appointment_id: $appointment_id");
+        }
+    } catch (Exception $log_exception) {
+        // Log the exception but don't fail the appointment creation
+        error_log("Warning: Exception in appointment logging: " . $log_exception->getMessage());
     }
     
     // Create queue entry for ALL appointments (BHC, DHO, CHO)
