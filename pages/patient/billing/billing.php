@@ -7,13 +7,28 @@ if (ob_get_length()) {
     ob_clean();
 }
 
+// Set error reporting for debugging but don't display errors in production
+error_reporting(E_ALL);
+ini_set('display_errors', '0');  // Never show errors to users in production
+ini_set('log_errors', '1');      // Log errors for debugging
+
 // Patient Billing Dashboard - Professional Healthcare Billing Interface
 $root_path = dirname(dirname(dirname(__DIR__)));
+
+// Load configuration first
+require_once $root_path . '/config/env.php';
+
+// Then load session management
 require_once $root_path . '/config/session/patient_session.php';
-require_once $root_path . '/config/db.php';
+
+// Ensure session is properly started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // If user is not logged in, redirect to login
 if (!is_patient_logged_in()) {
+    ob_clean(); // Clear output buffer before redirect
     header("Location: ../auth/patient_login.php");
     exit();
 }
