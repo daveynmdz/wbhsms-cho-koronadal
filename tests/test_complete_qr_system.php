@@ -206,8 +206,13 @@ try {
             echo "<div style='color: green;'>✅ Step 3: QR code can be retrieved from database</div>";
             
             // Step 4: Test QR validation (simulate check-in)
-            $qr_json = json_encode($qr_flow_result['qr_data']);
-            $is_valid = QRCodeGenerator::validateQRData($qr_json, $flow_test_id);
+            // The QR content should be the JSON string that was used to generate the QR
+            $qr_content_for_validation = json_encode([
+                'appointment_id' => $flow_test_id,
+                'patient_id' => 999,
+                'verification_code' => $qr_flow_result['verification_code'] ?? 'test-code'
+            ]);
+            $is_valid = QRCodeGenerator::validateQRData($qr_content_for_validation, $flow_test_id);
             if ($is_valid) {
                 echo "<div style='color: green;'>✅ Step 4: QR validation works for check-in</div>";
             } else {

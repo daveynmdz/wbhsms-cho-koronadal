@@ -46,10 +46,11 @@ try {
         $contact_number = '09123456789';
         $email = 'test@example.com';
         $address = 'Test Address';
+        $patient_number = $test_patient_number;
         
         $stmt->bind_param("ssssssss", 
             $first_name, $last_name, $date_of_birth, $gender,
-            $contact_number, $email, $address, $test_patient_number
+            $contact_number, $email, $address, $patient_number
         );
         
         if ($stmt->execute()) {

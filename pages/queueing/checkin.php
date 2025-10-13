@@ -257,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SELECT a.appointment_id, a.patient_id, a.scheduled_date, a.scheduled_time, a.status, a.service_id,
                            p.first_name, p.last_name, p.date_of_birth, p.isSenior, p.isPWD,
                            b.barangay_name,
-                           s.service_name,
+                           s.name as service_name,
                            CASE 
                                WHEN p.isSenior = 1 OR p.isPWD = 1 THEN 'priority'
                                ELSE 'normal'
@@ -328,9 +328,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("
                         SELECT a.*, 
                                p.first_name, p.last_name, p.middle_name, p.date_of_birth, 
-                               p.gender, p.isSenior, p.isPWD, p.email, p.phone,
+                               p.sex as gender, p.isSenior, p.isPWD, p.email, p.contact_number as phone,
                                b.barangay_name,
-                               s.service_name,
+                               s.name as service_name,
                                f.name as facility_name,
                                r.referral_reason, r.referred_by, r.referral_num,
                                v.visit_id as already_checked_in,
@@ -382,7 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        a.status, a.service_id,
                        p.first_name, p.last_name, p.date_of_birth, p.isSenior, p.isPWD, p.philhealth_id_number as philhealth_id,
                        b.barangay_name as barangay,
-                       s.service_name,
+                       s.name as service_name,
                        CASE 
                            WHEN p.isSenior = 1 OR p.isPWD = 1 THEN 'priority'
                            ELSE 'normal'
