@@ -6,31 +6,40 @@
  * It ensures patient sessions are separate from employee sessions.
  */
 
-// Check if a session is already active - we don't want to start another one
-if (session_status() === PHP_SESSION_NONE) {
-    // Configure session settings
-    ini_set('session.use_only_cookies', '1');
-    ini_set('session.use_strict_mode', '1');
-    ini_set('session.cookie_httponly', '1');
-    ini_set('session.cookie_samesite', 'Lax');
-    ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
-    
-    // Set unique session name for patients
-    session_name('PATIENT_SESSID');
-    
-    // Set cookie path to restrict to patient areas
-    // Exclude the management path to prevent conflicts with employee sessions
-    session_set_cookie_params([
-        'lifetime' => 0, // 0 = until browser is closed
-        'path' => '/', // Root path
-        'domain' => '', // Current domain
-        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'),
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    
-    // Start the session
-    session_start();
+// Check if headers have already been sent
+if (headers_sent($file, $line)) {
+    // If headers are already sent, we can't modify session settings
+    // Just start the session with existing settings
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+} else {
+    // Headers not sent yet, we can configure session settings
+    if (session_status() === PHP_SESSION_NONE) {
+        // Configure session settings
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_samesite', 'Lax');
+        ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? '1' : '0');
+        
+        // Set unique session name for patients
+        session_name('PATIENT_SESSID');
+        
+        // Set cookie path to restrict to patient areas
+        // Exclude the management path to prevent conflicts with employee sessions
+        session_set_cookie_params([
+            'lifetime' => 0, // 0 = until browser is closed
+            'path' => '/', // Root path
+            'domain' => '', // Current domain
+            'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'),
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        
+        // Start the session
+        session_start();
+    }
 }
 
 /**

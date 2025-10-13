@@ -1,4 +1,7 @@
 ﻿<?php
+// Start output buffering to prevent header issues
+ob_start();
+
 // Patient Billing Dashboard - Professional Healthcare Billing Interface
 $root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/patient_session.php';
@@ -1321,3 +1324,7 @@ try {
     </script>
 </body>
 </html>
+<?php
+// Flush output buffer
+ob_end_flush();
+?>
