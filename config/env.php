@@ -16,13 +16,18 @@ function loadEnvFile($envPath) {
     }
 }
 
-// Load .env only if not running in Docker
+// Load .env files - .env.local overrides .env for local development
 if (!getenv('DB_HOST')) {
     $root_dir = dirname(__DIR__);
+    
+    // Load production .env first
     if (file_exists($root_dir . '/.env')) {
         loadEnvFile($root_dir . '/.env');
-    } elseif (file_exists(__DIR__ . '/.env.local')) {
-        loadEnvFile(__DIR__ . '/.env.local');
+    }
+    
+    // Then load .env.local to override for local development
+    if (file_exists($root_dir . '/.env.local')) {
+        loadEnvFile($root_dir . '/.env.local');
     }
 }
 
@@ -45,7 +50,9 @@ try {
     // Log error instead of outputting it to prevent headers issues
     error_log("Database connection failed: " . $e->getMessage());
     
-    // In production/deployment, you might want to show a generic error
-    // For now, we'll exit with the error to help with debugging
-    exit("Database connection failed. Please check your configuration.");
+    // Set $pdo to null so other parts of the application can handle gracefully
+    $pdo = null;
+    
+    // Store the error message for display if needed
+    $db_connection_error = $e->getMessage();
 }

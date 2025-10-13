@@ -36,7 +36,7 @@ $employee_id = $_SESSION['employee_id'];
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
-    $queue_service = new QueueManagementService($conn);
+    $queue_service = new QueueManagementService($pdo);
     
     switch ($method) {
         case 'GET':

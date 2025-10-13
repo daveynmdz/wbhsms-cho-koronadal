@@ -118,9 +118,9 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= $nav_base ?>management/records_officer/patient_records.php"
+        <a href="<?= $nav_base ?>management/records_officer/patient_records_management.php"
             class="<?= $activePage === 'patient_records' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-folder-open"></i> Patient Records
+            <i class="fas fa-user-injured"></i> Patient Records
         </a>
         <a href="<?= $nav_base ?>management/records_officer/medical_records.php"
             class="<?= $activePage === 'medical_records' ? 'active' : '' ?>" role="menuitem">

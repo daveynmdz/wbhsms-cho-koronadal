@@ -1,15 +1,36 @@
 <?php
 // dashboard_patient.php - moved from dashboard folder to patient folder
+
+// Start output buffering at the very beginning
+ob_start();
+
+// Set error reporting for debugging but don't display errors in production
+error_reporting(E_ALL);
+ini_set('display_errors', '0');  // Never show errors to users in production
+ini_set('log_errors', '1');      // Log errors for debugging
+
+// Cache control headers
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
 // Include patient session configuration - Use absolute path resolution
 $root_path = dirname(dirname(__DIR__));
+
+// Load configuration first
+require_once $root_path . '/config/env.php';
+
+// Then load session management
 require_once $root_path . '/config/session/patient_session.php';
+
+// Ensure session is properly started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // If user is not logged in, bounce to login
 if (!is_patient_logged_in()) {
+    ob_clean(); // Clear output buffer before redirect
     header('Location: auth/patient_login.php'); // correct path to auth folder
     exit();
 }
@@ -687,8 +708,6 @@ if (!isset($defaults)) {
                 <?php endif; ?>
             </div>
         </section>
-
-        <hr class="section-divider">
 
         <section class="quick-actions">
             <h2 class="actions-title">Quick Actions</h2>

@@ -5,8 +5,15 @@
 require_once __DIR__ . '/queue_management_service.php';
 
 // Initialize the service if database connection exists
-if (isset($conn)) {
-    $queueService = new QueueManagementService($conn);
+if (isset($pdo)) {
+    $queueService = new QueueManagementService($pdo);
+} elseif (isset($conn)) {
+    // Fallback to MySQLi - but QueueManagementService expects PDO
+    // We need to use the global PDO connection
+    global $pdo;
+    if ($pdo) {
+        $queueService = new QueueManagementService($pdo);
+    }
 }
 
 /**
@@ -14,13 +21,28 @@ if (isset($conn)) {
  * Compatibility function for dashboard files
  */
 function getStaffAssignment($employee_id, $date = null) {
-    global $queueService, $conn;
+    global $queueService, $pdo, $conn;
     
-    if (!$queueService && $conn) {
-        $queueService = new QueueManagementService($conn);
+    // Try to get PDO connection first
+    if (!$queueService) {
+        if (isset($pdo) && $pdo) {
+            $queueService = new QueueManagementService($pdo);
+        } elseif (isset($conn) && $conn) {
+            // Fallback: need to create PDO from MySQLi config
+            try {
+                require_once __DIR__ . '/../config/db.php';
+                if (isset($pdo) && $pdo) {
+                    $queueService = new QueueManagementService($pdo);
+                }
+            } catch (Exception $e) {
+                error_log('Staff assignment: Failed to get PDO connection: ' . $e->getMessage());
+                return null;
+            }
+        }
     }
     
     if (!$queueService) {
+        error_log('Staff assignment: No database connection available');
         return null;
     }
     
@@ -28,15 +50,20 @@ function getStaffAssignment($employee_id, $date = null) {
         $date = date('Y-m-d');
     }
     
-    return $queueService->getActiveStationByEmployee($employee_id, $date);
+    try {
+        return $queueService->getActiveStationByEmployee($employee_id, $date);
+    } catch (Exception $e) {
+        error_log('Staff assignment error: ' . $e->getMessage());
+        return null;
+    }
 }
 
 /**
  * Get all assignments for a specific date
  * Compatibility function for admin staff assignments page
  */
-function getAllAssignmentsForDate($conn, $date) {
-    $queueService = new QueueManagementService($conn);
+function getAllAssignmentsForDate($pdo, $date) {
+    $queueService = new QueueManagementService($pdo);
     return $queueService->getAllStationsWithAssignments($date);
 }
 
@@ -45,7 +72,8 @@ function getAllAssignmentsForDate($conn, $date) {
  * Compatibility function with new signature
  */
 function assignStaffToStation($conn, $employee_id, $station_type, $station_number, $assigned_date, $shift_start = '08:00:00', $shift_end = '17:00:00', $assigned_by = null) {
-    $queueService = new QueueManagementService($conn);
+    global $pdo;
+    $queueService = new QueueManagementService($pdo);
     
     // Find station ID based on type and number (for backward compatibility)
     $stmt = $conn->prepare("SELECT station_id FROM stations WHERE station_type = ? AND station_number = ? AND is_active = 1 LIMIT 1");
@@ -76,7 +104,8 @@ function assignStaffToStation($conn, $employee_id, $station_type, $station_numbe
  * Compatibility function
  */
 function unassignStaffFromStation($conn, $employee_id, $station_type, $station_number, $assigned_date) {
-    $queueService = new QueueManagementService($conn);
+    global $pdo;
+    $queueService = new QueueManagementService($pdo);
     
     // Find station ID based on type and number
     $stmt = $conn->prepare("SELECT station_id FROM stations WHERE station_type = ? AND station_number = ? AND is_active = 1 LIMIT 1");
@@ -103,10 +132,10 @@ function unassignStaffFromStation($conn, $employee_id, $station_type, $station_n
  * New function for enhanced functionality
  */
 function getEmployeeAssignmentHistory($employee_id, $limit = 10) {
-    global $queueService, $conn;
+    global $queueService, $pdo;
     
-    if (!$queueService && $conn) {
-        $queueService = new QueueManagementService($conn);
+    if (!$queueService && $pdo) {
+        $queueService = new QueueManagementService($pdo);
     }
     
     if (!$queueService) {
@@ -121,10 +150,10 @@ function getEmployeeAssignmentHistory($employee_id, $limit = 10) {
  * New function for enhanced functionality
  */
 function getStationAssignmentHistory($station_id, $limit = 10) {
-    global $queueService, $conn;
+    global $queueService, $pdo;
     
-    if (!$queueService && $conn) {
-        $queueService = new QueueManagementService($conn);
+    if (!$queueService && $pdo) {
+        $queueService = new QueueManagementService($pdo);
     }
     
     if (!$queueService) {

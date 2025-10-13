@@ -65,7 +65,8 @@ function renderTopbar($options = []) {
         'back_url' => 'dashboard.php',
         'user_type' => 'employee', // 'employee' or 'patient'
         'logo_clickable' => false,
-        'css_path' => '../../../assets/css/topbar.css' // Relative path to topbar.css
+        'css_path' => '../../../assets/css/topbar.css', // Relative path to topbar.css
+        'vendor_path' => '../../../../vendor/' // Relative path to vendor directory
     ];
     
     $config = array_merge($defaults, $options);
@@ -118,7 +119,7 @@ function renderTopbar($options = []) {
                 </strong><br>
                 <small style="color: #ffffff;">{$role}</small>
             </div>
-            <img src="../../../vendor/photo_controller.php?{$photo_param}={$user_id}" alt="User Profile"
+            <img src="{$config['vendor_path']}photo_controller.php?{$photo_param}={$user_id}" alt="User Profile"
                 class="topbar-userphoto"
                 onerror="this.onerror=null;this.src='https://ik.imagekit.io/wbhsmslogo/user.png?updatedAt=1750423429172';" />
         </div>

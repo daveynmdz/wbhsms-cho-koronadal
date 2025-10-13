@@ -1,10 +1,29 @@
 <?php
+// Start output buffering at the very beginning
+ob_start();
+
+// Set error reporting for debugging but don't display errors in production
+error_reporting(E_ALL);
+ini_set('display_errors', '0');  // Never show errors to users in production
+ini_set('log_errors', '1');      // Log errors for debugging
+
 // Include patient session configuration FIRST - before any output
 $root_path = dirname(dirname(dirname(__DIR__)));
+
+// Load configuration first
+require_once $root_path . '/config/env.php';
+
+// Then load session management
 require_once $root_path . '/config/session/patient_session.php';
+
+// Ensure session is properly started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // If user is not logged in, redirect to login
 if (!isset($_SESSION['patient_id'])) {
+    ob_clean(); // Clear output buffer before redirect
     header('Location: ../auth/patient_login.php');
     exit();
 }
@@ -1118,7 +1137,7 @@ try {
         <!-- Breadcrumb Navigation -->
         <div class="breadcrumb" style="margin-top: 50px;">
             <a href="../dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-            <span> / </span>
+            <span> > </span>
             <span style="color: #0077b6; font-weight: 600;">My Appointments</span>
         </div>
 
@@ -1296,6 +1315,19 @@ try {
                                         </span>
                                     </div>
                                 <?php endif; ?>
+                                
+                                <?php if ($appointment['qr_code_path']): ?>
+                                    <div class="info-row qr-section">
+                                        <i class="fas fa-qrcode"></i>
+                                        <strong>QR Code:</strong>
+                                        <span class="value">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="showQRCode(<?php echo $appointment['appointment_id']; ?>)">
+                                                <i class="fas fa-qrcode"></i> View QR Code
+                                            </button>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                                
                                 <div class="info-row">
                                     <i class="fas fa-calendar-plus"></i>
                                     <strong>Booked:</strong>
@@ -1423,6 +1455,44 @@ try {
                 </button>
                 <button type="button" class="btn btn-primary" onclick="printAppointment()">
                     <i class="fas fa-print"></i> Print Details
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qrModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px; margin: 10% auto;">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-qrcode"></i>
+                    <span>QR Code for Check-in</span>
+                </h3>
+                <button class="close" onclick="closeQRModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 2rem;">
+                <div id="qr-code-container">
+                    <!-- QR code will be loaded here -->
+                </div>
+                <div id="qr-instructions" style="margin-top: 1rem; color: #6c757d; font-size: 0.9rem;">
+                    <p><i class="fas fa-info-circle"></i> Show this QR code at the check-in station for instant verification</p>
+                    <p><strong>Appointment ID:</strong> <span id="qr-appointment-id"></span></p>
+                </div>
+                <div id="qr-loading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Loading QR code...</p>
+                </div>
+                <div id="qr-error" style="display: none; color: #dc3545;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load QR code. Please try again.</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button type="button" class="btn btn-secondary" onclick="closeQRModal()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="downloadQR()" id="download-qr-btn" style="display: none;">
+                    <i class="fas fa-download"></i> Download QR
                 </button>
             </div>
         </div>
@@ -2138,6 +2208,63 @@ try {
             document.querySelectorAll('.appointment-card, .referral-card').forEach(card => {
                 card.style.transition = 'all 0.3s ease';
             });
+        });
+
+        // QR Code Modal Functions
+        function showQRCode(appointmentId) {
+            document.getElementById('qrModal').style.display = 'block';
+            document.getElementById('qr-loading').style.display = 'block';
+            document.getElementById('qr-code-container').style.display = 'none';
+            document.getElementById('qr-error').style.display = 'none';
+            document.getElementById('download-qr-btn').style.display = 'none';
+            
+            // Set appointment ID
+            document.getElementById('qr-appointment-id').textContent = 'APT-' + String(appointmentId).padStart(8, '0');
+            
+            // Fetch QR code from server
+            fetch('get_qr_code.php?appointment_id=' + appointmentId)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('qr-loading').style.display = 'none';
+                    
+                    if (data.success && data.qr_image) {
+                        document.getElementById('qr-code-container').innerHTML = 
+                            '<img src="data:image/png;base64,' + data.qr_image + '" alt="QR Code" style="max-width: 250px; border: 1px solid #dee2e6; border-radius: 8px;">';
+                        document.getElementById('qr-code-container').style.display = 'block';
+                        document.getElementById('download-qr-btn').style.display = 'inline-block';
+                    } else {
+                        document.getElementById('qr-error').style.display = 'block';
+                        document.getElementById('qr-error').innerHTML = 
+                            '<i class="fas fa-exclamation-triangle"></i><p>' + (data.message || 'Failed to load QR code') + '</p>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('qr-loading').style.display = 'none';
+                    document.getElementById('qr-error').style.display = 'block';
+                    console.error('Error fetching QR code:', error);
+                });
+        }
+
+        function closeQRModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+
+        function downloadQR() {
+            const qrImage = document.querySelector('#qr-code-container img');
+            if (qrImage) {
+                const link = document.createElement('a');
+                link.download = document.getElementById('qr-appointment-id').textContent + '_QR.png';
+                link.href = qrImage.src;
+                link.click();
+            }
+        }
+
+        // Close QR modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const qrModal = document.getElementById('qrModal');
+            if (event.target === qrModal) {
+                closeQRModal();
+            }
         });
     </script>
 

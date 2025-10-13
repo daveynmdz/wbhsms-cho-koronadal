@@ -38,17 +38,21 @@ error_log('BHW Dashboard - Session Data: ' . print_r($_SESSION, true));
 require_once $root_path . '/utils/staff_assignment.php';
 $employee_id = $_SESSION['employee_id'];
 
-// Enforce staff assignment for today
-$assignment = getStaffAssignment($employee_id);
-if (!$assignment) {
-    // Not assigned today, block access
-    error_log('BHW Dashboard: No active staff assignment for today.');
-    $_SESSION['flash'] = array('type' => 'error', 'msg' => 'You are not assigned to any station today. Please contact the administrator.');
-    header('Location: ../auth/employee_login.php?not_assigned=1');
-    exit();
-}
-
-$employee_name = $_SESSION['employee_name'] ?? ($_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name']);
+// Check staff assignment for today (non-blocking)
+$assignment = null;
+$assignment_warning = '';
+try {
+    $assignment = getStaffAssignment($employee_id);
+    if (!$assignment) {
+        // Not assigned today, but allow access with warning
+        error_log('BHW Dashboard: No active staff assignment for today - allowing access with warning.');
+        $assignment_warning = 'You are not assigned to any station today. Some queue management features may be limited. Please contact the administrator if you need station access.';
+    }
+} catch (Exception $e) {
+    // Staff assignment function failed, log error but continue
+    error_log('BHW Dashboard: Staff assignment check failed: ' . $e->getMessage());
+    $assignment_warning = 'Unable to verify station assignment. Some features may be limited.';
+}$employee_name = $_SESSION['employee_name'] ?? ($_SESSION['employee_first_name'] . ' ' . $_SESSION['employee_last_name']);
 $employee_number = $_SESSION['employee_number'] ?? 'N/A';
 $role = $_SESSION['role'] ?? 'BHW';
 
@@ -573,10 +577,17 @@ $stats = [
                 <a href="../auth/employee_logout.php" class="btn btn-outline">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </a>
-            </div>
-        </section>
+            </div>        </section>
         
-        <!-- System Overview Card -->
+        <!-- Assignment Warning (if applicable) -->
+        <?php if (!empty($assignment_warning)): ?>
+        <section class="info-card" style="border-left-color: #ffc107; background: #fff3cd;">
+            <h2 style="color: #856404;"><i class="fas fa-exclamation-triangle"></i> Station Assignment Notice</h2>
+            <p style="color: #856404;"><?php echo htmlspecialchars($assignment_warning); ?></p>
+        </section>
+        <?php endif; ?>
+        
+        <!-- System Overview Card --> <!-- System Overview Card -->
         <section class="info-card">
             <h2><i class="fas fa-heartbeat"></i> Community Health Overview</h2>
             <p>Welcome to your barangay health worker dashboard. Monitor household health, track immunizations, manage referrals, and coordinate community health programs in your assigned area.</p>

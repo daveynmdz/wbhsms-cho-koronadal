@@ -46,6 +46,22 @@ class AppointmentLogger {
         $created_by_id = null
     ) {
         try {
+            // Debug logging
+            error_log("AppointmentLogger: Attempting to log action '$action' for appointment_id: $appointment_id, patient_id: $patient_id");
+            
+            // Check if database connection is valid
+            if (!$this->conn) {
+                error_log("AppointmentLogger: Database connection is null");
+                return false;
+            }
+            
+            // Check if appointment_logs table exists
+            $check_table = $this->conn->query("SHOW TABLES LIKE 'appointment_logs'");
+            if (!$check_table || $check_table->num_rows == 0) {
+                error_log("AppointmentLogger: appointment_logs table does not exist");
+                return false;
+            }
+            
             $stmt = $this->conn->prepare("
                 INSERT INTO appointment_logs (
                     appointment_id, patient_id, action, old_status, new_status,
@@ -53,6 +69,11 @@ class AppointmentLogger {
                     reason, created_by_type, created_by_id, ip_address, user_agent, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
+            
+            if (!$stmt) {
+                error_log("AppointmentLogger: Failed to prepare statement: " . $this->conn->error);
+                return false;
+            }
             
             $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
             $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
@@ -64,12 +85,18 @@ class AppointmentLogger {
             );
             
             $result = $stmt->execute();
-            $stmt->close();
             
+            if (!$result) {
+                error_log("AppointmentLogger: Failed to execute statement: " . $stmt->error);
+            } else {
+                error_log("AppointmentLogger: Successfully logged appointment action");
+            }
+            
+            $stmt->close();
             return $result;
             
         } catch (Exception $e) {
-            error_log("Failed to log appointment action: " . $e->getMessage());
+            error_log("AppointmentLogger: Exception in logAppointmentAction: " . $e->getMessage());
             return false;
         }
     }

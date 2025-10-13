@@ -1,8 +1,6 @@
 <?php
 // At the VERY TOP of your PHP file (before session_start or other code)
-$debug = ($_ENV['APP_DEBUG'] ?? getenv('AP                    <a href="scripts/setup/testdb.php" class="btn btn-secondary btn-large">
-                        <i class="fas fa-database"></i> Test Database Connection
-                    </a>EBUG') ?? '0') === '1';
+$debug = ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG') ?? '0') === '1';
 ini_set('display_errors', $debug ? '1' : '0');
 ini_set('display_startup_errors', $debug ? '1' : '0');
 error_reporting(E_ALL); // log everything, just don't display in prod
@@ -18,35 +16,24 @@ require_once __DIR__ . '/vendor/autoload.php';
 // Put your database credentials in .env.local for local dev, .env for production.
 
 include_once __DIR__ . '/config/env.php';
-// Try to load .env.local first; if not, load .env
-if (file_exists(__DIR__ . '/config/.env.local')) {
-    loadEnv(__DIR__ . '/config/.env.local');
-} elseif (file_exists(__DIR__ . '/config/.env')) {
-    loadEnv(__DIR__ . '/config/.env');
-}
+// Environment loading is already handled by config/env.php
+// No need for additional .env loading here
 
 // --- End ENV Loader Section ---
 
 include_once __DIR__ . '/config/db.php';
 
-// --- Database Connection Section ---
-// Use environment variables for connection
-
-$host = isset($_ENV['DB_HOST']) ? $_ENV['DB_HOST'] : 'localhost';
-$port = isset($_ENV['DB_PORT']) ? $_ENV['DB_PORT'] : '3306';
-$db   = isset($_ENV['DB_NAME']) ? $_ENV['DB_NAME'] : '';
-$user = isset($_ENV['DB_USER']) ? $_ENV['DB_USER'] : '';
-$pass = isset($_ENV['DB_PASS']) ? $_ENV['DB_PASS'] : '';
-$charset = 'utf8mb4';
-
-$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
-
+// Database connection status for display
 $connectionStatus = '';
-try {
-    $pdo = new PDO($dsn, $user, $pass);
+if (isset($pdo) && $pdo !== null) {
     $connectionStatus = 'success';
-} catch (PDOException $e) {
-    $connectionStatus = 'failed: ' . $e->getMessage();
+} else {
+    // Show detailed error in debug mode, generic message in production
+    if ($debug && isset($db_connection_error)) {
+        $connectionStatus = 'failed: ' . $db_connection_error;
+    } else {
+        $connectionStatus = 'failed: Unable to connect to database';
+    }
 }
 // --- End Database Connection Section ---
 ?>
@@ -123,7 +110,7 @@ try {
                     <a href="pages/management/auth/employee_login.php" class="btn btn-outline btn-large">
                         <i class="fas fa-user-md"></i> Employee Login
                     </a>
-                    <a href="testdb.php" class="btn btn-secondary btn-large">
+                    <a href="tests/testdb.php" class="btn btn-secondary btn-large">
                         <i class="fas fa-database"></i> Test Connection
                     </a>
                 </div>
@@ -306,7 +293,7 @@ try {
                     <p>Modern facilities, accessible healthcare, and essential services for our community.</p>
                 </div>
                 <div class="footer-test">
-                    <a href="testdb.php" class="btn btn-sm btn-secondary">
+                    <a href="tests/testdb.php" class="btn btn-sm btn-secondary">
                         <i class="fas fa-database"></i> Test DB Connection
                     </a>
                 </div>

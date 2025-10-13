@@ -171,16 +171,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
 
-                // Parse QR data to extract appointment_id
+                // Parse QR data to extract appointment_id and validate
                 $appointment_id = null;
-                if (preg_match('/appointment_id[=:]\s*(\d+)/', $qr_data, $matches)) {
-                    $appointment_id = intval($matches[1]);
-                } elseif (is_numeric($qr_data)) {
-                    $appointment_id = intval($qr_data);
+                $is_valid_qr = false;
+                
+                // Try to parse as JSON first (new QR format)
+                $qr_json = json_decode($qr_data, true);
+                if ($qr_json && isset($qr_json['type']) && $qr_json['type'] === 'appointment') {
+                    $appointment_id = intval($qr_json['appointment_id'] ?? 0);
+                    
+                    // Validate QR code using verification code
+                    if ($appointment_id > 0) {
+                        require_once dirname(dirname(__DIR__)) . '/utils/qr_code_generator.php';
+                        $is_valid_qr = QRCodeGenerator::validateQRData($qr_data, $appointment_id);
+                    }
+                } else {
+                    // Fallback to legacy formats for backward compatibility
+                    if (preg_match('/appointment_id[=:]\s*(\d+)/', $qr_data, $matches)) {
+                        $appointment_id = intval($matches[1]);
+                        $is_valid_qr = true; // Legacy QR codes are considered valid
+                    } elseif (is_numeric($qr_data)) {
+                        $appointment_id = intval($qr_data);
+                        $is_valid_qr = true; // Legacy QR codes are considered valid
+                    }
                 }
 
                 if (!$appointment_id) {
                     echo json_encode(['success' => false, 'message' => 'Invalid QR code format']);
+                    exit;
+                }
+
+                if (!$is_valid_qr) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid QR code - verification failed']);
                     exit;
                 }
 
@@ -235,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SELECT a.appointment_id, a.patient_id, a.scheduled_date, a.scheduled_time, a.status, a.service_id,
                            p.first_name, p.last_name, p.date_of_birth, p.isSenior, p.isPWD,
                            b.barangay_name,
-                           s.service_name,
+                           s.name as service_name,
                            CASE 
                                WHEN p.isSenior = 1 OR p.isPWD = 1 THEN 'priority'
                                ELSE 'normal'
@@ -291,6 +313,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo json_encode(['success' => false, 'message' => 'Search failed: ' . $e->getMessage()]);
                 }
                 exit;
+
+            case 'get_appointment_details':
+                $appointment_id = $_POST['appointment_id'] ?? 0;
+                $patient_id = $_POST['patient_id'] ?? 0;
+
+                if (!$appointment_id || !$patient_id) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid appointment or patient ID']);
+                    exit;
+                }
+
+                try {
+                    // Get comprehensive appointment details
+                    $stmt = $pdo->prepare("
+                        SELECT a.*, 
+                               p.first_name, p.last_name, p.middle_name, p.date_of_birth, 
+                               p.sex as gender, p.isSenior, p.isPWD, p.email, p.contact_number as phone,
+                               b.barangay_name,
+                               s.name as service_name,
+                               f.name as facility_name,
+                               r.referral_reason, r.referred_by, r.referral_num,
+                               v.visit_id as already_checked_in,
+                               CASE 
+                                   WHEN p.isSenior = 1 OR p.isPWD = 1 THEN 'priority'
+                                   ELSE 'normal'
+                               END as priority_status,
+                               a.qr_code_path
+                        FROM appointments a
+                        JOIN patients p ON a.patient_id = p.patient_id
+                        LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
+                        LEFT JOIN services s ON a.service_id = s.service_id
+                        LEFT JOIN facilities f ON a.facility_id = f.facility_id
+                        LEFT JOIN referrals r ON a.referral_id = r.referral_id
+                        LEFT JOIN visits v ON a.appointment_id = v.appointment_id AND v.facility_id = a.facility_id
+                        WHERE a.appointment_id = ? AND a.patient_id = ? AND a.facility_id = 1
+                    ");
+
+                    $stmt->execute([$appointment_id, $patient_id]);
+                    $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$appointment) {
+                        echo json_encode(['success' => false, 'message' => 'Appointment not found']);
+                        exit;
+                    }
+
+                    echo json_encode(['success' => true, 'appointment' => $appointment]);
+                } catch (Exception $e) {
+                    echo json_encode(['success' => false, 'message' => 'Failed to load appointment details: ' . $e->getMessage()]);
+                }
+                exit;
         }
     }
 
@@ -311,7 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        a.status, a.service_id,
                        p.first_name, p.last_name, p.date_of_birth, p.isSenior, p.isPWD, p.philhealth_id_number as philhealth_id,
                        b.barangay_name as barangay,
-                       s.service_name,
+                       s.name as service_name,
                        CASE 
                            WHEN p.isSenior = 1 OR p.isPWD = 1 THEN 'priority'
                            ELSE 'normal'
@@ -372,6 +443,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $priority_override = $_POST['priority_override'] ?? '';
 
             if ($appointment_id && $patient_id) {
+                // Check if queue service is available
+                if (!isset($queueService)) {
+                    $error = "Queue service is not available. Please refresh the page or contact administrator.";
+                    break;
+                }
+
                 try {
                     $pdo->beginTransaction();
 
@@ -427,7 +504,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
 
                     if (!$queue_result['success']) {
-                        throw new Exception("Failed to create queue entry: " . $queue_result['message']);
+                        $error_message = $queue_result['message'] ?? $queue_result['error'] ?? 'Unknown error occurred';
+                        throw new Exception("Failed to create queue entry: " . $error_message);
                     }
 
                     // Update appointment status
@@ -440,7 +518,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         VALUES (?, ?, 'checked_in', ?, ?, NOW())
                     ");
                     $log_details = json_encode([
-                        'queue_code' => $queue_result['queue_code'],
+                        'queue_code' => $queue_result['queue_code'] ?? 'N/A',
                         'priority_level' => $priority_level,
                         'station' => 'triage'
                     ]);
@@ -448,10 +526,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $pdo->commit();
 
-                    $success = "Patient checked in successfully! Queue Code: " . $queue_result['queue_code'] .
+                    $queue_code = $queue_result['queue_code'] ?? 'N/A';
+                    $success = "Patient checked in successfully! Queue Code: " . $queue_code .
                         " | Priority: " . ucfirst($priority_level) . " | Next Station: Triage";
                 } catch (Exception $e) {
-                    $pdo->rollBack();
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
                     $error = "Check-in failed: " . $e->getMessage();
                 }
             } else {
@@ -514,7 +595,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $success .= " Appointment has been cancelled.";
                     }
                 } catch (Exception $e) {
-                    $pdo->rollback();
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollback();
+                    }
                     $error = "Flag operation failed: " . $e->getMessage();
                 }
             } else {
@@ -560,7 +643,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->commit();
                     $success = "Appointment cancelled successfully. Reason: " . $cancel_reason;
                 } catch (Exception $e) {
-                    $pdo->rollback();
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollback();
+                    }
                     $error = "Cancellation failed: " . $e->getMessage();
                 }
             } else {
@@ -2592,13 +2677,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">Appointment ID</label>
-                                    <input type="text" name="appointment_id" class="form-control"
+                                    <input type="text" name="appointment_id" id="appointment_id" class="form-control"
                                         placeholder="APT-00000024 or 24" value="<?php echo $_POST['appointment_id'] ?? ''; ?>">
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label">Patient ID</label>
-                                    <input type="number" name="patient_id" class="form-control"
+                                    <input type="number" name="patient_id" id="patient_id" class="form-control"
                                         placeholder="Patient ID" value="<?php echo $_POST['patient_id'] ?? ''; ?>">
                                 </div>
                             </div>
@@ -2606,13 +2691,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">First Name</label>
-                                    <input type="text" name="first_name" class="form-control"
+                                    <input type="text" name="first_name" id="first_name" class="form-control"
                                         placeholder="Enter first name" value="<?php echo $_POST['first_name'] ?? ''; ?>">
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label">Last Name</label>
-                                    <input type="text" name="last_name" class="form-control"
+                                    <input type="text" name="last_name" id="last_name" class="form-control"
                                         placeholder="Enter last name" value="<?php echo $_POST['last_name'] ?? ''; ?>">
                                 </div>
                             </div>
@@ -2620,7 +2705,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">Barangay</label>
-                                    <select name="barangay" class="form-control">
+                                    <select name="barangay" id="barangay" class="form-control">
                                         <option value="">All Barangays</option>
                                         <?php foreach ($barangays as $barangay): ?>
                                             <option value="<?php echo htmlspecialchars($barangay); ?>"
@@ -2633,8 +2718,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 <div class="form-group">
                                     <label class="form-label">Date</label>
-                                    <input type="date" name="appointment_date" class="form-control"
-                                        value="<?php echo $_POST['appointment_date'] ?? $today; ?>">
+                                    <input type="date" name="scheduled_date" id="scheduled_date" class="form-control"
+                                        value="<?php echo $_POST['scheduled_date'] ?? $today; ?>">
                                 </div>
                             </div>
 
@@ -3602,12 +3687,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             document.body.appendChild(alert);
 
-            // Auto-remove after 5 seconds
+            // Auto-remove after 10 seconds
             setTimeout(() => {
                 if (alert.parentNode) {
                     alert.remove();
                 }
-            }, 5000);
+            }, 10000);
         }
 
         // Form submission with loading
@@ -3709,29 +3794,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             `;
             document.head.appendChild(style);
         });
-
-        // Enhanced alert system for notifications
-        function showAlert(message, type) {
-            // Create alert element
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
-                ${message}
-                <button type="button" class="btn-close" onclick="this.parentElement.remove();">&times;</button>
-            `;
-
-            // Add to page
-            const container = document.querySelector('.queue-dashboard-container');
-            container.insertBefore(alert, container.firstChild);
-
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                if (alert.parentElement) {
-                    alert.remove();
-                }
-            }, 5000);
-        }
 
         // Cancel Appointment Function
         async function cancelAppointment(appointmentId, patientId) {

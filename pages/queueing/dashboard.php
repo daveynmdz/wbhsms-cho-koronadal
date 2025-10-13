@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_station'])) {
     } else {
         $error = "Failed to update station status";
     }
-    $stmt->close();
+        // No need to call close() on PDOStatement; it will be cleaned up automatically
 }
 
 // Get comprehensive queue statistics for today
@@ -155,7 +155,6 @@ $activePage = 'queueing';
         }
 
         .queue-dashboard-container .content-area {
-            padding: 1.5rem;
             min-height: calc(100vh - 60px);
         }
 
@@ -814,7 +813,7 @@ $activePage = 'queueing';
         /* Action buttons grid - full width layout */
         .queue-dashboard-container .action-buttons-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             width: 100%;
         }

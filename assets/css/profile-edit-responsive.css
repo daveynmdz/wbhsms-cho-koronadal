@@ -516,30 +516,6 @@
     }
 }
 
-/* Dark Mode Support (if needed) */
-@media (prefers-color-scheme: dark) {
-    .profile-wrapper {
-        background: #2d3436;
-    }
-    
-    .profile-card {
-        background: #636e72;
-        border-color: #81ecec;
-        color: white;
-    }
-    
-    .form-input,
-    .form-select {
-        background: #2d3436;
-        border-color: #81ecec;
-        color: white;
-    }
-    
-    .readonly-field {
-        background: #636e72;
-        color: #ddd;
-    }
-}
 
 /* Accessibility Improvements */
 .form-input:focus,
