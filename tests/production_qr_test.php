@@ -46,6 +46,13 @@ echo "<div class='test-section'>
 if (class_exists('QRCodeGenerator')) {
     echo "<div class='success'>✅ QRCodeGenerator class available</div>";
     
+    // Check extensions and capabilities
+    echo "<div class='info'>📋 Server Capabilities:</div>";
+    echo "<div class='info'>  • Internet Access: " . (ini_get('allow_url_fopen') ? "✅ Enabled" : "❌ Disabled") . "</div>";
+    echo "<div class='info'>  • GD Extension: " . (extension_loaded('gd') ? "✅ Available" : "❌ Missing") . "</div>";
+    echo "<div class='info'>  • cURL Extension: " . (extension_loaded('curl') ? "✅ Available" : "❌ Missing") . "</div>";
+    echo "<div class='info'>  • OpenSSL: " . (extension_loaded('openssl') ? "✅ Available" : "❌ Missing") . "</div>";
+    
     // Test QR generation with sample data
     $test_data = [
         'patient_id' => 1,
@@ -81,6 +88,7 @@ if (class_exists('QRCodeGenerator')) {
             }
         } catch (Exception $e2) {
             echo "<div class='info'>ℹ️ QR test completed - system ready for production testing</div>";
+            echo "<div class='error'>Details: " . htmlspecialchars($e2->getMessage()) . "</div>";
         }
     }
 } else {
