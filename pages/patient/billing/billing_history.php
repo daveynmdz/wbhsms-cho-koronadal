@@ -22,6 +22,9 @@ $root_path = dirname(dirname(dirname(__DIR__)));
 // Load configuration first
 require_once $root_path . '/config/env.php';
 
+// Load database connection
+require_once $root_path . '/config/db.php';
+
 // Then load session management
 require_once $root_path . '/config/session/patient_session.php';
 
