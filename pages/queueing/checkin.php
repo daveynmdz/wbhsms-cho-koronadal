@@ -443,6 +443,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $priority_override = $_POST['priority_override'] ?? '';
 
             if ($appointment_id && $patient_id) {
+                // Check if queue service is available
+                if (!isset($queueService)) {
+                    $error = "Queue service is not available. Please refresh the page or contact administrator.";
+                    break;
+                }
+
                 try {
                     $pdo->beginTransaction();
 
@@ -498,7 +504,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
 
                     if (!$queue_result['success']) {
-                        throw new Exception("Failed to create queue entry: " . $queue_result['message']);
+                        $error_message = $queue_result['message'] ?? 'Unknown error occurred';
+                        throw new Exception("Failed to create queue entry: " . $error_message);
                     }
 
                     // Update appointment status
@@ -511,7 +518,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         VALUES (?, ?, 'checked_in', ?, ?, NOW())
                     ");
                     $log_details = json_encode([
-                        'queue_code' => $queue_result['queue_code'],
+                        'queue_code' => $queue_result['queue_code'] ?? 'N/A',
                         'priority_level' => $priority_level,
                         'station' => 'triage'
                     ]);
@@ -519,10 +526,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $pdo->commit();
 
-                    $success = "Patient checked in successfully! Queue Code: " . $queue_result['queue_code'] .
+                    $queue_code = $queue_result['queue_code'] ?? 'N/A';
+                    $success = "Patient checked in successfully! Queue Code: " . $queue_code .
                         " | Priority: " . ucfirst($priority_level) . " | Next Station: Triage";
                 } catch (Exception $e) {
-                    $pdo->rollBack();
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
                     $error = "Check-in failed: " . $e->getMessage();
                 }
             } else {
@@ -585,7 +595,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $success .= " Appointment has been cancelled.";
                     }
                 } catch (Exception $e) {
-                    $pdo->rollback();
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollback();
+                    }
                     $error = "Flag operation failed: " . $e->getMessage();
                 }
             } else {
@@ -631,7 +643,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->commit();
                     $success = "Appointment cancelled successfully. Reason: " . $cancel_reason;
                 } catch (Exception $e) {
-                    $pdo->rollback();
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollback();
+                    }
                     $error = "Cancellation failed: " . $e->getMessage();
                 }
             } else {
