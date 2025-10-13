@@ -333,16 +333,33 @@ try {
     
     // Update referral status based on business rules  
     if ($referral_id) {
-        // Update referral status to 'accepted' (used for appointment)
-        $stmt = $conn->prepare("
-            UPDATE referrals 
-            SET status = 'accepted', 
-                updated_at = NOW(),
-                notes = CONCAT(COALESCE(notes, ''), 'Used for appointment #', ?)
-            WHERE referral_id = ?
-        ");
-        $appointment_reference = 'APT-' . str_pad($appointment_id, 8, '0', STR_PAD_LEFT);
-        $stmt->bind_param("si", $appointment_reference, $referral_id);
+        // Check if notes column exists in referrals table
+        $check_notes_query = "SHOW COLUMNS FROM referrals LIKE 'notes'";
+        $notes_result = $conn->query($check_notes_query);
+        $has_notes_column = ($notes_result->num_rows > 0);
+        
+        if ($has_notes_column) {
+            // Update referral status with notes (for databases that have the column)
+            $stmt = $conn->prepare("
+                UPDATE referrals 
+                SET status = 'accepted', 
+                    updated_at = NOW(),
+                    notes = CONCAT(COALESCE(notes, ''), 'Used for appointment #', ?)
+                WHERE referral_id = ?
+            ");
+            $appointment_reference = 'APT-' . str_pad($appointment_id, 8, '0', STR_PAD_LEFT);
+            $stmt->bind_param("si", $appointment_reference, $referral_id);
+        } else {
+            // Update referral status without notes (for production databases without notes column)
+            $stmt = $conn->prepare("
+                UPDATE referrals 
+                SET status = 'accepted', 
+                    updated_at = NOW()
+                WHERE referral_id = ?
+            ");
+            $stmt->bind_param("i", $referral_id);
+        }
+        
         $stmt->execute();
         $stmt->close();
     }

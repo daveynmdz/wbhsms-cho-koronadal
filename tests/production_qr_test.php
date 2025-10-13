@@ -104,7 +104,6 @@ $stmt = $conn->prepare("
     SELECT 
         a.appointment_id,
         a.qr_code_path IS NOT NULL as has_qr,
-        a.qr_verification_code IS NOT NULL as has_verification,
         a.created_at,
         CONCAT(p.first_name, ' ', p.last_name) as patient_name
     FROM appointments a
@@ -121,19 +120,16 @@ if ($stmt->execute()) {
             <th>Appointment ID</th>
             <th>Patient</th>
             <th>Has QR Code</th>
-            <th>Has Verification</th>
             <th>Created</th>
         </tr>";
         
         while ($row = $result->fetch_assoc()) {
             $qr_status = $row['has_qr'] ? "<span class='success'>✅ Yes</span>" : "<span class='error'>❌ No</span>";
-            $ver_status = $row['has_verification'] ? "<span class='success'>✅ Yes</span>" : "<span class='error'>❌ No</span>";
             
             echo "<tr>
                 <td>APT-" . str_pad($row['appointment_id'], 8, '0', STR_PAD_LEFT) . "</td>
                 <td>" . htmlspecialchars($row['patient_name']) . "</td>
                 <td>{$qr_status}</td>
-                <td>{$ver_status}</td>
                 <td>" . $row['created_at'] . "</td>
             </tr>";
         }
