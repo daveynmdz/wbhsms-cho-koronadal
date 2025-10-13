@@ -116,7 +116,7 @@ try {
     $stmt->close();
     
     // Try to cancel the associated queue entry (if it exists)
-    $queue_service = new QueueManagementService($conn);
+    $queue_service = new QueueManagementService($pdo);
     $queue_result = $queue_service->cancelQueueEntry(
         $appointment_id, 
         $cancellation_reason, 

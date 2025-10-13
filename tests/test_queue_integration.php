@@ -68,7 +68,7 @@ echo "<div class='test-section'>";
 echo "<h2>🧪 Testing Queue Management Service</h2>";
 
 try {
-    $queue_service = new QueueManagementService($conn);
+    $queue_service = new QueueManagementService($pdo);
     
     // Test 1: Get queue statistics
     echo "<h3>Test 1: Queue Statistics</h3>";
@@ -251,7 +251,7 @@ if ($logs_count_result) {
 
 // Queue service functionality was tested above
 try {
-    $queue_service = new QueueManagementService($conn);
+    $queue_service = new QueueManagementService($pdo);
     $test_stats = $queue_service->getQueueStatistics();
     if ($test_stats['success']) {
         $integration_checks['Queue service is functional'] = true;

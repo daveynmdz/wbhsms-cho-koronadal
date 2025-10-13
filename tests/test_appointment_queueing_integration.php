@@ -95,7 +95,7 @@ try {
         echo "✅ Test appointment created with ID: $test_appointment_id<br>";
         
         // Test queue creation
-        $queue_service = new QueueManagementService($conn);
+        $queue_service = new QueueManagementService($pdo);
         $result = $queue_service->createQueueEntry(
             $test_appointment_id, 
             $test_patient_id,

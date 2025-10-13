@@ -72,7 +72,8 @@ function getAllAssignmentsForDate($pdo, $date) {
  * Compatibility function with new signature
  */
 function assignStaffToStation($conn, $employee_id, $station_type, $station_number, $assigned_date, $shift_start = '08:00:00', $shift_end = '17:00:00', $assigned_by = null) {
-    $queueService = new QueueManagementService($conn);
+    global $pdo;
+    $queueService = new QueueManagementService($pdo);
     
     // Find station ID based on type and number (for backward compatibility)
     $stmt = $conn->prepare("SELECT station_id FROM stations WHERE station_type = ? AND station_number = ? AND is_active = 1 LIMIT 1");
@@ -103,7 +104,8 @@ function assignStaffToStation($conn, $employee_id, $station_type, $station_numbe
  * Compatibility function
  */
 function unassignStaffFromStation($conn, $employee_id, $station_type, $station_number, $assigned_date) {
-    $queueService = new QueueManagementService($conn);
+    global $pdo;
+    $queueService = new QueueManagementService($pdo);
     
     // Find station ID based on type and number
     $stmt = $conn->prepare("SELECT station_id FROM stations WHERE station_type = ? AND station_number = ? AND is_active = 1 LIMIT 1");
@@ -130,10 +132,10 @@ function unassignStaffFromStation($conn, $employee_id, $station_type, $station_n
  * New function for enhanced functionality
  */
 function getEmployeeAssignmentHistory($employee_id, $limit = 10) {
-    global $queueService, $conn;
+    global $queueService, $pdo;
     
-    if (!$queueService && $conn) {
-        $queueService = new QueueManagementService($conn);
+    if (!$queueService && $pdo) {
+        $queueService = new QueueManagementService($pdo);
     }
     
     if (!$queueService) {
@@ -148,10 +150,10 @@ function getEmployeeAssignmentHistory($employee_id, $limit = 10) {
  * New function for enhanced functionality
  */
 function getStationAssignmentHistory($station_id, $limit = 10) {
-    global $queueService, $conn;
+    global $queueService, $pdo;
     
-    if (!$queueService && $conn) {
-        $queueService = new QueueManagementService($conn);
+    if (!$queueService && $pdo) {
+        $queueService = new QueueManagementService($pdo);
     }
     
     if (!$queueService) {

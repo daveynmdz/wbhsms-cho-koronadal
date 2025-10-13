@@ -330,7 +330,7 @@ try {
     
     // Create queue entry for ALL appointments (BHC, DHO, CHO)
     $queue_result = null;
-    $queue_service = new QueueManagementService($conn);
+    $queue_service = new QueueManagementService($pdo);
     
     // Determine priority level based on patient information
     $priority_level = 'normal';
