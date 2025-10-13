@@ -504,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
 
                     if (!$queue_result['success']) {
-                        $error_message = $queue_result['message'] ?? 'Unknown error occurred';
+                        $error_message = $queue_result['message'] ?? $queue_result['error'] ?? 'Unknown error occurred';
                         throw new Exception("Failed to create queue entry: " . $error_message);
                     }
 

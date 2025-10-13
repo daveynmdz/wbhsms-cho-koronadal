@@ -78,15 +78,17 @@ class QueueManagementService {
             
             // Check if we found an open station
             if (!$station_id) {
+                error_log("No open stations found for service_id: $service_id, facility_id: $facility_id");
                 throw new Exception("No open stations available for this service. Please try again later or contact staff.");
             }
-            
+
+            error_log("Creating queue entry with: visit_id=$visit_id, appointment_id=$appointment_id, patient_id=$patient_id, service_id=$service_id, station_id=$station_id, queue_type=$queue_type");
+
             $stmt = $this->conn->prepare("
                 INSERT INTO queue_entries (
                     visit_id, appointment_id, patient_id, service_id, station_id,
-                    queue_type, queue_number, queue_code, priority_level, status, 
-                    time_in, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting', NOW(), NOW(), NOW())
+                    queue_type, queue_number, queue_code, priority_level, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting')
             ");
             
             if (!$stmt->execute([
@@ -122,14 +124,18 @@ class QueueManagementService {
             ];
             
         } catch (Exception $e) {
-            $this->conn->rollback();
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollback();
+            }
+            error_log("QueueManagementService::createQueueEntry failed: " . $e->getMessage());
             return [
                 'success' => false,
+                'message' => $e->getMessage(),
                 'error' => $e->getMessage()
             ];
         }
     }
-    
+
     /**
      * Update queue entry status
      * 
@@ -1188,9 +1194,8 @@ class QueueManagementService {
                 LIMIT 1
             ");
             $stmt2->execute();
-            $result2 = $stmt2->get_result();
             
-            if ($row2 = $result2->fetch_assoc()) {
+            if ($row2 = $stmt2->fetch(PDO::FETCH_ASSOC)) {
                 return $row2['station_id'];
             }
             
