@@ -27,6 +27,9 @@ require_once $root_path . '/utils/queue_management_service.php';
 // Include appointment logger
 require_once $root_path . '/utils/appointment_logger.php';
 
+// Include QR code generator
+require_once $root_path . '/utils/qr_code_generator.php';
+
 // Check database connection
 if (!isset($conn) || $conn->connect_error) {
     echo json_encode(['success' => false, 'message' => 'Database connection failed']);
@@ -328,7 +331,26 @@ try {
         error_log("Warning: Exception in appointment logging: " . $log_exception->getMessage());
     }
     
-    // Create queue entry for ALL appointments (BHC, DHO, CHO)
+    // Update referral status based on business rules  
+    if ($referral_id) {
+        // Update referral status to 'accepted' (used for appointment)
+        $stmt = $conn->prepare("
+            UPDATE referrals 
+            SET status = 'accepted', 
+                updated_at = NOW(),
+                notes = CONCAT(COALESCE(notes, ''), 'Used for appointment #', ?)
+            WHERE referral_id = ?
+        ");
+        $appointment_reference = 'APT-' . str_pad($appointment_id, 8, '0', STR_PAD_LEFT);
+        $stmt->bind_param("si", $appointment_reference, $referral_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+    
+    // Commit transaction BEFORE creating queue entry
+    $conn->commit();
+    
+    // Create queue entry for ALL appointments (BHC, DHO, CHO) - AFTER appointment is committed
     $queue_result = null;
     $queue_service = new QueueManagementService($pdo);
     
@@ -366,28 +388,35 @@ try {
                 'queue_number' => null
             ];
         } else {
-            throw new Exception('Failed to create queue entry: ' . $queue_result['error']);
+            // Log the error but don't fail the appointment
+            error_log("Queue creation failed for appointment $appointment_id: " . $queue_result['error']);
+            $queue_result = [
+                'success' => false,
+                'error' => 'Queue entry creation failed - appointment created successfully',
+                'queue_number' => null
+            ];
         }
     }
     
-    // Update referral status based on business rules
-    if ($referral_id) {
-        // Update referral status to 'accepted' (used for appointment)
-        $stmt = $conn->prepare("
-            UPDATE referrals 
-            SET status = 'accepted', 
-                updated_at = NOW(),
-                notes = CONCAT(COALESCE(notes, ''), 'Used for appointment #', ?)
-            WHERE referral_id = ?
-        ");
-        $appointment_reference = 'APT-' . str_pad($appointment_id, 8, '0', STR_PAD_LEFT);
-        $stmt->bind_param("si", $appointment_reference, $referral_id);
-        $stmt->execute();
-        $stmt->close();
-    }
+    // Generate QR code for appointment
+    error_log("DEBUG: Generating QR code for appointment $appointment_id");
+    $qr_result = QRCodeGenerator::generateAndSaveQR(
+        $appointment_id,
+        [
+            'patient_id' => $patient_id,
+            'scheduled_date' => $appointment_date,
+            'scheduled_time' => $appointment_time,
+            'facility_id' => $facility_id,
+            'service_id' => $service_id
+        ],
+        $conn // Use MySQLi connection for consistency
+    );
     
-    // Commit transaction
-    $conn->commit();
+    if ($qr_result['success']) {
+        error_log("DEBUG: QR code generated successfully for appointment $appointment_id");
+    } else {
+        error_log("WARNING: QR code generation failed for appointment $appointment_id: " . $qr_result['error']);
+    }
     
     // Send email notification
     $email_result = ['success' => false, 'message' => 'Email not configured'];
@@ -408,7 +437,8 @@ try {
                 $appointment_date, 
                 $appointment_time, 
                 $referral_id,
-                $queue_result  // Pass queue information to email function
+                $queue_result,  // Pass queue information to email function
+                $qr_result      // Pass QR information to email function
             );
         }
     } catch (Exception $e) {
@@ -428,6 +458,16 @@ try {
         'email_message' => $email_result['message'],
         'patient_email' => $patient_info['email']
     ];
+    
+    // Add QR code information
+    if (isset($qr_result) && $qr_result['success']) {
+        $response['qr_generated'] = true;
+        $response['qr_verification_code'] = $qr_result['verification_code'];
+        $response['qr_message'] = 'QR code generated successfully for seamless check-in';
+    } else {
+        $response['qr_generated'] = false;
+        $response['qr_message'] = isset($qr_result) ? $qr_result['error'] : 'QR generation not attempted';
+    }
     
     // Add queue information for all appointments
     if ($queue_result && $queue_result['success']) {
@@ -467,7 +507,7 @@ try {
 $conn->close();
 
 // Function to send appointment confirmation email using the same pattern as OTP emails
-function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $facility_name, $service, $appointment_date, $appointment_time, $referral_id = null, $queue_result = null) {
+function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $facility_name, $service, $appointment_date, $appointment_time, $referral_id = null, $queue_result = null, $qr_result = null) {
     try {
         // Get referral information if available
         $referral_num = '';
@@ -509,6 +549,41 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
                         </tr>';
             
             $queue_info_text = "\nQueue Number: #{$queue_result['queue_number']}\nQueue Type: " . ucfirst($queue_result['queue_type']) . "\nPriority Level: {$priority_display}";
+        }
+
+        // Prepare QR code information for email
+        $qr_info_html = '';
+        $qr_info_text = '';
+        $has_qr_image = false;
+        
+        if ($qr_result && $qr_result['success']) {
+            // Get QR code from database
+            global $conn;
+            $stmt = $conn->prepare("SELECT qr_code_path FROM appointments WHERE appointment_id = ?");
+            $appointment_id = substr($appointment_num, 4); // Remove 'APT-' prefix and leading zeros
+            $appointment_id = (int)$appointment_id;
+            $stmt->bind_param("i", $appointment_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $appointment_data = $result->fetch_assoc();
+            $stmt->close();
+            
+            if ($appointment_data && $appointment_data['qr_code_path']) {
+                $has_qr_image = true;
+                $qr_verification_code = $qr_result['verification_code'] ?? 'N/A';
+                
+                $qr_info_html = '
+                        <tr style="border-bottom: 1px solid #e9ecef;">
+                            <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">QR Code:</td>
+                            <td style="padding: 12px 0; color: #333;">Available for seamless check-in</td>
+                        </tr>
+                        <tr' . (!empty($referral_num) ? ' style="border-bottom: 1px solid #e9ecef;"' : '') . '>
+                            <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">Verification Code:</td>
+                            <td style="padding: 12px 0; color: #333; font-family: monospace; background: #f8f9fa; padding: 8px; border-radius: 4px;">' . htmlspecialchars($qr_verification_code, ENT_QUOTES, 'UTF-8') . '</td>
+                        </tr>';
+                
+                $qr_info_text = "\nQR Code: Available for seamless check-in\nVerification Code: {$qr_verification_code}";
+            }
         }
 
         // For development: bypass email if SMTP_PASS is empty or 'disabled'
@@ -611,6 +686,7 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
                             <td style="padding: 12px 0; color: #333;">' . htmlspecialchars($formatted_time, ENT_QUOTES, 'UTF-8') . '</td>
                         </tr>' . 
                         $queue_info_html .
+                        $qr_info_html .
                         (!empty($referral_num) ? '
                         <tr>
                             <td style="padding: 12px 0; font-weight: 600; color: #0077b6;">Referral Number:</td>
@@ -675,6 +751,7 @@ Service Type: {$service}
 Appointment Date: {$formatted_date}
 Appointment Time: {$formatted_time}" .
 $queue_info_text .
+$qr_info_text .
 (!empty($referral_num) ? "\nReferral Number: #{$referral_num}" : "") . "
 
 IMPORTANT REMINDERS:
@@ -696,6 +773,49 @@ Thank you for choosing CHO Koronadal for your healthcare needs.
 City Health Office of Koronadal
 This is an automated message. Please do not reply to this email.
 © " . date('Y') . " CHO Koronadal. All rights reserved.";
+
+        // Embed QR code if available
+        if ($has_qr_image && isset($appointment_data['qr_code_path'])) {
+            try {
+                // Create temporary file for QR code
+                $temp_qr_file = tempnam(sys_get_temp_dir(), 'qr_appointment_');
+                file_put_contents($temp_qr_file, $appointment_data['qr_code_path']);
+                
+                // Add QR code as embedded image
+                $mail->addEmbeddedImage($temp_qr_file, 'qr_code', 'appointment_qr.png', 'base64', 'image/png');
+                
+                // Update email body to include QR code display
+                $qr_section = '
+                <div style="background: #f8f9fa; border: 2px dashed #6c757d; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                    <h4 style="margin: 0 0 15px 0; color: #495057;">📱 Your QR Code for Check-in</h4>
+                    <img src="cid:qr_code" alt="Appointment QR Code" style="max-width: 200px; height: auto; border: 1px solid #dee2e6; border-radius: 4px;">
+                    <p style="margin: 15px 0 5px 0; color: #6c757d; font-size: 14px;">
+                        <strong>Scan this QR code at the check-in station for instant verification</strong>
+                    </p>
+                    <p style="margin: 0; color: #6c757d; font-size: 12px;">
+                        Verification Code: <span style="font-family: monospace; background: #e9ecef; padding: 2px 6px; border-radius: 3px;">' . htmlspecialchars($qr_verification_code, ENT_QUOTES, 'UTF-8') . '</span>
+                    </p>
+                </div>';
+                
+                // Insert QR section before the contact information
+                $mail->Body = str_replace(
+                    '<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">',
+                    $qr_section . '<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">',
+                    $mail->Body
+                );
+                
+                // Clean up temp file after sending
+                register_shutdown_function(function() use ($temp_qr_file) {
+                    if (file_exists($temp_qr_file)) {
+                        unlink($temp_qr_file);
+                    }
+                });
+                
+            } catch (Exception $qr_e) {
+                error_log("Failed to embed QR code in email: " . $qr_e->getMessage());
+                // Continue without QR code if embedding fails
+            }
+        }
 
         $mail->send();
         return ['success' => true, 'message' => 'Email sent successfully'];

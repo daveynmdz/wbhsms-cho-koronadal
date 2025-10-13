@@ -171,16 +171,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
 
-                // Parse QR data to extract appointment_id
+                // Parse QR data to extract appointment_id and validate
                 $appointment_id = null;
-                if (preg_match('/appointment_id[=:]\s*(\d+)/', $qr_data, $matches)) {
-                    $appointment_id = intval($matches[1]);
-                } elseif (is_numeric($qr_data)) {
-                    $appointment_id = intval($qr_data);
+                $is_valid_qr = false;
+                
+                // Try to parse as JSON first (new QR format)
+                $qr_json = json_decode($qr_data, true);
+                if ($qr_json && isset($qr_json['type']) && $qr_json['type'] === 'appointment') {
+                    $appointment_id = intval($qr_json['appointment_id'] ?? 0);
+                    
+                    // Validate QR code using verification code
+                    if ($appointment_id > 0) {
+                        require_once dirname(dirname(__DIR__)) . '/utils/qr_code_generator.php';
+                        $is_valid_qr = QRCodeGenerator::validateQRData($qr_data, $appointment_id);
+                    }
+                } else {
+                    // Fallback to legacy formats for backward compatibility
+                    if (preg_match('/appointment_id[=:]\s*(\d+)/', $qr_data, $matches)) {
+                        $appointment_id = intval($matches[1]);
+                        $is_valid_qr = true; // Legacy QR codes are considered valid
+                    } elseif (is_numeric($qr_data)) {
+                        $appointment_id = intval($qr_data);
+                        $is_valid_qr = true; // Legacy QR codes are considered valid
+                    }
                 }
 
                 if (!$appointment_id) {
                     echo json_encode(['success' => false, 'message' => 'Invalid QR code format']);
+                    exit;
+                }
+
+                if (!$is_valid_qr) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid QR code - verification failed']);
                     exit;
                 }
 

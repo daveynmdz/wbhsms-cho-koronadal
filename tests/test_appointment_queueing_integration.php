@@ -39,9 +39,17 @@ try {
         ");
         
         $test_patient_number = 'TEST-' . date('Ymd-His');
+        $first_name = 'Test';
+        $last_name = 'Patient';
+        $date_of_birth = '1990-01-01';
+        $gender = 'Male';
+        $contact_number = '09123456789';
+        $email = 'test@example.com';
+        $address = 'Test Address';
+        
         $stmt->bind_param("ssssssss", 
-            'Test', 'Patient', '1990-01-01', 'Male',
-            '09123456789', 'test@example.com', 'Test Address', $test_patient_number
+            $first_name, $last_name, $date_of_birth, $gender,
+            $contact_number, $email, $address, $test_patient_number
         );
         
         if ($stmt->execute()) {
