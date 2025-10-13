@@ -1,6 +1,11 @@
 ﻿<?php
-// Start output buffering to prevent header issues
+// Start output buffering immediately to prevent any header issues
 ob_start();
+
+// Clean any potential output that might have been sent
+if (ob_get_length()) {
+    ob_clean();
+}
 
 // Patient Billing Dashboard - Professional Healthcare Billing Interface
 $root_path = dirname(dirname(dirname(__DIR__)));

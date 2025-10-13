@@ -3,8 +3,13 @@
  * Patient Billing History - View complete billing history with filters
  */
 
-// Start output buffering to prevent header issues
+// Start output buffering immediately to prevent any header issues
 ob_start();
+
+// Clean any potential output that might have been sent
+if (ob_get_length()) {
+    ob_clean();
+}
 
 // Include patient session configuration
 $root_path = dirname(dirname(dirname(__DIR__)));

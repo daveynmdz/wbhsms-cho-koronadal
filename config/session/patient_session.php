@@ -6,17 +6,11 @@
  * It ensures patient sessions are separate from employee sessions.
  */
 
-// Check if headers have already been sent
-if (headers_sent($file, $line)) {
-    // If headers are already sent, we can't modify session settings
-    // Just start the session with existing settings
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-} else {
-    // Headers not sent yet, we can configure session settings
-    if (session_status() === PHP_SESSION_NONE) {
-        // Configure session settings
+// Only proceed if session is not already active
+if (session_status() === PHP_SESSION_NONE) {
+    // Check if headers have already been sent
+    if (!headers_sent($file, $line)) {
+        // Headers not sent yet, we can configure session settings
         ini_set('session.use_only_cookies', '1');
         ini_set('session.use_strict_mode', '1');
         ini_set('session.cookie_httponly', '1');
@@ -27,7 +21,6 @@ if (headers_sent($file, $line)) {
         session_name('PATIENT_SESSID');
         
         // Set cookie path to restrict to patient areas
-        // Exclude the management path to prevent conflicts with employee sessions
         session_set_cookie_params([
             'lifetime' => 0, // 0 = until browser is closed
             'path' => '/', // Root path
@@ -37,8 +30,17 @@ if (headers_sent($file, $line)) {
             'samesite' => 'Lax'
         ]);
         
-        // Start the session
+        // Start the session normally
         session_start();
+    } else {
+        // Headers already sent - try to start session without configuration
+        // This will use default session settings
+        try {
+            session_start();
+        } catch (Exception $e) {
+            // If session start fails, log the error but continue
+            error_log("Patient session start failed: " . $e->getMessage());
+        }
     }
 }
 

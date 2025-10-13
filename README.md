@@ -154,10 +154,50 @@ SMTP_PORT=587
 - **System Check**: Navigate through login and dashboard pages
 - **Patient Registration**: Test the registration process
 
+## 📚 Documentation
+
+### 📁 Available Documentation (`docs/` folder)
+
+#### **System Setup & Configuration**
+- **[SETUP_SUMMARY.md](docs/SETUP_SUMMARY.md)** - Complete system setup instructions
+- **[ENV_CONFIGURATION_GUIDE.md](docs/ENV_CONFIGURATION_GUIDE.md)** - Environment configuration for local/production
+- **[EMAIL_SETUP_GUIDE.md](docs/EMAIL_SETUP_GUIDE.md)** - Email system configuration
+
+#### **System Architecture & Database**
+- **[DATABASE_TABLE_ANALYSIS.md](docs/DATABASE_TABLE_ANALYSIS.md)** - Database structure and table relationships
+- **[DASHBOARD_TEMPLATE_DOCS.md](docs/DASHBOARD_TEMPLATE_DOCS.md)** - Dashboard template documentation
+
+#### **Queue Management System**
+- **[QUEUE_SYSTEM_DOCUMENTATION.md](docs/QUEUE_SYSTEM_DOCUMENTATION.md)** - Complete queue system guide
+- **[APPOINTMENT_QUEUEING_ENHANCEMENT.md](docs/APPOINTMENT_QUEUEING_ENHANCEMENT.md)** - Appointment-queue integration
+- **[AUTOMATIC_STATUS_UPDATES.md](docs/AUTOMATIC_STATUS_UPDATES.md)** - Automated status update system
+- **[Queueing/](docs/Queueing/)** - Station-specific workflow documentation:
+  - `patient-flow_Version2.md` - Patient flow workflows
+  - `station-checkin_Version2.md` - Check-in station procedures
+  - `station-triage_Version2.md` - Triage station workflows
+  - `station-consultation_Version2.md` - Consultation station procedures
+  - `station-lab_Version2.md` - Laboratory station workflows
+  - `station-pharmacy_Version3.md` - Pharmacy station procedures
+  - `station-billing_Version2.md` - Billing station workflows
+  - `station-document_Version2.md` - Document station procedures
+
+#### **Staff Management**
+- **[STAFF_ASSIGNMENT_GUIDE.md](docs/STAFF_ASSIGNMENT_GUIDE.md)** - Staff assignment system guide
+- **[STAFF_ASSIGNMENT_LOGIN_FIX.md](docs/STAFF_ASSIGNMENT_LOGIN_FIX.md)** - Login system fixes and security
+
+#### **Production Deployment & Fixes**
+- **[AUTH_URL_FIX_SUMMARY.md](docs/AUTH_URL_FIX_SUMMARY.md)** - Authentication URL fixes for production
+- **[EMPLOYEE_PRODUCTION_LOGOUT_FIX.md](docs/EMPLOYEE_PRODUCTION_LOGOUT_FIX.md)** - Employee logout fixes
+- **[PATIENT_NAVIGATION_PRODUCTION_FIX.md](docs/PATIENT_NAVIGATION_PRODUCTION_FIX.md)** - Patient navigation fixes
+- **[PATIENT_SESSION_HEADERS_FIX.md](docs/PATIENT_SESSION_HEADERS_FIX.md)** - Session header management
+- **[ENHANCED_SESSION_HEADERS_FIX.md](docs/ENHANCED_SESSION_HEADERS_FIX.md)** - Advanced session handling
+- **[MYSQLI_INTRANSACTION_FIX.md](docs/MYSQLI_INTRANSACTION_FIX.md)** - Database transaction fixes
+- **[CENTRALIZED_FILES_SIDEBAR_FIX.md](docs/CENTRALIZED_FILES_SIDEBAR_FIX.md)** - Sidebar navigation fixes
+
 ## 📚 For Developers
 
 ### Advanced Setup (Production)
-- See `docs/DEPLOYMENT.md` for production deployment
+- See **[docs/ENV_CONFIGURATION_GUIDE.md](docs/ENV_CONFIGURATION_GUIDE.md)** for production deployment
 - Use Composer for dependency management: `composer install`
 - Configure proper environment variables for production
 
