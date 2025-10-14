@@ -1413,6 +1413,10 @@ $activePage = 'queueing';
                         <i class="fas fa-display"></i>
                         <span>Display Launcher</span>
                     </a>
+                    <a href="queue_simulation.php" class="action-btn btn-warning">
+                        <i class="fas fa-flask"></i>
+                        <span>Queue Simulation</span>
+                    </a>
                 </div>
             </div>
 

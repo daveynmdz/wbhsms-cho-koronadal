@@ -75,7 +75,6 @@ wbhsms-cho-koronadal/
 ```
 wbhsms-cho-koronadal/
 ├── 📄 index.php           # Main homepage
-├── 📄 testdb.php          # Database connection test
 ├── 📄 .env.example        # Environment configuration template
 ├── 📁 assets/             # CSS, JavaScript, images
 │   ├── css/              # Stylesheets
@@ -136,7 +135,7 @@ SMTP_PORT=587
 1. Make sure XAMPP MySQL is running
 2. Verify database `wbhsms_cho` exists in phpMyAdmin
 3. Check if database file was imported correctly
-4. Test connection: http://localhost/wbhsms-cho-koronadal/testdb.php
+4. Test connection: http://localhost/wbhsms-cho-koronadal/scripts/setup/testdb.php
 
 **Page Not Found?**
 1. Verify project is in `htdocs/wbhsms-cho-koronadal/`
@@ -150,9 +149,10 @@ SMTP_PORT=587
 
 ## 🧪 Testing
 
-- **Database Test**: `/testdb.php` - Tests database connectivity
+- **Database Test**: `/scripts/setup/testdb.php` - Tests database connectivity
 - **System Check**: Navigate through login and dashboard pages
 - **Patient Registration**: Test the registration process
+- **Queue System Tests**: Available in `/tests/` folder for comprehensive queue testing
 
 ## 📚 Documentation
 
@@ -210,7 +210,7 @@ SMTP_PORT=587
 
 For issues or questions:
 1. Check the troubleshooting section above
-2. Test database connection using `/testdb.php`
+2. Test database connection using `/scripts/setup/testdb.php`
 3. Review XAMPP logs for errors
 4. Create an issue in the GitHub repository
 
