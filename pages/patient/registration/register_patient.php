@@ -363,7 +363,12 @@ try {
         if ($bypassEmail) {
             // Development mode: show OTP directly and redirect immediately
             error_log("DEVELOPMENT MODE: OTP for {$email} is: {$otp}");
-            $_SESSION['dev_message'] = "DEVELOPMENT MODE: Your OTP is {$otp}";
+            
+            // Only show dev message if APP_DEBUG is enabled
+            if (getenv('APP_DEBUG') === '1') {
+                $_SESSION['dev_message'] = "DEVELOPMENT MODE: Your OTP is {$otp}";
+            }
+            
             header('Location: ' . $otp_page, true, 303);
             exit;
         }

@@ -77,10 +77,18 @@ try {
     if ($bypassEmail) {
         // Development mode: show OTP directly
         error_log("DEVELOPMENT MODE: Resent OTP for {$email} is: {$newOtp}");
-        $_SESSION['dev_message'] = "DEVELOPMENT MODE: Your new OTP is {$newOtp}";
+        
+        // Only show dev message if APP_DEBUG is enabled
+        if (getenv('APP_DEBUG') === '1') {
+            $_SESSION['dev_message'] = "DEVELOPMENT MODE: Your new OTP is {$newOtp}";
+            $message = "DEVELOPMENT MODE: Your new OTP is {$newOtp}";
+        } else {
+            $message = "A new verification code has been sent to your email address.";
+        }
+        
         echo json_encode([
             'success' => true,
-            'message' => "DEVELOPMENT MODE: Your new OTP is {$newOtp}"
+            'message' => $message
         ]);
         exit;
     }
