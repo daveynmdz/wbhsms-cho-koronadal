@@ -25,14 +25,14 @@ include_once __DIR__ . '/config/db.php';
 
 // Database connection status for display
 $connectionStatus = '';
-if (isset($pdo) && $pdo !== null && isset($conn) && $conn !== null) {
+if (isset($pdo) && $pdo !== null) {
     $connectionStatus = 'success';
 } else {
     // Show detailed error in debug mode, generic message in production
     if ($debug && isset($db_connection_error)) {
         $connectionStatus = 'failed: ' . $db_connection_error;
     } else {
-        $connectionStatus = 'failed: Database service temporarily unavailable';
+        $connectionStatus = 'failed: Unable to connect to database';
     }
 }
 // --- End Database Connection Section ---

@@ -2079,7 +2079,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .status-text {
             font-size: 12px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(0, 0, 0, 0.9);
         }
 
         @keyframes pulse {
@@ -2258,12 +2258,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 600;
             font-size: 15px;
             color: #2c3e50;
+            text-align: left;
         }
 
         .btn-subtitle {
             font-size: 12px;
             color: #7f8c8d;
             font-weight: 400;
+            text-align: left;
         }
 
         .stats-row {
@@ -2509,11 +2511,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <button class="toggle-instructions" onclick="toggleInstructions()" title="Toggle detailed instructions">
                             <i class="fas fa-chevron-down"></i>
                         </button>
-                    </div>
-                    <div class="instructions-summary">
-                        <span class="quick-steps">
-                            <strong>1.</strong> Verify ID → <strong>2.</strong> Scan/Search → <strong>3.</strong> Confirm → <strong>4.</strong> Check Priority → <strong>5.</strong> Check-In
-                        </span>
                     </div>
                     <div class="detailed-instructions" id="detailedInstructions" style="display: none;">
                         <div class="instruction-grid">
