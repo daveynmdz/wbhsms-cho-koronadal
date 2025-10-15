@@ -18,14 +18,16 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 // Include database connection and queue management service
 require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
+require_once $root_path . '/utils/patient_flow_validator.php';
 
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 $message = '';
 $error = '';
 
-// Initialize queue management service
+// Initialize queue management service and patient flow validator
 $queueService = new QueueManagementService($pdo);
+$flowValidator = new PatientFlowValidator($pdo);
 
 // Check if role is authorized for laboratory operations
 $allowed_roles = ['laboratory_tech', 'admin', 'nurse'];
@@ -153,16 +155,121 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 
             case 'reroute_to_consultation':
                 $remarks = $_POST['remarks'] ?? 'Lab work completed, returning to consultation';
-                // Route patient back to consultation (maintaining same HHM-XXX queue code)
+                
+                // Get patient visit info for service validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $service_id = $visit_info['service_id'];
+                
+                // Check if lab-only service (should not return to consultation)
+                if ($flowValidator->isLabOnlyService($service_id)) {
+                    echo json_encode(['success' => false, 
+                        'message' => 'Lab-only services cannot return to consultation. Please complete the visit or route to pharmacy.']);
+                    break;
+                }
+                
+                // Check time-based requeue restrictions
+                $requeue_check = $flowValidator->canLabRequeueToConsultation();
+                if (!$requeue_check['allowed']) {
+                    echo json_encode(['success' => false, 'message' => $requeue_check['message'], 
+                        'suggestion' => 'Consider issuing a referral for next day consultation instead.']);
+                    break;
+                }
+                
+                // Route patient back to consultation
                 $result = $queueService->routePatientToStation($queue_entry_id, 'consultation', $employee_id, $remarks);
+                $flowValidator->logRoutingAction($queue_entry_id, 'route_to_consultation', 'lab', 'consultation', 
+                    $employee_id, 'Lab requeue to consultation (before 4:00 PM)');
+                
                 echo json_encode($result);
                 break;
                 
             case 'reroute_to_pharmacy':
                 $remarks = $_POST['remarks'] ?? 'Lab work completed, forwarded to pharmacy';
-                // Route patient to pharmacy (maintaining same HHM-XXX queue code)
+                
+                // Get patient visit info for validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $service_id = $visit_info['service_id'];
+                $patient_id = $visit_info['patient_id'];
+                
+                // Check if patient needs billing first (non-PhilHealth)
+                if (!$flowValidator->shouldSkipBilling($patient_id, $service_id)) {
+                    echo json_encode(['success' => false, 
+                        'message' => 'Non-PhilHealth patient must complete billing before pharmacy services. Use "Route to Consultation" for proper workflow.']);
+                    break;
+                }
+                
+                // Route patient to pharmacy
                 $result = $queueService->routePatientToStation($queue_entry_id, 'pharmacy', $employee_id, $remarks);
+                $flowValidator->logRoutingAction($queue_entry_id, 'route_to_pharmacy', 'lab', 'pharmacy', 
+                    $employee_id, 'Lab to pharmacy routing');
+                
                 echo json_encode($result);
+                break;
+                
+            case 'issue_next_day_referral':
+                $remarks = $_POST['remarks'] ?? 'Lab work completed after 4:00 PM - referral issued for next day consultation';
+                $referral_notes = $_POST['referral_notes'] ?? '';
+                
+                // Get patient visit info
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                try {
+                    $pdo->beginTransaction();
+                    
+                    // Update queue status to completed
+                    $result = $queueService->updateQueueStatus($queue_entry_id, 'done', 'in_progress', $employee_id, $remarks);
+                    
+                    if ($result['success']) {
+                        // Create next-day referral record
+                        $referral_stmt = $pdo->prepare("
+                            INSERT INTO patient_referrals 
+                            (patient_id, referring_employee_id, referral_date, target_date, referral_type, notes, status, created_at)
+                            VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 DAY), 'consultation', ?, 'active', NOW())
+                        ");
+                        $referral_stmt->execute([
+                            $visit_info['patient_id'],
+                            $employee_id,
+                            "Lab work completed after 4:00 PM cutoff. " . $referral_notes
+                        ]);
+                        
+                        // Update visit status
+                        $visit_stmt = $pdo->prepare("
+                            UPDATE visits SET visit_status = 'completed', time_out = NOW() 
+                            WHERE visit_id = ?
+                        ");
+                        $visit_stmt->execute([$visit_info['visit_id']]);
+                        
+                        // Log the referral action
+                        $flowValidator->logRoutingAction($queue_entry_id, 'issue_referral', 'lab', 'referral_system', 
+                            $employee_id, 'Next-day consultation referral issued due to 4:00 PM cutoff');
+                        
+                        $pdo->commit();
+                        echo json_encode([
+                            'success' => true, 
+                            'message' => 'Next-day referral issued successfully. Patient visit completed.',
+                            'referral_date' => date('Y-m-d', strtotime('+1 day'))
+                        ]);
+                    } else {
+                        throw new Exception($result['message'] ?? 'Failed to update queue status');
+                    }
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    echo json_encode(['success' => false, 'message' => 'Failed to issue referral: ' . $e->getMessage()]);
+                }
                 break;
                 
             case 'end_patient_queue':

@@ -18,14 +18,16 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 // Include database connection and queue management service
 require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
+require_once $root_path . '/utils/patient_flow_validator.php';
 
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 $message = '';
 $error = '';
 
-// Initialize queue management service
+// Initialize queue management service and patient flow validator
 $queueService = new QueueManagementService($pdo);
+$flowValidator = new PatientFlowValidator($pdo);
 
 // Check if role is authorized for billing operations
 $allowed_roles = ['cashier', 'admin', 'nurse'];
@@ -168,22 +170,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 
             case 'reroute_to_consultation':
                 $remarks = $_POST['remarks'] ?? 'Billing completed, forwarded back to consultation';
-                // Route patient to consultation (maintaining same HHM-XXX queue code)
+                
+                // Get patient visit info for service validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $service_id = $visit_info['service_id'];
+                
+                // Validate that consultation routing is allowed for this service
+                $billing_check = $flowValidator->canBillingRouteToConsultation($service_id);
+                if (!$billing_check['allowed']) {
+                    echo json_encode(['success' => false, 'message' => $billing_check['message']]);
+                    break;
+                }
+                
+                // Route patient to consultation (double consultation for non-PhilHealth primary care)
                 $result = $queueService->routePatientToStation($queue_entry_id, 'consultation', $employee_id, $remarks);
+                $flowValidator->logRoutingAction($queue_entry_id, 'route_to_consultation', 'billing', 'consultation', 
+                    $employee_id, 'Post-billing consultation (double consultation flow)');
+                
                 echo json_encode($result);
                 break;
                 
             case 'reroute_to_lab':
                 $remarks = $_POST['remarks'] ?? 'Billing completed, forwarded to laboratory';
-                // Route patient to lab (maintaining same HHM-XXX queue code)
-                $result = $queueService->routePatientToStation($queue_entry_id, 'lab', $employee_id, $remarks);
+                
+                // Get patient visit info for validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $service_id = $visit_info['service_id'];
+                
+                // Validate routing (lab-only services go direct, others may need consultation first)
+                if ($flowValidator->isLabOnlyService($service_id)) {
+                    $result = $queueService->routePatientToStation($queue_entry_id, 'lab', $employee_id, $remarks);
+                    $flowValidator->logRoutingAction($queue_entry_id, 'route_to_lab', 'billing', 'lab', 
+                        $employee_id, 'Lab-only service - direct routing after billing');
+                } else {
+                    // Primary care services: suggest consultation first for proper workflow
+                    echo json_encode(['success' => false, 
+                        'message' => 'Primary care services should return to consultation before lab. Use "Route to Consultation" instead.']);
+                    break;
+                }
+                
                 echo json_encode($result);
                 break;
                 
             case 'reroute_to_document':
                 $remarks = $_POST['remarks'] ?? 'Billing completed, forwarded to document processing';
-                // Route patient to document (maintaining same HHM-XXX queue code)
-                $result = $queueService->routePatientToStation($queue_entry_id, 'document', $employee_id, $remarks);
+                
+                // Get patient visit info for validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $service_id = $visit_info['service_id'];
+                
+                // Document routing is allowed for document requests or after consultation
+                if ($flowValidator->isDocumentRequestService($service_id)) {
+                    $result = $queueService->routePatientToStation($queue_entry_id, 'document', $employee_id, $remarks);
+                    $flowValidator->logRoutingAction($queue_entry_id, 'route_to_document', 'billing', 'document', 
+                        $employee_id, 'Document request service - routing after billing');
+                } else {
+                    // Other services: suggest consultation first for proper workflow
+                    echo json_encode(['success' => false, 
+                        'message' => 'Non-document services should return to consultation before document processing. Use "Route to Consultation" instead.']);
+                    break;
+                }
+                
                 echo json_encode($result);
                 break;
                 

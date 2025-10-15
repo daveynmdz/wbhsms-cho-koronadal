@@ -18,14 +18,16 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 // Include database connection and queue management service
 require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
+require_once $root_path . '/utils/patient_flow_validator.php';
 
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 $message = '';
 $error = '';
 
-// Initialize queue management service
+// Initialize queue management service and patient flow validator
 $queueService = new QueueManagementService($pdo);
+$flowValidator = new PatientFlowValidator($pdo);
 
 // Check if role is authorized for consultation operations
 $allowed_roles = ['doctor', 'admin', 'nurse'];
@@ -148,29 +150,132 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 
             case 'reroute_to_lab':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to laboratory';
-                // Route patient to lab (maintaining same HHM-XXX queue code)
-                $result = $queueService->routePatientToStation($queue_entry_id, 'lab', $employee_id, $remarks);
+                
+                // Get patient visit info for PhilHealth validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $patient_id = $visit_info['patient_id'];
+                $service_id = $visit_info['service_id'];
+                
+                // Check if non-PhilHealth patient needs billing first
+                if (!$flowValidator->shouldSkipBilling($patient_id, $service_id)) {
+                    // Non-PhilHealth primary care: must go to billing first
+                    if ($flowValidator->isPrimaryCareService($service_id)) {
+                        $result = $queueService->routePatientToStation($queue_entry_id, 'billing', $employee_id, 
+                            'Non-PhilHealth patient - payment required before lab services');
+                        $flowValidator->logRoutingAction($queue_entry_id, 'route_to_billing', 'consultation', 'billing', 
+                            $employee_id, 'PhilHealth validation: Payment required before lab');
+                    } else {
+                        $result = $queueService->routePatientToStation($queue_entry_id, 'lab', $employee_id, $remarks);
+                    }
+                } else {
+                    // PhilHealth member: direct to lab
+                    $result = $queueService->routePatientToStation($queue_entry_id, 'lab', $employee_id, $remarks);
+                    $flowValidator->logRoutingAction($queue_entry_id, 'route_to_lab', 'consultation', 'lab', 
+                        $employee_id, 'PhilHealth member - direct routing to lab');
+                }
+                
                 echo json_encode($result);
                 break;
                 
             case 'reroute_to_pharmacy':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to pharmacy';
-                // Route patient to pharmacy (maintaining same HHM-XXX queue code)
-                $result = $queueService->routePatientToStation($queue_entry_id, 'pharmacy', $employee_id, $remarks);
+                
+                // Get patient visit info for PhilHealth validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $patient_id = $visit_info['patient_id'];
+                $service_id = $visit_info['service_id'];
+                
+                // Check if non-PhilHealth patient needs billing first
+                if (!$flowValidator->shouldSkipBilling($patient_id, $service_id)) {
+                    // Non-PhilHealth primary care: must go to billing first
+                    if ($flowValidator->isPrimaryCareService($service_id)) {
+                        $result = $queueService->routePatientToStation($queue_entry_id, 'billing', $employee_id, 
+                            'Non-PhilHealth patient - payment required before pharmacy services');
+                        $flowValidator->logRoutingAction($queue_entry_id, 'route_to_billing', 'consultation', 'billing', 
+                            $employee_id, 'PhilHealth validation: Payment required before pharmacy');
+                    } else {
+                        $result = $queueService->routePatientToStation($queue_entry_id, 'pharmacy', $employee_id, $remarks);
+                    }
+                } else {
+                    // PhilHealth member: direct to pharmacy
+                    $result = $queueService->routePatientToStation($queue_entry_id, 'pharmacy', $employee_id, $remarks);
+                    $flowValidator->logRoutingAction($queue_entry_id, 'route_to_pharmacy', 'consultation', 'pharmacy', 
+                        $employee_id, 'PhilHealth member - direct routing to pharmacy');
+                }
+                
                 echo json_encode($result);
                 break;
                 
             case 'reroute_to_billing':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to billing';
-                // Route patient to billing (maintaining same HHM-XXX queue code)
+                
+                // Get patient visit info for validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $patient_id = $visit_info['patient_id'];
+                $service_id = $visit_info['service_id'];
+                
+                // Validate that billing is appropriate for this service/patient
+                if ($flowValidator->shouldSkipBilling($patient_id, $service_id)) {
+                    echo json_encode(['success' => false, 
+                        'message' => 'PhilHealth members do not require billing for this service type']);
+                    break;
+                }
+                
                 $result = $queueService->routePatientToStation($queue_entry_id, 'billing', $employee_id, $remarks);
+                $flowValidator->logRoutingAction($queue_entry_id, 'route_to_billing', 'consultation', 'billing', 
+                    $employee_id, 'Manual routing to billing - payment required');
+                
                 echo json_encode($result);
                 break;
                 
             case 'reroute_to_document':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to document processing';
-                // Route patient to document (maintaining same HHM-XXX queue code)
-                $result = $queueService->routePatientToStation($queue_entry_id, 'document', $employee_id, $remarks);
+                
+                // Get patient visit info for validation
+                $visit_info = $flowValidator->getPatientVisitInfo($queue_entry_id);
+                if (!$visit_info) {
+                    echo json_encode(['success' => false, 'message' => 'Unable to retrieve patient information']);
+                    break;
+                }
+                
+                $patient_id = $visit_info['patient_id'];
+                $service_id = $visit_info['service_id'];
+                
+                // Document services always require billing regardless of PhilHealth status
+                if (!$flowValidator->isDocumentRequestService($service_id)) {
+                    // Not a document request service - may need billing first
+                    if (!$flowValidator->shouldSkipBilling($patient_id, $service_id)) {
+                        $result = $queueService->routePatientToStation($queue_entry_id, 'billing', $employee_id, 
+                            'Payment required before document processing');
+                        $flowValidator->logRoutingAction($queue_entry_id, 'route_to_billing', 'consultation', 'billing', 
+                            $employee_id, 'Document request - payment required first');
+                    } else {
+                        $result = $queueService->routePatientToStation($queue_entry_id, 'document', $employee_id, $remarks);
+                        $flowValidator->logRoutingAction($queue_entry_id, 'route_to_document', 'consultation', 'document', 
+                            $employee_id, 'PhilHealth member - direct routing to document');
+                    }
+                } else {
+                    // Already a document service - direct routing
+                    $result = $queueService->routePatientToStation($queue_entry_id, 'document', $employee_id, $remarks);
+                    $flowValidator->logRoutingAction($queue_entry_id, 'route_to_document', 'consultation', 'document', 
+                        $employee_id, 'Document service routing');
+                }
+                
                 echo json_encode($result);
                 break;
                 

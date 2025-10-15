@@ -398,7 +398,7 @@ if (empty($connection_status)) {
             <a href="?<?php echo http_build_query(['test' => $test]); ?>" class="btn btn-refresh">
                 <i class="fas fa-sync-alt"></i> Refresh Test
             </a>
-            <a href="../pages/patient/login.php" class="btn btn-secondary">
+            <a href="../pages/patient/auth/patient_login.php" class="btn btn-secondary">
                 <i class="fas fa-user"></i> Patient Portal
             </a>
         </div>

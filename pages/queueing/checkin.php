@@ -16,6 +16,7 @@ require_once '../../config/session/employee_session.php';
 // Include necessary files
 require_once '../../config/db.php';
 require_once '../../utils/queue_management_service.php';
+require_once '../../utils/patient_flow_validator.php';
 
 // Access Control - Only allow check-in roles
 $allowed_roles = ['admin', 'records_officer', 'dho', 'bhw'];
@@ -99,9 +100,10 @@ $search_results = [];
 $barangays = [];
 $services = [];
 
-// Initialize Queue Management Service
+// Initialize Queue Management Service and Patient Flow Validator
 try {
     $queueService = new QueueManagementService($pdo);
+    $flowValidator = new PatientFlowValidator($pdo);
 } catch (Exception $e) {
     error_log("Queue Service initialization error: " . $e->getMessage());
     $error = "System initialization failed. Please contact administrator.";
@@ -442,8 +444,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $appointment_id = $_POST['appointment_id'] ?? 0;
             $patient_id = $_POST['patient_id'] ?? 0;
             $priority_override = $_POST['priority_override'] ?? '';
+            $is_philhealth = isset($_POST['is_philhealth']) ? (int)$_POST['is_philhealth'] : null;
+            $philhealth_id = trim($_POST['philhealth_id'] ?? '');
 
-            if ($appointment_id && $patient_id) {
+            if ($appointment_id && $patient_id && $is_philhealth !== null) {
                 // Check if queue service is available
                 if (!isset($queueService)) {
                     $error = "Queue service is not available. Please refresh the page or contact administrator.";
@@ -451,9 +455,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 try {
-                    $pdo->beginTransaction();
+                    // Ensure no open transactions before starting
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                        error_log("Warning: Found open transaction before check-in, rolling back");
+                    }
 
-                    // Get appointment and patient details
+                    // Get appointment and patient details first (no transaction yet)
                     $stmt = $pdo->prepare("
                         SELECT a.appointment_id, a.patient_id, a.service_id, a.status, a.scheduled_date, a.scheduled_time,
                                p.first_name, p.last_name, p.isSenior, p.isPWD, p.date_of_birth
@@ -478,14 +486,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Validate employee permissions
                     $employee_id = $_SESSION['employee_id'] ?? $_SESSION['user_id'];
 
-                    // Create visit entry
-                    $stmt = $pdo->prepare("
-                        INSERT INTO visits (patient_id, facility_id, appointment_id, visit_date, time_in, visit_status) 
-                        VALUES (?, 1, ?, CURDATE(), NOW(), 'ongoing')
-                    ");
-                    $stmt->execute([$patient_id, $appointment_id]);
-                    $visit_id = $pdo->lastInsertId();
-
                     // Determine priority level
                     $priority_level = 'normal';
                     if ($priority_override === 'priority' || $priority_override === 'emergency') {
@@ -494,50 +494,157 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $priority_level = 'priority';
                     }
 
-                    // Create queue entry using Queue Management Service
-                    $queue_result = $queueService->createQueueEntry(
-                        $appointment_id,
-                        $patient_id,
-                        $appointment_data['service_id'],
-                        'triage', // First station after check-in
-                        $priority_level,
-                        $employee_id
-                    );
+                    // **SINGLE TRANSACTION for all operations**
+                    $pdo->beginTransaction();
+                    
+                    try {
+                        // 1. Update patient PhilHealth status if provided
+                        if ($is_philhealth !== null) {
+                            $update_params = [$is_philhealth];
+                            $philhealth_update_query = "UPDATE patients SET is_philhealth = ?";
+                            
+                            if (!empty($philhealth_id) && $is_philhealth == 1) {
+                                $philhealth_update_query .= ", philhealth_id_number = ?";
+                                $update_params[] = $philhealth_id;
+                            }
+                            
+                            $philhealth_update_query .= " WHERE patient_id = ?";
+                            $update_params[] = $patient_id;
+                            
+                            $stmt = $pdo->prepare($philhealth_update_query);
+                            $stmt->execute($update_params);
+                        }
 
-                    if (!$queue_result['success']) {
-                        $error_message = $queue_result['message'] ?? $queue_result['error'] ?? 'Unknown error occurred';
-                        throw new Exception("Failed to create queue entry: " . $error_message);
+                        // 2. Create visit record
+                        $stmt = $pdo->prepare("
+                            INSERT INTO visits (
+                                patient_id, facility_id, appointment_id, visit_date, 
+                                visit_status, created_at, updated_at
+                            ) VALUES (?, 1, ?, ?, 'ongoing', NOW(), NOW())
+                        ");
+                        $stmt->execute([$patient_id, $appointment_id, $appointment_data['scheduled_date']]);
+                        $visit_id = $pdo->lastInsertId();
+
+                        // 3. Generate queue code for CHO appointments
+                        $queue_code = null;
+                        $queue_number = null;
+                        
+                        // Generate structured queue code (CHO appointments only)
+                        $stmt = $pdo->prepare("SELECT facility_id FROM appointments WHERE appointment_id = ?");
+                        $stmt->execute([$appointment_id]);
+                        $facility_info = $stmt->fetch();
+                        
+                        if ($facility_info && $facility_info['facility_id'] == 1) { // CHO Main District
+                            // Get next queue number for today
+                            $stmt = $pdo->prepare("
+                                SELECT COALESCE(MAX(queue_number), 0) + 1 as next_number 
+                                FROM queue_entries 
+                                WHERE DATE(time_in) = CURDATE() 
+                                AND queue_number IS NOT NULL
+                            ");
+                            $stmt->execute();
+                            $result = $stmt->fetch();
+                            $queue_number = $result['next_number'] ?? 1;
+                            $queue_code = 'CHO-' . date('Ymd') . '-' . str_pad($queue_number, 3, '0', STR_PAD_LEFT);
+                        }
+
+                        // 4. Get station for this service
+                        $stmt = $pdo->prepare("
+                            SELECT s.station_id FROM stations s
+                            JOIN station_services ss ON s.station_id = ss.station_id
+                            WHERE ss.service_id = ? AND s.facility_id = 1 
+                            AND s.station_type = 'triage' AND s.status = 'open'
+                            LIMIT 1
+                        ");
+                        $stmt->execute([$appointment_data['service_id']]);
+                        $station_result = $stmt->fetch();
+                        
+                        if (!$station_result) {
+                            // Fallback to any open triage station
+                            $stmt = $pdo->prepare("
+                                SELECT station_id FROM stations 
+                                WHERE facility_id = 1 AND station_type = 'triage' AND status = 'open' 
+                                LIMIT 1
+                            ");
+                            $stmt->execute();
+                            $station_result = $stmt->fetch();
+                        }
+                        
+                        if (!$station_result) {
+                            throw new Exception("No open triage stations available. Please contact administrator.");
+                        }
+                        
+                        $station_id = $station_result['station_id'];
+
+                        // 5. Create queue entry
+                        $stmt = $pdo->prepare("
+                            INSERT INTO queue_entries (
+                                visit_id, appointment_id, patient_id, service_id, station_id,
+                                queue_type, queue_number, queue_code, priority_level, status
+                            ) VALUES (?, ?, ?, ?, ?, 'triage', ?, ?, ?, 'waiting')
+                        ");
+                        $stmt->execute([
+                            $visit_id, $appointment_id, $patient_id, $appointment_data['service_id'], 
+                            $station_id, $queue_number, $queue_code, $priority_level
+                        ]);
+                        $queue_entry_id = $pdo->lastInsertId();
+
+                        // 6. Update appointment status
+                        $stmt = $pdo->prepare("UPDATE appointments SET status = 'checked_in' WHERE appointment_id = ?");
+                        $stmt->execute([$appointment_id]);
+
+                        // 7. Log queue creation
+                        $stmt = $pdo->prepare("
+                            INSERT INTO queue_logs (queue_entry_id, action, old_status, new_status, remarks, performed_by, created_at)
+                            VALUES (?, 'created', null, 'waiting', ?, ?, NOW())
+                        ");
+                        $queue_remarks = $queue_code ? "Queue created with code: {$queue_code}" : 'Queue entry created';
+                        $stmt->execute([$queue_entry_id, $queue_remarks, $employee_id]);
+
+                        // 8. Log the check-in action
+                        $stmt = $pdo->prepare("
+                            INSERT INTO appointment_logs (appointment_id, patient_id, action, details, performed_by, created_at)
+                            VALUES (?, ?, 'checked_in', ?, ?, NOW())
+                        ");
+                        $log_details = json_encode([
+                            'queue_code' => $queue_code ?? 'N/A',
+                            'priority_level' => $priority_level,
+                            'station' => 'triage',
+                            'philhealth_status' => $is_philhealth ? 'Member' : 'Non-member'
+                        ]);
+                        $stmt->execute([$appointment_id, $patient_id, 'Patient checked in successfully', $employee_id]);
+
+                        // Commit all operations
+                        $pdo->commit();
+
+                        // Success message
+                        $queue_code_display = $queue_code ?? 'N/A';
+                        $success = "Patient checked in successfully! Queue Code: " . $queue_code_display .
+                            " | Priority: " . ucfirst($priority_level) . " | Next Station: Triage" .
+                            " | PhilHealth: " . ($is_philhealth ? 'Member' : 'Non-member');
+
+                        // Log success
+                        error_log("Check-in successful for appointment {$appointment_id}: Queue Code {$queue_code_display}");
+                        
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        throw $e; // Re-throw to be caught by outer catch
                     }
-
-                    // Update appointment status
-                    $stmt = $pdo->prepare("UPDATE appointments SET status = 'checked_in' WHERE appointment_id = ?");
-                    $stmt->execute([$appointment_id]);
-
-                    // Log the check-in action
-                    $stmt = $pdo->prepare("
-                        INSERT INTO appointment_logs (appointment_id, patient_id, action, details, performed_by, created_at)
-                        VALUES (?, ?, 'checked_in', ?, ?, NOW())
-                    ");
-                    $log_details = json_encode([
-                        'queue_code' => $queue_result['queue_code'] ?? 'N/A',
-                        'priority_level' => $priority_level,
-                        'station' => 'triage'
-                    ]);
-                    $stmt->execute([$appointment_id, $patient_id, 'Patient checked in successfully', $employee_id]);
-
-                    $pdo->commit();
-
-                    $queue_code = $queue_result['queue_code'] ?? 'N/A';
-                    $success = "Patient checked in successfully! Queue Code: " . $queue_code .
-                        " | Priority: " . ucfirst($priority_level) . " | Next Station: Triage";
+                        
                 } catch (Exception $e) {
+                    // Clean up any open transactions
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
                     }
                     $error = "Check-in failed: " . $e->getMessage();
+                    error_log("Check-in error for appointment {$appointment_id}: " . $e->getMessage());
                 }
             } else {
-                $error = "Invalid appointment or patient information.";
+                if ($is_philhealth === null) {
+                    $error = "Please specify PhilHealth membership status before check-in.";
+                } else {
+                    $error = "Invalid appointment or patient information.";
+                }
             }
             break;
 
@@ -1908,6 +2015,170 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #495057;
         }
 
+        /* PhilHealth Verification Section */
+        .philhealth-verification {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+
+        .philhealth-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 15px 0;
+        }
+
+        .philhealth-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .philhealth-option:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+        }
+
+        .philhealth-option input[type="radio"] {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+
+        .philhealth-option input[type="radio"]:checked + .philhealth-label {
+            font-weight: 600;
+            color: #007bff;
+        }
+
+        .philhealth-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .philhealth-label i {
+            font-size: 18px;
+        }
+
+        .philhealth-option small {
+            display: block;
+            color: #6c757d;
+            margin-top: 4px;
+            font-size: 13px;
+        }
+
+        .philhealth-id-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+
+        .philhealth-id-section label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .philhealth-id-section input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* PhilHealth Verification Section */
+        .philhealth-verification {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+
+        .philhealth-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .philhealth-option {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .philhealth-option:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+
+        .philhealth-option input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .philhealth-option input[type="radio"]:checked + .philhealth-label {
+            color: #007bff;
+            font-weight: 600;
+        }
+
+        .philhealth-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .philhealth-label i {
+            font-size: 1.2em;
+        }
+
+        .philhealth-option small {
+            display: block;
+            color: #6c757d;
+            margin-top: 5px;
+            font-size: 0.85em;
+        }
+
+        .philhealth-id-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .philhealth-id-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .philhealth-id-section input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
         /* Priority Selection */
         .priority-selection {
             margin-top: 20px;
@@ -2645,6 +2916,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="modal-body">
                     <div class="confirmation-details" id="checkinConfirmDetails">
                         <!-- Details populated via JavaScript -->
+                    </div>
+
+                    <!-- PhilHealth Verification Section -->
+                    <div class="philhealth-verification">
+                        <label class="form-label">
+                            <i class="fas fa-id-card"></i> PhilHealth Membership Status
+                        </label>
+                        <div class="philhealth-options">
+                            <label class="philhealth-option">
+                                <input type="radio" name="is_philhealth" value="1" id="philhealth_yes">
+                                <span class="philhealth-label">
+                                    <i class="fas fa-check-circle text-success"></i> PhilHealth Member
+                                </span>
+                                <small>Patient has valid PhilHealth coverage</small>
+                            </label>
+                            <label class="philhealth-option">
+                                <input type="radio" name="is_philhealth" value="0" id="philhealth_no">
+                                <span class="philhealth-label">
+                                    <i class="fas fa-times-circle text-danger"></i> Non-PhilHealth
+                                </span>
+                                <small>Patient will be charged for services</small>
+                            </label>
+                        </div>
+                        
+                        <div class="philhealth-id-section" id="philhealth_id_section" style="display: none;">
+                            <label for="philhealth_id">PhilHealth ID Number (Optional)</label>
+                            <input type="text" name="philhealth_id" id="philhealth_id" class="form-control" 
+                                   placeholder="e.g., 12-345678901-2" maxlength="15">
+                            <small class="text-muted">For record keeping purposes</small>
+                        </div>
                     </div>
 
                     <div class="priority-selection">
@@ -3453,10 +3754,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
+        // PhilHealth handling functions
+        function handlePhilHealthSelection() {
+            const philhealthYes = document.getElementById('philhealth_yes');
+            const philhealthNo = document.getElementById('philhealth_no');
+            const philhealthIdSection = document.getElementById('philhealth_id_section');
+            
+            if (philhealthYes && philhealthNo && philhealthIdSection) {
+                philhealthYes.addEventListener('change', function() {
+                    if (this.checked) {
+                        philhealthIdSection.style.display = 'block';
+                    }
+                });
+                
+                philhealthNo.addEventListener('change', function() {
+                    if (this.checked) {
+                        philhealthIdSection.style.display = 'none';
+                        document.getElementById('philhealth_id').value = '';
+                    }
+                });
+            }
+        }
+
+        function validatePhilHealthSelection() {
+            const philhealthYes = document.getElementById('philhealth_yes');
+            const philhealthNo = document.getElementById('philhealth_no');
+            
+            if (!philhealthYes || !philhealthNo) return true; // Skip validation if elements not found
+            
+            if (!philhealthYes.checked && !philhealthNo.checked) {
+                showAlert('Please specify the patient\'s PhilHealth membership status before proceeding.', 'warning');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Enhanced check-in form validation
+        function validateCheckinForm() {
+            return validatePhilHealthSelection();
+        }
+
         // Initialize form handlers
         document.addEventListener('DOMContentLoaded', function() {
-            // Add loading to form submissions
-            submitFormWithLoading('checkinConfirmForm', 'Checking in patient...');
+            // Initialize PhilHealth handling
+            handlePhilHealthSelection();
+            
+            // Add enhanced validation to check-in form
+            const checkinForm = document.getElementById('checkinConfirmForm');
+            if (checkinForm) {
+                checkinForm.addEventListener('submit', function(e) {
+                    if (!validateCheckinForm()) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    showLoadingOverlay('Checking in patient...');
+                });
+            }
+            
+            // Add loading to other form submissions
             submitFormWithLoading('flagForm', 'Flagging patient...');
             submitFormWithLoading('cancelForm', 'Cancelling appointment...');
 
