@@ -6,7 +6,7 @@
  */
 
 // Include employee session configuration
-$root_path = dirname(dirname(__DIR__));
+$root_path = dirname(dirname(dirname(__FILE__)));
 require_once $root_path . '/config/session/employee_session.php';
 
 // Check if user is logged in
@@ -40,17 +40,16 @@ $pharmacy_station = null;
 $can_manage_queue = false;
 
 // Check if employee is assigned to a pharmacy station today
-$assignment_query = "SELECT sa.*, s.station_name, s.station_type 
-                     FROM station_assignments sa 
-                     JOIN stations s ON sa.station_id = s.station_id 
-                     WHERE sa.employee_id = ? 
+$assignment_query = "SELECT sch.*, s.station_name, s.station_type 
+                     FROM assignment_schedules sch 
+                     JOIN stations s ON sch.station_id = s.station_id 
+                     WHERE sch.employee_id = ? 
                      AND s.station_type = 'pharmacy'
-                     AND sa.assigned_date <= ? 
-                     AND (sa.end_date IS NULL OR sa.end_date >= ?)
-                     AND sa.status = 'active'
-                     ORDER BY sa.assigned_date DESC LIMIT 1";
+                     AND sch.is_active = 1
+                     AND (sch.start_date <= CURDATE() AND (sch.end_date IS NULL OR sch.end_date >= CURDATE()))
+                     ORDER BY sch.assigned_at DESC LIMIT 1";
 $stmt = $pdo->prepare($assignment_query);
-$stmt->execute([$employee_id, $current_date, $current_date]);
+$stmt->execute([$employee_id]);
 $pharmacy_station = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Handle station selection for multi-station support

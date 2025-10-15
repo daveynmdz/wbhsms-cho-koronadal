@@ -538,7 +538,7 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
         }
 
         // For development: bypass email if SMTP_PASS is empty or 'disabled'
-        $bypassEmail = empty($_ENV['SMTP_PASS']) || $_ENV['SMTP_PASS'] === 'disabled';
+        $bypassEmail = empty(getenv('SMTP_PASS')) || getenv('SMTP_PASS') === 'disabled';
         
         if ($bypassEmail) {
             // Development mode: log instead of sending
@@ -565,17 +565,17 @@ function sendAppointmentConfirmationEmail($patient_info, $appointment_num, $faci
 
         // Use the same SMTP configuration as the working OTP system
         $mail->isSMTP();
-        $mail->Host = $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com';
+        $mail->Host = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
         $mail->SMTPAuth = true;
         $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Username = $_ENV['SMTP_USER'] ?? 'cityhealthofficeofkoronadal@gmail.com';
-        $mail->Password = $_ENV['SMTP_PASS'] ?? '';
-        $mail->Port = $_ENV['SMTP_PORT'] ?? 587;
-        $fromEmail = $_ENV['SMTP_FROM'] ?? 'cityhealthofficeofkoronadal@gmail.com';
-        $fromName = $_ENV['SMTP_FROM_NAME'] ?? 'City Health Office of Koronadal';
+        $mail->Username = getenv('SMTP_USER') ?: 'cityhealthofficeofkoronadal@gmail.com';
+        $mail->Password = getenv('SMTP_PASS') ?: '';
+        $mail->Port = getenv('SMTP_PORT') ?: 587;
+        $fromEmail = getenv('SMTP_FROM') ?: 'cityhealthofficeofkoronadal@gmail.com';
+        $fromName = getenv('SMTP_FROM_NAME') ?: 'City Health Office of Koronadal';
 
         // Add debugging for development
-        $debug = ($_ENV['APP_DEBUG'] ?? '0') === '1';
+        $debug = (getenv('APP_DEBUG') ?: '0') === '1';
         if ($debug) {
             $mail->SMTPDebug = 2;
             $mail->Debugoutput = 'error_log';

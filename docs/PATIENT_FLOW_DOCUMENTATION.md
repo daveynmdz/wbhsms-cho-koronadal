@@ -100,7 +100,7 @@ Each patient's path depends on their PhilHealth membership and the type of servi
 | ❌ Non-Member     | `[16] Check-In Counter → [1-3] Triage → [4] Billing → [13] Laboratory → END QUEUE` |
 
 **Notes:**  
-- Billing applies only to non-PhilHealth members before proceeding to lab testing.
+- Billing applies only to non-PhilHealth members before proceeding to lab testing or consultation again if it is dental related like service_id='2'&&item_id='1'.
 - Laboratory station handles both specimen collection and result upload.
 
 **✅ Implementation Status:** Laboratory routing verified and working.

@@ -6,7 +6,7 @@
  */
 
 // Include employee session configuration
-$root_path = dirname(dirname(__DIR__));
+$root_path = dirname(dirname(dirname(__FILE__)));
 require_once $root_path . '/config/session/employee_session.php';
 
 // Check if user is logged in
@@ -40,17 +40,16 @@ $consultation_station = null;
 $can_manage_queue = false;
 
 // Check if employee is assigned to a consultation station today
-$assignment_query = "SELECT sa.*, s.station_name, s.station_type 
-                     FROM station_assignments sa 
-                     JOIN stations s ON sa.station_id = s.station_id 
-                     WHERE sa.employee_id = ? 
+$assignment_query = "SELECT sch.*, s.station_name, s.station_type 
+                     FROM assignment_schedules sch 
+                     JOIN stations s ON sch.station_id = s.station_id 
+                     WHERE sch.employee_id = ? 
                      AND s.station_type = 'consultation'
-                     AND sa.assigned_date <= ? 
-                     AND (sa.end_date IS NULL OR sa.end_date >= ?)
-                     AND sa.status = 'active'
-                     ORDER BY sa.assigned_date DESC LIMIT 1";
+                     AND sch.is_active = 1
+                     AND (sch.start_date <= CURDATE() AND (sch.end_date IS NULL OR sch.end_date >= CURDATE()))
+                     ORDER BY sch.assigned_at DESC LIMIT 1";
 $stmt = $pdo->prepare($assignment_query);
-$stmt->execute([$employee_id, $current_date, $current_date]);
+$stmt->execute([$employee_id]);
 $consultation_station = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Handle station selection for multi-station support
@@ -149,94 +148,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 
             case 'reroute_to_lab':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to laboratory';
-                $result = $queueService->updateQueueStatus($queue_entry_id, 'done', 'in_progress', $employee_id, $remarks);
-                if ($result['success']) {
-                    $patient_query = "SELECT patient_id, visit_id, appointment_id, service_id FROM queue_entries WHERE queue_entry_id = ?";
-                    $stmt = $pdo->prepare($patient_query);
-                    $stmt->execute([$queue_entry_id]);
-                    $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($patient_data) {
-                        $lab_result = $queueService->createQueueEntry(
-                            $patient_data['appointment_id'],
-                            $patient_data['patient_id'], 
-                            $patient_data['service_id'],
-                            'lab',
-                            'normal',
-                            $employee_id
-                        );
-                        echo json_encode($lab_result);
-                    }
-                }
+                // Route patient to lab (maintaining same HHM-XXX queue code)
+                $result = $queueService->routePatientToStation($queue_entry_id, 'lab', $employee_id, $remarks);
+                echo json_encode($result);
                 break;
                 
             case 'reroute_to_pharmacy':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to pharmacy';
-                $result = $queueService->updateQueueStatus($queue_entry_id, 'done', 'in_progress', $employee_id, $remarks);
-                if ($result['success']) {
-                    $patient_query = "SELECT patient_id, visit_id, appointment_id, service_id FROM queue_entries WHERE queue_entry_id = ?";
-                    $stmt = $pdo->prepare($patient_query);
-                    $stmt->execute([$queue_entry_id]);
-                    $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($patient_data) {
-                        $pharmacy_result = $queueService->createQueueEntry(
-                            $patient_data['appointment_id'],
-                            $patient_data['patient_id'], 
-                            $patient_data['service_id'],
-                            'pharmacy',
-                            'normal',
-                            $employee_id
-                        );
-                        echo json_encode($pharmacy_result);
-                    }
-                }
+                // Route patient to pharmacy (maintaining same HHM-XXX queue code)
+                $result = $queueService->routePatientToStation($queue_entry_id, 'pharmacy', $employee_id, $remarks);
+                echo json_encode($result);
                 break;
                 
             case 'reroute_to_billing':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to billing';
-                $result = $queueService->updateQueueStatus($queue_entry_id, 'done', 'in_progress', $employee_id, $remarks);
-                if ($result['success']) {
-                    $patient_query = "SELECT patient_id, visit_id, appointment_id, service_id FROM queue_entries WHERE queue_entry_id = ?";
-                    $stmt = $pdo->prepare($patient_query);
-                    $stmt->execute([$queue_entry_id]);
-                    $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($patient_data) {
-                        $billing_result = $queueService->createQueueEntry(
-                            $patient_data['appointment_id'],
-                            $patient_data['patient_id'], 
-                            $patient_data['service_id'],
-                            'billing',
-                            'normal',
-                            $employee_id
-                        );
-                        echo json_encode($billing_result);
-                    }
-                }
+                // Route patient to billing (maintaining same HHM-XXX queue code)
+                $result = $queueService->routePatientToStation($queue_entry_id, 'billing', $employee_id, $remarks);
+                echo json_encode($result);
                 break;
                 
             case 'reroute_to_document':
                 $remarks = $_POST['remarks'] ?? 'Completed consultation, forwarded to document processing';
-                $result = $queueService->updateQueueStatus($queue_entry_id, 'done', 'in_progress', $employee_id, $remarks);
-                if ($result['success']) {
-                    $patient_query = "SELECT patient_id, visit_id, appointment_id, service_id FROM queue_entries WHERE queue_entry_id = ?";
-                    $stmt = $pdo->prepare($patient_query);
-                    $stmt->execute([$queue_entry_id]);
-                    $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($patient_data) {
-                        $document_result = $queueService->createQueueEntry(
-                            $patient_data['appointment_id'],
-                            $patient_data['patient_id'], 
-                            $patient_data['service_id'],
-                            'document',
-                            'normal',
-                            $employee_id
-                        );
-                        echo json_encode($document_result);
-                    }
-                }
+                // Route patient to document (maintaining same HHM-XXX queue code)
+                $result = $queueService->routePatientToStation($queue_entry_id, 'document', $employee_id, $remarks);
+                echo json_encode($result);
                 break;
                 
             case 'enter_consultation_notes':

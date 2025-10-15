@@ -69,14 +69,14 @@ try {
     
     if ($count > 0) {
         echo "<table>";
-        echo "<tr><th>Service ID</th><th>Name</th><th>Type</th><th>Status</th></tr>";
-        $result = $conn->query("SELECT service_id, service_name, service_type, status FROM services LIMIT 5");
+        echo "<tr><th>Service ID</th><th>Name</th><th>Description</th><th>Billable</th></tr>";
+        $result = $conn->query("SELECT service_id, name, description, is_billable FROM services LIMIT 5");
         while ($row = $result->fetch_assoc()) {
             echo "<tr>";
             echo "<td>" . $row['service_id'] . "</td>";
-            echo "<td>" . $row['service_name'] . "</td>";
-            echo "<td>" . $row['service_type'] . "</td>";
-            echo "<td>" . $row['status'] . "</td>";
+            echo "<td>" . $row['name'] . "</td>";
+            echo "<td>" . $row['description'] . "</td>";
+            echo "<td>" . ($row['is_billable'] ? 'Yes' : 'No') . "</td>";
             echo "</tr>";
         }
         echo "</table>";

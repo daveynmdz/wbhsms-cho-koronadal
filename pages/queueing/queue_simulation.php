@@ -119,19 +119,8 @@ function createSimulation() {
         // Create test appointment
         $appointment_data = createTestAppointment($test_patient_id);
         
-        // Create initial queue entry
-        $queue_result = $queueService->createQueueEntry(
-            $appointment_data['appointment_id'],
-            $test_patient_id,
-            1, // General Consultation service_id
-            'consultation',
-            'normal',
-            $employee_id
-        );
-        
-        if (!$queue_result['success']) {
-            throw new Exception('Failed to create queue entry: ' . $queue_result['message']);
-        }
+        // For simulation, we just create the appointment - queue entry will be created during check-in
+        // This simulates the patient having a confirmed appointment but not yet checked in
         
         $pdo->commit();
         
@@ -140,9 +129,7 @@ function createSimulation() {
             'simulation_id' => $appointment_data['appointment_id'],
             'patient_id' => $test_patient_id,
             'appointment_id' => $appointment_data['appointment_id'],
-            'queue_entry_id' => $queue_result['queue_entry_id'],
-            'queue_code' => $queue_result['queue_code'],
-            'message' => 'Simulation created successfully'
+            'message' => 'Simulation created successfully - Patient ready for check-in'
         ];
         
     } catch (Exception $e) {
@@ -231,317 +218,551 @@ function createTestAppointment($patient_id) {
  * Simulate check-in process
  */
 function simulateCheckin($simulation_id) {
-    global $queueService, $employee_id;
+    global $pdo, $queueService, $employee_id;
     
-    // Get current queue entry
-    $queue_entry = getCurrentQueueEntry($simulation_id);
-    if (!$queue_entry) {
-        return ['success' => false, 'message' => 'No queue entry found'];
+    try {
+        // Get appointment details
+        $stmt = $pdo->prepare("SELECT * FROM appointments WHERE appointment_id = ?");
+        $stmt->execute([$simulation_id]);
+        $appointment = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$appointment) {
+            return ['success' => false, 'message' => 'Appointment not found'];
+        }
+        
+        // Check if already checked in
+        $existing_queue = getCurrentQueueEntry($simulation_id);
+        if ($existing_queue) {
+            return ['success' => false, 'message' => 'Patient already checked in'];
+        }
+        
+        // Generate HHM-XXX queue code format
+        $current_time = date('H:i');
+        $hour = date('H');
+        $meridiem = $hour < 12 ? 'A' : 'P';
+        $hour_12 = $hour > 12 ? $hour - 12 : ($hour == 0 ? 12 : $hour);
+        $hour_12 = str_pad($hour_12, 2, '0', STR_PAD_LEFT);
+        
+        // Get the next number in line for today
+        $today = date('Y-m-d');
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count 
+            FROM queue_entries qe 
+            WHERE DATE(qe.time_in) = ? 
+            AND qe.queue_code LIKE ?
+        ");
+        $time_prefix = $hour_12 . $meridiem;
+        $stmt->execute([$today, $time_prefix . '-%']);
+        $count_result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $next_number = ($count_result['count'] ?? 0) + 1;
+        
+        $queue_code = $time_prefix . '-' . str_pad($next_number, 3, '0', STR_PAD_LEFT);
+        
+        // Create single queue entry that will follow patient through all stations
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_entries (
+                appointment_id, patient_id, service_id, queue_code, 
+                status, priority, time_in, created_by, created_at
+            ) VALUES (?, ?, ?, ?, 'waiting', 'normal', NOW(), ?, NOW())
+        ");
+        
+        $stmt->execute([
+            $appointment['appointment_id'],
+            $appointment['patient_id'],
+            $appointment['service_id'],
+            $queue_code,
+            $employee_id
+        ]);
+        
+        $queue_entry_id = $pdo->lastInsertId();
+        
+        // Update appointment status to checked_in
+        updateAppointmentStatus($simulation_id, 'checked_in');
+        
+        // Log the check-in action
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'check_in', NULL, 'waiting', ?, 'Patient checked in successfully', NOW())
+        ");
+        $stmt->execute([$queue_entry_id, $employee_id]);
+        
+        return [
+            'success' => true,
+            'message' => "Patient checked in successfully! Queue Code: {$queue_code}",
+            'queue_code' => $queue_code,
+            'queue_entry_id' => $queue_entry_id,
+            'next_station' => 'triage'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Check-in failed: ' . $e->getMessage()];
     }
-    
-    // Update appointment status to checked_in
-    updateAppointmentStatus($simulation_id, 'checked_in');
-    
-    // Route to triage station
-    $result = $queueService->routePatientToStation(
-        $queue_entry['queue_entry_id'],
-        'triage',
-        $employee_id,
-        'Patient checked in and routed to triage'
-    );
-    
-    return [
-        'success' => $result ? true : false,
-        'message' => $result ? 'Patient checked in and routed to triage' : 'Failed to route to triage',
-        'next_station' => 'triage'
-    ];
 }
 
 /**
  * Simulate triage process
  */
 function simulateTriage($simulation_id) {
-    global $queueService, $employee_id;
+    global $pdo, $employee_id;
     
     $queue_entry = getCurrentQueueEntry($simulation_id);
-    if (!$queue_entry || $queue_entry['station_type'] !== 'triage') {
-        return ['success' => false, 'message' => 'Patient not in triage or queue entry not found'];
+    if (!$queue_entry) {
+        return ['success' => false, 'message' => 'No queue entry found'];
     }
     
-    // Call patient to triage
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'in_progress',
-        'waiting',
-        $employee_id,
-        'Patient called for triage assessment'
-    );
-    
-    // Simulate vital signs collection (you could add actual vital signs data here)
-    sleep(2); // Simulate processing time
-    
-    // Complete triage and route to consultation
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'done',
-        'in_progress',
-        $employee_id,
-        'Vitals collected: BP 120/80, HR 72, Temp 36.5°C, Weight 70kg'
-    );
-    
-    // Route to consultation
-    $result = $queueService->routePatientToStation(
-        $queue_entry['queue_entry_id'],
-        'consultation',
-        $employee_id,
-        'Triage completed, routed to consultation'
-    );
-    
-    return [
-        'success' => $result ? true : false,
-        'message' => $result ? 'Triage completed, patient routed to consultation' : 'Failed to route to consultation',
-        'next_station' => 'consultation',
-        'vitals' => 'BP 120/80, HR 72, Temp 36.5°C, Weight 70kg'
-    ];
+    try {
+        // Get a triage station
+        $stmt = $pdo->prepare("
+            SELECT station_id FROM stations 
+            WHERE station_type = 'triage' AND is_active = 1 
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $triage_station = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$triage_station) {
+            return ['success' => false, 'message' => 'No triage station available'];
+        }
+        
+        // Update queue entry to assign to triage station and set to in_progress
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET station_id = ?, status = 'in_progress', time_started = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$triage_station['station_id'], $queue_entry['queue_entry_id']]);
+        
+        // Log the triage start
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'call_patient', 'waiting', 'in_progress', ?, 'Patient called for triage assessment', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // Simulate triage completion
+        sleep(1); // Simulate processing time
+        
+        // Complete triage
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET status = 'completed_station', time_completed = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id']]);
+        
+        // Log triage completion
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'complete_station', 'in_progress', 'completed_station', ?, 
+                      'Vitals collected: BP 120/80, HR 72, Temp 36.5°C, Weight 70kg', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        return [
+            'success' => true,
+            'message' => 'Triage completed, patient ready for consultation',
+            'queue_code' => $queue_entry['queue_code'],
+            'next_station' => 'consultation',
+            'vitals' => 'BP 120/80, HR 72, Temp 36.5°C, Weight 70kg'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Triage failed: ' . $e->getMessage()];
+    }
 }
 
 /**
  * Simulate consultation process
  */
 function simulateConsultation($simulation_id) {
-    global $queueService, $employee_id;
+    global $pdo, $employee_id;
     
     $queue_entry = getCurrentQueueEntry($simulation_id);
-    if (!$queue_entry || $queue_entry['station_type'] !== 'consultation') {
-        return ['success' => false, 'message' => 'Patient not in consultation or queue entry not found'];
+    if (!$queue_entry) {
+        return ['success' => false, 'message' => 'No queue entry found'];
     }
     
-    // Call patient to consultation
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'in_progress',
-        'waiting',
-        $employee_id,
-        'Patient called for doctor consultation'
-    );
-    
-    // Simulate consultation time
-    sleep(2);
-    
-    // Complete consultation
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'done',
-        'in_progress',
-        $employee_id,
-        'Consultation completed. Diagnosis: Upper respiratory tract infection. Treatment plan provided.'
-    );
-    
-    // For simulation, randomly route to lab or pharmacy
-    $next_station = (rand(1, 2) === 1) ? 'lab' : 'pharmacy';
-    
-    $result = $queueService->routePatientToStation(
-        $queue_entry['queue_entry_id'],
-        $next_station,
-        $employee_id,
-        "Consultation completed, routed to {$next_station}"
-    );
-    
-    return [
-        'success' => $result ? true : false,
-        'message' => $result ? "Consultation completed, patient routed to {$next_station}" : "Failed to route to {$next_station}",
-        'next_station' => $next_station,
-        'diagnosis' => 'Upper respiratory tract infection',
-        'treatment' => 'Prescribed antibiotics and rest'
-    ];
+    try {
+        // Get a consultation station
+        $stmt = $pdo->prepare("
+            SELECT station_id FROM stations 
+            WHERE station_type = 'consultation' AND is_active = 1 
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $consultation_station = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$consultation_station) {
+            return ['success' => false, 'message' => 'No consultation station available'];
+        }
+        
+        // Update queue entry to assign to consultation station
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET station_id = ?, status = 'in_progress', time_started = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$consultation_station['station_id'], $queue_entry['queue_entry_id']]);
+        
+        // Log consultation start
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'call_patient', 'completed_station', 'in_progress', ?, 'Patient called for doctor consultation', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // Simulate consultation time
+        sleep(1);
+        
+        // Complete consultation
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET status = 'completed_station', time_completed = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id']]);
+        
+        // Log consultation completion
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'complete_station', 'in_progress', 'completed_station', ?, 
+                      'Consultation completed. Diagnosis: Upper respiratory tract infection', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // For simulation, randomly choose next station
+        $next_station = (rand(1, 2) === 1) ? 'lab' : 'pharmacy';
+        
+        return [
+            'success' => true,
+            'message' => "Consultation completed, patient ready for {$next_station}",
+            'queue_code' => $queue_entry['queue_code'],
+            'next_station' => $next_station,
+            'diagnosis' => 'Upper respiratory tract infection',
+            'treatment' => 'Prescribed antibiotics and rest'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Consultation failed: ' . $e->getMessage()];
+    }
 }
 
 /**
  * Simulate laboratory process
  */
 function simulateLaboratory($simulation_id) {
-    global $queueService, $employee_id;
+    global $pdo, $employee_id;
     
     $queue_entry = getCurrentQueueEntry($simulation_id);
-    if (!$queue_entry || $queue_entry['station_type'] !== 'lab') {
-        return ['success' => false, 'message' => 'Patient not in laboratory or queue entry not found'];
+    if (!$queue_entry) {
+        return ['success' => false, 'message' => 'No queue entry found'];
     }
     
-    // Call patient for lab work
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'in_progress',
-        'waiting',
-        $employee_id,
-        'Patient called for laboratory tests'
-    );
-    
-    // Simulate lab processing time
-    sleep(3);
-    
-    // Complete lab work
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'done',
-        'in_progress',
-        $employee_id,
-        'Lab tests completed: CBC normal, Urinalysis normal'
-    );
-    
-    // Route to pharmacy
-    $result = $queueService->routePatientToStation(
-        $queue_entry['queue_entry_id'],
-        'pharmacy',
-        $employee_id,
-        'Lab work completed, routed to pharmacy'
-    );
-    
-    return [
-        'success' => $result ? true : false,
-        'message' => $result ? 'Lab work completed, patient routed to pharmacy' : 'Failed to route to pharmacy',
-        'next_station' => 'pharmacy',
-        'lab_results' => 'CBC: Normal, Urinalysis: Normal'
-    ];
+    try {
+        // Get a lab station
+        $stmt = $pdo->prepare("
+            SELECT station_id FROM stations 
+            WHERE station_type = 'lab' AND is_active = 1 
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $lab_station = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$lab_station) {
+            return ['success' => false, 'message' => 'No laboratory station available'];
+        }
+        
+        // Update queue entry to assign to lab station
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET station_id = ?, status = 'in_progress', time_started = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$lab_station['station_id'], $queue_entry['queue_entry_id']]);
+        
+        // Log lab start
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'call_patient', 'completed_station', 'in_progress', ?, 'Patient called for laboratory tests', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // Simulate lab processing time
+        sleep(1);
+        
+        // Complete lab work
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET status = 'completed_station', time_completed = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id']]);
+        
+        // Log lab completion
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'complete_station', 'in_progress', 'completed_station', ?, 
+                      'Lab tests completed: CBC normal, Urinalysis normal', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        return [
+            'success' => true,
+            'message' => 'Lab work completed, patient ready for pharmacy',
+            'queue_code' => $queue_entry['queue_code'],
+            'next_station' => 'pharmacy',
+            'lab_results' => 'CBC: Normal, Urinalysis: Normal'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Laboratory failed: ' . $e->getMessage()];
+    }
 }
 
 /**
  * Simulate pharmacy process
  */
 function simulatePharmacy($simulation_id) {
-    global $queueService, $employee_id;
+    global $pdo, $employee_id;
     
     $queue_entry = getCurrentQueueEntry($simulation_id);
-    if (!$queue_entry || $queue_entry['station_type'] !== 'pharmacy') {
-        return ['success' => false, 'message' => 'Patient not in pharmacy or queue entry not found'];
+    if (!$queue_entry) {
+        return ['success' => false, 'message' => 'No queue entry found'];
     }
     
-    // Call patient for medication dispensing
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'in_progress',
-        'waiting',
-        $employee_id,
-        'Patient called for medication dispensing'
-    );
-    
-    // Simulate dispensing time
-    sleep(2);
-    
-    // Complete pharmacy
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'done',
-        'in_progress',
-        $employee_id,
-        'Medications dispensed: Amoxicillin 500mg (7 days), Paracetamol 500mg (as needed)'
-    );
-    
-    // Route to billing
-    $result = $queueService->routePatientToStation(
-        $queue_entry['queue_entry_id'],
-        'billing',
-        $employee_id,
-        'Medications dispensed, routed to billing'
-    );
-    
-    return [
-        'success' => $result ? true : false,
-        'message' => $result ? 'Medications dispensed, patient routed to billing' : 'Failed to route to billing',
-        'next_station' => 'billing',
-        'medications' => 'Amoxicillin 500mg (7 days), Paracetamol 500mg (as needed)'
-    ];
+    try {
+        // Get a pharmacy station
+        $stmt = $pdo->prepare("
+            SELECT station_id FROM stations 
+            WHERE station_type = 'pharmacy' AND is_active = 1 
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $pharmacy_station = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$pharmacy_station) {
+            return ['success' => false, 'message' => 'No pharmacy station available'];
+        }
+        
+        // Update queue entry to assign to pharmacy station
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET station_id = ?, status = 'in_progress', time_started = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$pharmacy_station['station_id'], $queue_entry['queue_entry_id']]);
+        
+        // Log pharmacy start
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'call_patient', 'completed_station', 'in_progress', ?, 'Patient called for medication dispensing', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // Simulate dispensing time
+        sleep(1);
+        
+        // Complete pharmacy
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET status = 'completed_station', time_completed = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id']]);
+        
+        // Log pharmacy completion
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'complete_station', 'in_progress', 'completed_station', ?, 
+                      'Medications dispensed: Amoxicillin 500mg (7 days), Paracetamol 500mg (as needed)', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        return [
+            'success' => true,
+            'message' => 'Medications dispensed, patient ready for billing',
+            'queue_code' => $queue_entry['queue_code'],
+            'next_station' => 'billing',
+            'medications' => 'Amoxicillin 500mg (7 days), Paracetamol 500mg (as needed)'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Pharmacy failed: ' . $e->getMessage()];
+    }
 }
 
 /**
  * Simulate billing process
  */
 function simulateBilling($simulation_id) {
-    global $queueService, $employee_id;
+    global $pdo, $employee_id;
     
     $queue_entry = getCurrentQueueEntry($simulation_id);
-    if (!$queue_entry || $queue_entry['station_type'] !== 'billing') {
-        return ['success' => false, 'message' => 'Patient not in billing or queue entry not found'];
+    if (!$queue_entry) {
+        return ['success' => false, 'message' => 'No queue entry found'];
     }
     
-    // Call patient for billing
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'in_progress',
-        'waiting',
-        $employee_id,
-        'Patient called for billing and payment'
-    );
-    
-    // Simulate billing processing
-    sleep(2);
-    
-    // Complete billing
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'done',
-        'in_progress',
-        $employee_id,
-        'Payment processed: PHP 250.00 (Consultation: PHP 150, Medications: PHP 100)'
-    );
-    
-    // Route to document station for medical certificate
-    $result = $queueService->routePatientToStation(
-        $queue_entry['queue_entry_id'],
-        'document',
-        $employee_id,
-        'Payment completed, routed to document station'
-    );
-    
-    return [
-        'success' => $result ? true : false,
-        'message' => $result ? 'Payment completed, patient routed to document station' : 'Failed to route to document station',
-        'next_station' => 'document',
-        'total_amount' => 'PHP 250.00',
-        'breakdown' => 'Consultation: PHP 150, Medications: PHP 100'
-    ];
+    try {
+        // Get a billing station
+        $stmt = $pdo->prepare("
+            SELECT station_id FROM stations 
+            WHERE station_type = 'billing' AND is_active = 1 
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $billing_station = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$billing_station) {
+            return ['success' => false, 'message' => 'No billing station available'];
+        }
+        
+        // Update queue entry to assign to billing station
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET station_id = ?, status = 'in_progress', time_started = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$billing_station['station_id'], $queue_entry['queue_entry_id']]);
+        
+        // Log billing start
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'call_patient', 'completed_station', 'in_progress', ?, 'Patient called for billing and payment', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // Simulate billing processing
+        sleep(1);
+        
+        // Complete billing
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET status = 'completed_station', time_completed = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id']]);
+        
+        // Log billing completion
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'complete_station', 'in_progress', 'completed_station', ?, 
+                      'Payment processed: PHP 250.00 (Consultation: PHP 150, Medications: PHP 100)', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        return [
+            'success' => true,
+            'message' => 'Payment completed, patient ready for document station',
+            'queue_code' => $queue_entry['queue_code'],
+            'next_station' => 'document',
+            'total_amount' => 'PHP 250.00',
+            'breakdown' => 'Consultation: PHP 150, Medications: PHP 100'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Billing failed: ' . $e->getMessage()];
+    }
 }
 
 /**
  * Simulate document station process
  */
 function simulateDocument($simulation_id) {
-    global $queueService, $employee_id;
+    global $pdo, $employee_id;
     
     $queue_entry = getCurrentQueueEntry($simulation_id);
-    if (!$queue_entry || $queue_entry['station_type'] !== 'document') {
-        return ['success' => false, 'message' => 'Patient not in document station or queue entry not found'];
+    if (!$queue_entry) {
+        return ['success' => false, 'message' => 'No queue entry found'];
     }
     
-    // Call patient for document processing
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'in_progress',
-        'waiting',
-        $employee_id,
-        'Patient called for medical certificate processing'
-    );
-    
-    // Simulate document processing
-    sleep(2);
-    
-    // Complete document processing and entire visit
-    $queueService->updateQueueStatus(
-        $queue_entry['queue_entry_id'],
-        'done',
-        'in_progress',
-        $employee_id,
-        'Medical certificate issued. Patient visit completed.'
-    );
-    
-    // Update appointment status to completed
-    updateAppointmentStatus($simulation_id, 'completed');
-    
-    return [
-        'success' => true,
-        'message' => 'Medical certificate issued. Patient visit completed!',
-        'next_station' => 'completed',
-        'document' => 'Medical Certificate for 3 days rest'
-    ];
+    try {
+        // Get a document station
+        $stmt = $pdo->prepare("
+            SELECT station_id FROM stations 
+            WHERE station_type = 'document' AND is_active = 1 
+            LIMIT 1
+        ");
+        $stmt->execute();
+        $document_station = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$document_station) {
+            return ['success' => false, 'message' => 'No document station available'];
+        }
+        
+        // Update queue entry to assign to document station
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET station_id = ?, status = 'in_progress', time_started = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$document_station['station_id'], $queue_entry['queue_entry_id']]);
+        
+        // Log document start
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'call_patient', 'completed_station', 'in_progress', ?, 'Patient called for medical certificate processing', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // Simulate document processing
+        sleep(1);
+        
+        // Complete document processing and entire visit
+        $stmt = $pdo->prepare("
+            UPDATE queue_entries 
+            SET status = 'done', time_completed = NOW()
+            WHERE queue_entry_id = ?
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id']]);
+        
+        // Log final completion
+        $stmt = $pdo->prepare("
+            INSERT INTO queue_logs (
+                queue_entry_id, action, old_status, new_status, 
+                employee_id, remarks, created_at
+            ) VALUES (?, 'complete_visit', 'in_progress', 'done', ?, 
+                      'Medical certificate issued. Patient visit completed.', NOW())
+        ");
+        $stmt->execute([$queue_entry['queue_entry_id'], $employee_id]);
+        
+        // Update appointment status to completed
+        updateAppointmentStatus($simulation_id, 'completed');
+        
+        return [
+            'success' => true,
+            'message' => 'Medical certificate issued. Patient visit completed!',
+            'queue_code' => $queue_entry['queue_code'],
+            'next_station' => 'completed',
+            'document' => 'Medical Certificate for 3 days rest'
+        ];
+        
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Document processing failed: ' . $e->getMessage()];
+    }
 }
 
 /**
@@ -554,7 +775,7 @@ function getCurrentQueueEntry($appointment_id) {
         SELECT qe.*, s.station_type, s.station_name 
         FROM queue_entries qe
         LEFT JOIN stations s ON qe.station_id = s.station_id
-        WHERE qe.appointment_id = ? AND qe.status IN ('waiting', 'in_progress')
+        WHERE qe.appointment_id = ?
         ORDER BY qe.created_at DESC
         LIMIT 1
     ");

@@ -6,7 +6,7 @@
  */
 
 // Include employee session configuration
-$root_path = dirname(dirname(__DIR__));
+require_once __DIR__ . '/station_path_helper.php';
 require_once $root_path . '/config/session/employee_session.php';
 
 // Check if user is logged in
@@ -40,17 +40,16 @@ $triage_station = null;
 $can_manage_queue = false;
 
 // Check if employee is assigned to a triage station today
-$assignment_query = "SELECT sa.*, s.station_name, s.station_type 
-                     FROM station_assignments sa 
-                     JOIN stations s ON sa.station_id = s.station_id 
-                     WHERE sa.employee_id = ? 
+$assignment_query = "SELECT sch.*, s.station_name, s.station_type 
+                     FROM assignment_schedules sch 
+                     JOIN stations s ON sch.station_id = s.station_id 
+                     WHERE sch.employee_id = ? 
                      AND s.station_type = 'triage'
-                     AND sa.assigned_date <= ? 
-                     AND (sa.end_date IS NULL OR sa.end_date >= ?)
-                     AND sa.status = 'active'
-                     ORDER BY sa.assigned_date DESC LIMIT 1";
+                     AND sch.is_active = 1
+                     AND (sch.start_date <= CURDATE() AND (sch.end_date IS NULL OR sch.end_date >= CURDATE()))
+                     ORDER BY sch.assigned_at DESC LIMIT 1";
 $stmt = $pdo->prepare($assignment_query);
-$stmt->execute([$employee_id, $current_date, $current_date]);
+$stmt->execute([$employee_id]);
 $triage_station = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Handle station selection for multi-station support
@@ -149,32 +148,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 
             case 'push_to_consultation':
                 $remarks = $_POST['remarks'] ?? 'Completed triage, forwarded to consultation';
-                // Mark current triage as completed
-                $result = $queueService->updateQueueStatus($queue_entry_id, 'done', 'in_progress', $employee_id, $remarks);
-                if ($result['success']) {
-                    // Get current patient info for creating consultation entry
-                    $patient_query = "SELECT patient_id, visit_id, appointment_id, service_id FROM queue_entries WHERE queue_entry_id = ?";
-                    $stmt = $pdo->prepare($patient_query);
-                    $stmt->execute([$queue_entry_id]);
-                    $patient_data = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($patient_data) {
-                        // Create consultation queue entry
-                        $consultation_result = $queueService->createQueueEntry(
-                            $patient_data['appointment_id'],
-                            $patient_data['patient_id'], 
-                            $patient_data['service_id'],
-                            'consultation',
-                            'normal',
-                            $employee_id
-                        );
-                        echo json_encode($consultation_result);
-                    } else {
-                        echo json_encode(['success' => false, 'message' => 'Failed to get patient data for consultation']);
-                    }
-                } else {
-                    echo json_encode($result);
-                }
+                // Route patient to consultation (maintaining same HHM-XXX queue code)
+                $result = $queueService->routePatientToStation($queue_entry_id, 'consultation', $employee_id, $remarks);
+                echo json_encode($result);
                 break;
                 
             case 'save_vitals':

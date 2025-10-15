@@ -208,7 +208,7 @@ $current_datetime = date('F j, Y g:i A');
         /* Station Cards Grid Layout */
         .stations-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
             gap: 25px;
             margin-bottom: 30px;
         }
@@ -217,10 +217,15 @@ $current_datetime = date('F j, Y g:i A');
             background: white;
             border: 2px solid var(--cho-border);
             border-radius: var(--cho-border-radius-lg);
-            padding: 25px;
+            padding: 30px;
             box-shadow: var(--cho-shadow);
             transition: var(--cho-transition);
-            position: relative;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 220px;
         }
 
         .station-card:hover {
@@ -229,95 +234,20 @@ $current_datetime = date('F j, Y g:i A');
             border-color: var(--cho-primary);
         }
 
-        .station-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--cho-light);
-        }
-
         .station-icon {
-            font-size: 28px;
+            font-size: 48px;
             color: var(--cho-primary);
-            margin-right: 15px;
-            width: 40px;
-            text-align: center;
-        }
-
-        .station-title {
-            flex: 1;
+            margin-bottom: 20px;
+            display: block;
         }
 
         .station-name {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
             color: var(--cho-primary-dark);
-            margin: 0 0 5px 0;
-        }
-
-        .service-name {
-            font-size: 14px;
-            color: var(--cho-secondary);
-            margin: 0;
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .status-open {
-            background: #d1edda;
-            color: var(--cho-success);
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-closed {
-            background: #f8d7da;
-            color: var(--cho-danger);
-            border: 1px solid #f5c6cb;
-        }
-
-        .station-info {
-            margin-bottom: 20px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: var(--cho-secondary);
-            font-size: 14px;
-        }
-
-        .info-value {
-            color: var(--cho-primary-dark);
-            font-weight: 600;
-        }
-
-        .employee-name {
-            color: var(--cho-primary);
-            font-weight: 600;
-        }
-
-        .no-assignment {
-            color: var(--cho-secondary);
-            font-style: italic;
+            margin: 0 0 25px 0;
+            text-align: center;
+            line-height: 1.3;
         }
 
         /* Open Display Button */
@@ -326,7 +256,7 @@ $current_datetime = date('F j, Y g:i A');
             background: linear-gradient(135deg, var(--cho-primary) 0%, var(--cho-primary-dark) 100%);
             color: white;
             border: none;
-            padding: 15px 20px;
+            padding: 15px 25px;
             border-radius: var(--cho-border-radius);
             font-size: 16px;
             font-weight: 600;
@@ -361,7 +291,7 @@ $current_datetime = date('F j, Y g:i A');
         /* Responsive design - matching dashboard */
         @media (max-width: 768px) {
             .stations-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
                 gap: 20px;
             }
             
@@ -372,33 +302,31 @@ $current_datetime = date('F j, Y g:i A');
             }
             
             .station-card {
-                padding: 20px;
-            }
-            
-            .station-header {
-                flex-direction: column;
-                text-align: center;
-                gap: 10px;
+                padding: 25px 20px;
+                min-height: 200px;
             }
             
             .station-icon {
-                margin-right: 0;
+                font-size: 40px;
+            }
+            
+            .station-name {
+                font-size: 20px;
             }
         }
 
         @media (max-width: 576px) {
+            .stations-grid {
+                grid-template-columns: 1fr;
+            }
+            
             .station-card {
-                padding: 15px;
+                padding: 25px 15px;
+                min-height: 180px;
             }
             
             .station-name {
                 font-size: 18px;
-            }
-            
-            .info-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 5px;
             }
         }
     </style>
@@ -448,56 +376,9 @@ $current_datetime = date('F j, Y g:i A');
                     <!-- Stations Grid -->
                     <div class="stations-grid">
                         <?php foreach ($station_types as $type => $config): ?>
-                            <?php 
-                                $station_data = $stations_data[$type] ?? null;
-                                $is_open = $station_data ? $station_data['is_open'] : 0;
-                                $assigned_employee = $station_data ? $station_data['assigned_employee'] : null;
-                                $employee_role = $station_data ? $station_data['employee_role'] : null;
-                                $service_name = $station_data ? $station_data['service_name'] : null;
-                                $station_name = $station_data ? $station_data['station_name'] : $config['name'];
-                            ?>
                             <div class="station-card">
-                                <div class="station-header">
-                                    <i class="station-icon <?php echo $config['icon']; ?>"></i>
-                                    <div class="station-title">
-                                        <h3 class="station-name"><?php echo htmlspecialchars($station_name); ?></h3>
-                                        <?php if ($service_name): ?>
-                                            <p class="service-name"><?php echo htmlspecialchars($service_name); ?></p>
-                                        <?php endif; ?>
-                                    </div>
-                                    <span class="status-badge <?php echo $is_open ? 'status-open' : 'status-closed'; ?>">
-                                        <?php echo $is_open ? '🟢 Open' : '🔴 Closed'; ?>
-                                    </span>
-                                </div>
-
-                                <div class="station-info">
-                                    <div class="info-row">
-                                        <span class="info-label">Service Type:</span>
-                                        <span class="info-value">
-                                            <?php echo $service_name ? htmlspecialchars($service_name) : ucfirst($type) . ' Services'; ?>
-                                        </span>
-                                    </div>
-                                    <div class="info-row">
-                                        <span class="info-label">Current Status:</span>
-                                        <span class="info-value <?php echo $is_open ? 'status-open' : 'status-closed'; ?>">
-                                            <?php echo $is_open ? 'Station Open' : 'Station Closed'; ?>
-                                        </span>
-                                    </div>
-                                    <div class="info-row">
-                                        <span class="info-label">Assigned Employee:</span>
-                                        <span class="info-value">
-                                            <?php if ($assigned_employee): ?>
-                                                <span class="employee-name"><?php echo htmlspecialchars($assigned_employee); ?></span>
-                                                <?php if ($employee_role): ?>
-                                                    <br><small>(<?php echo htmlspecialchars(ucfirst($employee_role)); ?>)</small>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <span class="no-assignment">No assignment for today</span>
-                                            <?php endif; ?>
-                                        </span>
-                                    </div>
-                                </div>
-
+                                <i class="station-icon <?php echo $config['icon']; ?>"></i>
+                                <h3 class="station-name"><?php echo htmlspecialchars($config['name']); ?></h3>
                                 <a href="#" onclick="openPublicDisplay('<?php echo $config['file']; ?>', '<?php echo $config['name']; ?>'); return false;" class="open-display-btn">
                                     <i class="fas fa-external-link-alt"></i>
                                     Open Display
