@@ -12,6 +12,9 @@ require_once $root_path . '/utils/queue_management_service.php';
 // Initialize queue management service
 $queueService = new QueueManagementService($pdo);
 
+// Include queue code formatter helper
+require_once __DIR__ . '/queue_code_formatter.php';
+
 // Get current date for display
 $current_date = date('Y-m-d');
 $display_date = date('F j, Y');

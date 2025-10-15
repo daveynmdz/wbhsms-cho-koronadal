@@ -12,6 +12,9 @@ require_once $root_path . '/utils/queue_management_service.php';
 // Initialize queue management service
 $queueService = new QueueManagementService($pdo);
 
+// Include queue code formatter helper
+require_once __DIR__ . '/queue_code_formatter.php';
+
 // Get current date for display
 $current_date = date('Y-m-d');
 $display_date = date('F j, Y');
@@ -518,7 +521,7 @@ foreach ($stations as $station) {
                         </div>
                         <div class="display-numbers">
                             <div class="ticket-number">
-                                <?php echo $station && $station['current_queue_code'] ? htmlspecialchars($station['current_queue_code']) : '---'; ?>
+                                <?php echo $station && $station['current_queue_code'] ? htmlspecialchars(formatQueueCodeForPublicDisplay($station['current_queue_code'])) : '---'; ?>
                             </div>
                             <div class="arrow">→</div>
                             <div class="counter-number">

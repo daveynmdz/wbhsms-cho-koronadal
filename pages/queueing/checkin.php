@@ -525,27 +525,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([$patient_id, $appointment_id, $appointment_data['scheduled_date']]);
                         $visit_id = $pdo->lastInsertId();
 
-                        // 3. Generate queue code for CHO appointments
+                        // 3. Generate queue code for CHO appointments using QueueManagementService
                         $queue_code = null;
                         $queue_number = null;
                         
-                        // Generate structured queue code (CHO appointments only)
-                        $stmt = $pdo->prepare("SELECT facility_id FROM appointments WHERE appointment_id = ?");
-                        $stmt->execute([$appointment_id]);
-                        $facility_info = $stmt->fetch();
+                        // Use QueueManagementService to create proper queue entry with time-slot codes
+                        $queue_result = $queueService->createQueueEntry(
+                            $appointment_id, 
+                            $patient_id, 
+                            $appointment_data['service_id'], 
+                            'triage', 
+                            $priority_level, 
+                            $employee_id
+                        );
                         
-                        if ($facility_info && $facility_info['facility_id'] == 1) { // CHO Main District
-                            // Get next queue number for today
-                            $stmt = $pdo->prepare("
-                                SELECT COALESCE(MAX(queue_number), 0) + 1 as next_number 
-                                FROM queue_entries 
-                                WHERE DATE(time_in) = CURDATE() 
-                                AND queue_number IS NOT NULL
-                            ");
-                            $stmt->execute();
-                            $result = $stmt->fetch();
-                            $queue_number = $result['next_number'] ?? 1;
-                            $queue_code = 'CHO-' . date('Ymd') . '-' . str_pad($queue_number, 3, '0', STR_PAD_LEFT);
+                        if ($queue_result['success']) {
+                            $queue_code = $queue_result['queue_code'];
+                            $queue_entry_id = $queue_result['queue_entry_id'];
+                            // Skip manual queue entry creation since QueueManagementService handled it
+                            $skip_manual_queue_creation = true;
+                        } else {
+                            throw new Exception("Failed to create queue entry: " . $queue_result['message']);
                         }
 
                         // 4. Get station for this service
@@ -574,18 +574,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         $station_id = $station_result['station_id'];
 
-                        // 5. Create queue entry
-                        $stmt = $pdo->prepare("
-                            INSERT INTO queue_entries (
-                                visit_id, appointment_id, patient_id, service_id, station_id,
-                                queue_type, queue_number, queue_code, priority_level, status
-                            ) VALUES (?, ?, ?, ?, ?, 'triage', ?, ?, ?, 'waiting')
-                        ");
-                        $stmt->execute([
-                            $visit_id, $appointment_id, $patient_id, $appointment_data['service_id'], 
-                            $station_id, $queue_number, $queue_code, $priority_level
-                        ]);
-                        $queue_entry_id = $pdo->lastInsertId();
+                        // 5. Create queue entry (skip if QueueManagementService already handled it)
+                        if (!isset($skip_manual_queue_creation)) {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO queue_entries (
+                                    visit_id, appointment_id, patient_id, service_id, station_id,
+                                    queue_type, queue_number, queue_code, priority_level, status
+                                ) VALUES (?, ?, ?, ?, ?, 'triage', ?, ?, ?, 'waiting')
+                            ");
+                            $stmt->execute([
+                                $visit_id, $appointment_id, $patient_id, $appointment_data['service_id'], 
+                                $station_id, $queue_number, $queue_code, $priority_level
+                            ]);
+                            $queue_entry_id = $pdo->lastInsertId();
+                        } else {
+                            // Update the existing queue entry with visit_id
+                            $stmt = $pdo->prepare("UPDATE queue_entries SET visit_id = ? WHERE queue_entry_id = ?");
+                            $stmt->execute([$visit_id, $queue_entry_id]);
+                        }
 
                         // 6. Update appointment status
                         $stmt = $pdo->prepare("UPDATE appointments SET status = 'checked_in' WHERE appointment_id = ?");

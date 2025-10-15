@@ -12,6 +12,9 @@ require_once $root_path . '/utils/queue_management_service.php';
 // Initialize queue management service
 $queueService = new QueueManagementService($pdo);
 
+// Include queue code formatter helper
+require_once __DIR__ . '/queue_code_formatter.php';
+
 // Get current date for display
 $current_date = date('Y-m-d');
 $display_date = date('F j, Y');
@@ -516,8 +519,8 @@ foreach ($stations as $station) {
                                 <div class="ticket-number">
                                     <?php 
                                     if ($station && $station['current_queue_code']):
-                                        // Display the complete queue code (e.g., "08A-001")
-                                        echo htmlspecialchars($station['current_queue_code']);
+                                        // Display simplified queue code (e.g., "08AM-001")
+                                        echo htmlspecialchars(formatQueueCodeForPublicDisplay($station['current_queue_code']));
                                     else:
                                         echo "---";
                                     endif;
@@ -548,7 +551,7 @@ foreach ($stations as $station) {
                         <i class="fas fa-bullhorn"></i> NOW CALLING
                     </div>
                     <div class="called-queue-code flashing" id="calledQueueCode">
-                        <?php echo htmlspecialchars($current_call['current_queue_code']); ?>
+                        <?php echo htmlspecialchars(formatQueueCodeForPublicDisplay($current_call['current_queue_code'])); ?>
                     </div>
                     <div class="proceed-instruction">
                         Please proceed to
