@@ -4,7 +4,9 @@
 $root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 include $root_path . '/config/db.php';
-$baseurl = '/wbhsms-cho-koronadal-1'; // Change this if your deployment base changes
+
+// Use relative path for assets - more reliable than absolute URLs
+$assets_path = '../../../assets';
 
 // Check if user is logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -1285,7 +1287,7 @@ $dho_district_name = $district_name_result->fetch_assoc()['district_name'];
                                                         <img src="data:image/jpeg;base64,<?php echo base64_encode($patient['profile_photo']); ?>" 
                                                              class="profile-img" alt="Patient Photo">
                                                     <?php else: ?>
-                                                        <img src="<?php echo $baseurl; ?>/assets/images/user-default.png" 
+                                                        <img src="<?php echo $assets_path; ?>/images/user-default.png" 
                                                              class="profile-img" alt="Patient Photo">
                                                     <?php endif; ?>
                                                 </td>
@@ -1319,7 +1321,7 @@ $dho_district_name = $district_name_result->fetch_assoc()['district_name'];
                                                 </td>
                                                 <td>
                                                     <div class="action-buttons">
-                                                        <a href="../../patient/profile.php?patient_id=<?php echo $patient['patient_id']; ?>&view_mode=dho" 
+                                                        <a href="../../../patient/profile/profile.php?patient_id=<?php echo $patient['patient_id']; ?>&view_mode=dho" 
                                                         class="action-btn btn-info" title="View Profile (DHO Mode)">
                                                             <i class="fas fa-eye"></i>
                                                         </a>
@@ -1333,7 +1335,7 @@ $dho_district_name = $district_name_result->fetch_assoc()['district_name'];
                                                                 data-barangay="<?php echo !empty($patient['barangay_name']) ? htmlspecialchars($patient['barangay_name']) : 'N/A'; ?>"
                                                                 data-emergency-name="<?php echo !empty($patient['contact_name']) ? htmlspecialchars($patient['contact_name']) : 'N/A'; ?>"
                                                                 data-emergency-contact="<?php echo !empty($patient['emergency_contact']) ? htmlspecialchars($patient['emergency_contact']) : 'N/A'; ?>"
-                                                                data-photo="<?php echo !empty($patient['profile_photo']) ? 'data:image/jpeg;base64,'.base64_encode($patient['profile_photo']) : $baseurl . '/assets/images/user-default.png'; ?>"
+                                                                data-photo="<?php echo !empty($patient['profile_photo']) ? 'data:image/jpeg;base64,'.base64_encode($patient['profile_photo']) : $assets_path . '/images/user-default.png'; ?>"
                                                                 title="View Contact">
                                                             <i class="fas fa-address-card"></i>
                                                         </button>
@@ -1401,7 +1403,7 @@ $dho_district_name = $district_name_result->fetch_assoc()['district_name'];
                             <h5>WBHSMS - CHO Koronadal</h5>
                         </div>
                         <div style="text-align: center; padding: 20px 0;">
-                            <img src="<?php echo $baseurl; ?>/assets/images/user-default.png" id="patientPhoto" alt="Patient Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #0077b6; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            <img src="<?php echo $assets_path; ?>/images/user-default.png" id="patientPhoto" alt="Patient Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #0077b6; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                             <h4 id="patientName" style="margin-top: 15px; color: var(--primary-dark); font-weight: 600;"></h4>
                             <p style="color: var(--primary); font-weight: 500; letter-spacing: 1px;"><i class="fas fa-id-badge" style="margin-right: 5px;"></i> Patient ID: <span id="patientId"></span></p>
                         </div>

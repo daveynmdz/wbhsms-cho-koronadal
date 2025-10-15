@@ -4,7 +4,9 @@
 $root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 include $root_path . '/config/db.php';
-$baseurl = '/wbhsms-cho-koronadal-1'; // Change this if your deployment base changes
+
+// Use relative path for assets - more reliable than absolute URLs
+$assets_path = '../../../assets';
 
 // Check if user is logged in
 if (!isset($_SESSION['employee_id'])) {
@@ -1024,7 +1026,7 @@ if ($_POST['action'] === 'update_status' && $canEdit) {
                             <tr>
                                 <td>
                                     <div class="patient-info">
-                                        <img src="<?php echo $baseurl; ?>/assets/images/user-default.png" class="profile-img" alt="Patient Photo">
+                                        <img src="<?php echo $assets_path; ?>/images/user-default.png" class="profile-img" alt="Patient Photo">
                                         <div class="patient-details">
                                             <h4><?php echo htmlspecialchars($patient['full_name']); ?></h4>
                                             <p>
@@ -1083,7 +1085,7 @@ if ($_POST['action'] === 'update_status' && $canEdit) {
                                                 data-barangay="<?php echo htmlspecialchars($patient['barangay_name']); ?>"
                                                 data-status="<?php echo $patient['status']; ?>"
                                                 data-created="<?php echo $patient['created_at']; ?>"
-                                                data-photo="<?php echo !empty($patient['profile_photo']) ? 'data:image/jpeg;base64,' . base64_encode($patient['profile_photo']) : $baseurl . '/assets/images/user-default.png'; ?>">
+                                                data-photo="<?php echo !empty($patient['profile_photo']) ? 'data:image/jpeg;base64,' . base64_encode($patient['profile_photo']) : $assets_path . '/images/user-default.png'; ?>">
                                             <i class="fas fa-eye"></i> View
                                         </button>
                                     </div>
@@ -1146,7 +1148,7 @@ if ($_POST['action'] === 'update_status' && $canEdit) {
             <div class="modal-body">
                 <div class="patient-detail-grid">
                     <div class="patient-photo-section">
-                        <img src="<?php echo $baseurl; ?>/assets/images/user-default.png" id="patientPhoto" alt="Patient Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #1e3c72; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                        <img src="<?php echo $assets_path; ?>/images/user-default.png" id="patientPhoto" alt="Patient Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #1e3c72; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                     </div>
                     <div class="patient-info-section">
                         <div class="info-group">
@@ -1299,7 +1301,7 @@ if ($_POST['action'] === 'update_status' && $canEdit) {
             $('#modalCreated').text(formatDate(btn.data('created')));
             
             // Set patient photo
-            $('#patientPhoto').attr('src', btn.data('photo') || '<?php echo $baseurl; ?>/assets/images/user-default.png');
+            $('#patientPhoto').attr('src', btn.data('photo') || '<?php echo $assets_path; ?>/images/user-default.png');
             
             // Show modal
             $('#patientModal').fadeIn();

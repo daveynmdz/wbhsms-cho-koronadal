@@ -27,12 +27,23 @@ if (strtolower($_SESSION['role']) !== 'admin') {
 // DB connection
 require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
+require_once $root_path . '/utils/queue_settings_service.php';
 
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
 
 // Initialize queue management service with PDO connection
 $queueService = new QueueManagementService($pdo);
+
+// Initialize queue settings service for toggle controls
+try {
+    $queueSettings = new QueueSettingsService($pdo);
+    // Initialize default settings if they don't exist
+    $queueSettings->initializeDefaults();
+} catch (Exception $e) {
+    error_log("Queue Settings Service initialization failed: " . $e->getMessage());
+    // Continue without queue settings if service fails
+}
 
 $today = date('Y-m-d');
 $message = '';
@@ -50,7 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_station'])) {
     } else {
         $error = "Failed to update station status";
     }
-        // No need to call close() on PDOStatement; it will be cleaned up automatically
 }
 
 // Get comprehensive queue statistics for today
@@ -155,6 +165,7 @@ $activePage = 'queueing';
         }
 
         .queue-dashboard-container .content-area {
+            padding: 1.5rem;
             min-height: calc(100vh - 60px);
         }
 
@@ -813,7 +824,7 @@ $activePage = 'queueing';
         /* Action buttons grid - full width layout */
         .queue-dashboard-container .action-buttons-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             width: 100%;
         }
@@ -890,6 +901,367 @@ $activePage = 'queueing';
             .queue-dashboard-container .action-buttons-grid {
                 grid-template-columns: 1fr 1fr;
             }
+        }
+
+        /* Queue Settings Panel Styles */
+        .queue-dashboard-container .queue-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .queue-dashboard-container .status-normal {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .queue-dashboard-container .status-testing {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .queue-dashboard-container .status-modified {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .queue-dashboard-container .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .queue-dashboard-container .setting-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+        }
+
+        .queue-dashboard-container .setting-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .queue-dashboard-container .setting-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .queue-dashboard-container .setting-icon {
+            font-size: 1.25rem;
+            color: var(--primary);
+            width: 24px;
+            text-align: center;
+        }
+
+        .queue-dashboard-container .setting-info h5 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .queue-dashboard-container .setting-info p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #6c757d;
+            line-height: 1.3;
+        }
+
+        .queue-dashboard-container .setting-control {
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+
+        /* Toggle Switch Styles */
+        .queue-dashboard-container .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            cursor: pointer;
+        }
+
+        .queue-dashboard-container .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .queue-dashboard-container .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .queue-dashboard-container .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .queue-dashboard-container .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+
+        .queue-dashboard-container .toggle-switch input:focus + .toggle-slider {
+            box-shadow: 0 0 1px var(--primary);
+        }
+
+        .queue-dashboard-container .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        .queue-dashboard-container .settings-note {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: var(--border-radius);
+            font-size: 0.85rem;
+            color: #856404;
+        }
+
+        .queue-dashboard-container .settings-note i {
+            color: #f39c12;
+        }
+
+        /* Queue Overview Styles */
+        .queue-dashboard-container .queue-overview {
+            margin: 2rem 0;
+        }
+
+        .queue-dashboard-container .section-header-with-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .queue-dashboard-container .section-header-with-action h2 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .queue-dashboard-container .section-header-with-action h2 i {
+            color: var(--primary);
+        }
+
+        .queue-dashboard-container .queue-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .queue-dashboard-container .refresh-btn, 
+        .queue-dashboard-container .monitor-btn, 
+        .queue-dashboard-container .display-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .queue-dashboard-container .refresh-btn {
+            background: linear-gradient(135deg, #48cae4, #0096c7);
+        }
+
+        .queue-dashboard-container .monitor-btn {
+            background: linear-gradient(135deg, #52b788, #2d6a4f);
+        }
+
+        .queue-dashboard-container .display-btn {
+            background: linear-gradient(135deg, #adb5bd, #6c757d);
+        }
+
+        .queue-dashboard-container .refresh-btn:hover, 
+        .queue-dashboard-container .monitor-btn:hover, 
+        .queue-dashboard-container .display-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .queue-dashboard-container .queue-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .queue-dashboard-container .queue-station-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .queue-dashboard-container .queue-station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .queue-dashboard-container .queue-station-card.active {
+            border-left: 4px solid var(--success);
+        }
+
+        .queue-dashboard-container .queue-station-card.inactive {
+            border-left: 4px solid var(--secondary);
+            opacity: 0.7;
+        }
+
+        .queue-dashboard-container .queue-station-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .queue-dashboard-container .queue-station-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin: 0;
+            text-transform: capitalize;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .queue-dashboard-container .queue-station-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .queue-dashboard-container .queue-station-status.active {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success);
+        }
+
+        .queue-dashboard-container .queue-station-status.inactive {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--danger);
+        }
+
+        .queue-dashboard-container .queue-stats-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .queue-dashboard-container .queue-stat-item {
+            text-align: center;
+            padding: 10px;
+            background: var(--light);
+            border-radius: var(--border-radius);
+        }
+
+        .queue-dashboard-container .queue-stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            display: block;
+        }
+
+        .queue-dashboard-container .queue-stat-label {
+            font-size: 12px;
+            color: var(--secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        .queue-dashboard-container .queue-current-patient {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border-left: 3px solid var(--info);
+        }
+
+        .queue-dashboard-container .queue-current-patient .patient-name {
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .queue-dashboard-container .queue-current-patient .patient-details {
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+
+        .queue-dashboard-container .loading-state, 
+        .queue-dashboard-container .error-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary);
+        }
+
+        .queue-dashboard-container .error-state {
+            color: var(--danger);
+        }
+
+        .queue-dashboard-container .loading-state i, 
+        .queue-dashboard-container .error-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .queue-dashboard-container .section-divider {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+            margin: 2rem 0;
         }
 
         /* Dashboard Sections - matching staff assignments card style */
@@ -1383,6 +1755,85 @@ $activePage = 'queueing';
                 </div>
             </div>
             
+            <!-- Queue Settings Panel (Testing Controls) -->
+            <div class="card-container">
+                <div class="section-header">
+                    <h4><i class="fas fa-cogs"></i> Queue System Settings</h4>
+                    <span id="queue-system-status" class="queue-status status-normal">Normal Operations</span>
+                </div>
+                
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <i class="fas fa-flask setting-icon"></i>
+                            <div class="setting-info">
+                                <h5>Testing Mode</h5>
+                                <p>Enable comprehensive testing without restrictions</p>
+                            </div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="testing-mode">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <i class="fas fa-clock setting-icon"></i>
+                            <div class="setting-info">
+                                <h5>Time Constraints</h5>
+                                <p>Ignore business hours and time restrictions</p>
+                            </div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="time-constraints">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <i class="fas fa-hand-paper setting-icon"></i>
+                            <div class="setting-info">
+                                <h5>Override Mode</h5>
+                                <p>Allow queue overrides and manual interventions</p>
+                            </div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="override-mode">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <i class="fas fa-door-open setting-icon"></i>
+                            <div class="setting-info">
+                                <h5>Force Stations Open</h5>
+                                <p>Keep all stations available regardless of schedule</p>
+                            </div>
+                        </div>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="force-stations">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-note">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span><strong>Note:</strong> These settings bypass normal queue constraints for testing purposes.</span>
+                </div>
+            </div>
+
             <!-- Quick Actions -->
             <div class="card-container">
                 <div class="section-header">
@@ -1403,8 +1854,8 @@ $activePage = 'queueing';
                     </a>
                     <a href="station.php" class="action-btn btn-primary">
                         <i class="fas fa-desktop"></i>
-                        <span>Station View</span>
-                    </a>
+                            <span>Station View</span>
+                        </a>
                     <a href="admin_monitor.php" class="action-btn btn-info">
                         <i class="fas fa-tv"></i>
                         <span>Master View</span>
@@ -1412,10 +1863,6 @@ $activePage = 'queueing';
                     <a href="public_display_selector.php" class="action-btn btn-outline">
                         <i class="fas fa-display"></i>
                         <span>Display Launcher</span>
-                    </a>
-                    <a href="queue_simulation.php" class="action-btn btn-warning">
-                        <i class="fas fa-flask"></i>
-                        <span>Queue Simulation</span>
                     </a>
                 </div>
             </div>
@@ -1494,6 +1941,34 @@ $activePage = 'queueing';
                 </div>
                 </div>
             </div>
+
+            <!-- Queue Overview Section -->
+            <section class="queue-overview">
+                <div class="section-header-with-action">
+                    <h2><i class="fas fa-tv"></i> Queue Overview</h2>
+                    <div class="queue-actions">
+                        <button onclick="refreshQueueOverview()" class="refresh-btn" title="Refresh Queue Data">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <a href="admin_monitor.php" class="monitor-btn" title="Open Queue Monitor">
+                            <i class="fas fa-external-link-alt"></i> Full Monitor
+                        </a>
+                        <a href="public_display_selector.php" class="display-btn" title="Open Display Selector">
+                            <i class="fas fa-tv"></i> Public Displays
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="queue-cards-grid" id="queueOverview">
+                    <!-- Queue overview content will be loaded here -->
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading queue data...</p>
+                    </div>
+                </div>
+            </section>
+
+            <hr class="section-divider">
 
             <!-- Main Content Grid -->
             <div class="main-grid">
@@ -1760,6 +2235,187 @@ $activePage = 'queueing';
         });
         <?php endif; ?>
 
+        // Queue Overview Management
+        class QueueOverviewManager {
+            constructor() {
+                this.init();
+                this.loadQueueOverview();
+            }
+            
+            init() {
+                // Set up periodic refresh for queue overview
+                this.setupAutoRefresh();
+            }
+            
+            async loadQueueOverview() {
+                const container = document.getElementById('queueOverview');
+                if (!container) return;
+                
+                try {
+                    const response = await fetch('dashboard_queue_api.php', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.renderQueueOverview(data.stations, container);
+                    } else {
+                        throw new Error(data.message || 'Failed to load queue data');
+                    }
+                } catch (error) {
+                    console.error('Error loading queue overview:', error);
+                    this.renderError(container, error.message);
+                }
+            }
+            
+            renderQueueOverview(stations, container) {
+                if (!stations || stations.length === 0) {
+                    container.innerHTML = `
+                        <div class="error-state">
+                            <i class="fas fa-hospital"></i>
+                            <p>No active stations found</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                
+                stations.forEach(station => {
+                    const isActive = station.assigned_employee_id && station.is_open;
+                    const statusClass = isActive ? 'active' : 'inactive';
+                    const statusText = isActive ? 'Active' : 'Inactive';
+                    
+                    // Get queue statistics
+                    const stats = station.queue_stats || {
+                        waiting_count: 0,
+                        in_progress_count: 0,
+                        total_served: 0
+                    };
+                    
+                    // Current and next patient info
+                    const currentPatient = station.current_patient;
+                    const nextPatient = station.next_patient;
+                    
+                    html += `
+                        <div class="queue-station-card ${statusClass}">
+                            <div class="queue-station-header">
+                                <h3 class="queue-station-title">
+                                    <i class="fas fa-hospital"></i>
+                                    ${station.station_name}
+                                </h3>
+                                <span class="queue-station-status ${statusClass}">
+                                    <i class="fas fa-circle"></i>
+                                    ${statusText}
+                                </span>
+                            </div>
+                            
+                            <div class="queue-stats-row">
+                                <div class="queue-stat-item">
+                                    <span class="queue-stat-number">${stats.waiting_count || 0}</span>
+                                    <span class="queue-stat-label">Waiting</span>
+                                </div>
+                                <div class="queue-stat-item">
+                                    <span class="queue-stat-number">${stats.in_progress_count || 0}</span>
+                                    <span class="queue-stat-label">In Progress</span>
+                                </div>
+                            </div>
+                            
+                            ${isActive && station.assigned_employee ? `
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+                                    <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.5rem;">
+                                        <i class="fas fa-user"></i> Assigned: ${station.assigned_employee}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            ${currentPatient ? `
+                                <div class="queue-current-patient">
+                                    <div class="patient-name">
+                                        <i class="fas fa-user-clock"></i>
+                                        Current: ${currentPatient.patient_name}
+                                    </div>
+                                    <div class="patient-details">
+                                        Queue: ${currentPatient.formatted_code || currentPatient.queue_code}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            ${nextPatient ? `
+                                <div style="background: #e8f4fd; padding: 0.75rem; border-radius: 6px; margin-top: 0.75rem; border-left: 3px solid #0096c7;">
+                                    <div style="font-weight: 600; color: #0096c7; margin-bottom: 0.25rem;">
+                                        <i class="fas fa-arrow-right"></i>
+                                        Next: ${nextPatient.patient_name}
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #6c757d;">
+                                        Queue: ${nextPatient.formatted_code || nextPatient.queue_code}
+                                    </div>
+                                </div>
+                            ` : (isActive ? `
+                                <div style="background: #f8f9fa; padding: 0.75rem; border-radius: 6px; margin-top: 0.75rem; text-align: center; color: #6c757d; font-size: 0.85rem;">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    No patients in queue
+                                </div>
+                            ` : '')}
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            }
+            
+            renderError(container, message) {
+                container.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading queue data: ${message}</p>
+                        <button onclick="queueOverviewManager.loadQueueOverview()" class="btn btn-primary" style="margin-top: 1rem;">
+                            <i class="fas fa-sync-alt"></i> Try Again
+                        </button>
+                    </div>
+                `;
+            }
+            
+            setupAutoRefresh() {
+                // Refresh every 30 seconds for queue overview
+                setInterval(() => {
+                    this.loadQueueOverview();
+                }, 30000);
+            }
+            
+            // Method to handle external refresh requests
+            refresh() {
+                console.log('🔄 Queue overview refresh triggered');
+                this.loadQueueOverview();
+            }
+        }
+
+        // Global function for refresh button
+        function refreshQueueOverview() {
+            if (window.queueOverviewManager) {
+                window.queueOverviewManager.refresh();
+                
+                // Add visual feedback
+                const refreshBtn = document.querySelector('.refresh-btn i');
+                if (refreshBtn) {
+                    refreshBtn.style.transform = 'rotate(360deg)';
+                    refreshBtn.style.transition = 'transform 0.5s ease';
+                    setTimeout(() => {
+                        refreshBtn.style.transform = 'rotate(0deg)';
+                    }, 500);
+                }
+            }
+        }
+
         // Auto-refresh functionality (every 3 minutes) - silent refresh
         function refreshDashboard() {
             // Add a subtle loading indicator
@@ -1844,6 +2500,191 @@ $activePage = 'queueing';
                 // Resume auto-refresh when tab becomes visible again
                 refreshTimer = setInterval(refreshDashboard, 180000);
             }
+        });
+
+        // Queue Settings Management
+        class QueueSettingsManager {
+            constructor() {
+                this.init();
+            }
+            
+            init() {
+                this.loadCurrentSettings();
+                this.attachEventListeners();
+            }
+            
+            async loadCurrentSettings() {
+                try {
+                    const response = await fetch('queue_settings_api.php?action=get_status', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.updateUI(data.data);
+                    } else {
+                        console.error('Failed to load settings:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error loading queue settings:', error);
+                }
+            }
+            
+            updateUI(settings) {
+                // Update toggle switches if they exist
+                const toggles = {
+                    'testing-mode': settings.testing_mode,
+                    'time-constraints': settings.ignore_time_constraints,
+                    'override-mode': settings.queue_override_mode,
+                    'force-stations': settings.force_all_stations_open
+                };
+                
+                Object.entries(toggles).forEach(([key, value]) => {
+                    const toggle = document.getElementById(key);
+                    if (toggle) {
+                        toggle.checked = value === '1';
+                    }
+                });
+                
+                // Update status indicators
+                this.updateStatusIndicators(settings);
+            }
+            
+            updateStatusIndicators(settings) {
+                const statusElement = document.getElementById('queue-system-status');
+                if (statusElement) {
+                    const isTestMode = settings.testing_mode === '1';
+                    const ignoreTime = settings.ignore_time_constraints === '1';
+                    
+                    let statusText = 'Normal Operations';
+                    let statusClass = 'status-normal';
+                    
+                    if (isTestMode) {
+                        statusText = 'Testing Mode Active';
+                        statusClass = 'status-testing';
+                    } else if (ignoreTime) {
+                        statusText = 'Time Constraints Disabled';
+                        statusClass = 'status-modified';
+                    }
+                    
+                    statusElement.className = `queue-status ${statusClass}`;
+                    statusElement.textContent = statusText;
+                }
+            }
+            
+            attachEventListeners() {
+                // Add event listeners for toggle switches
+                const toggles = ['testing-mode', 'time-constraints', 'override-mode', 'force-stations'];
+                
+                toggles.forEach(toggleId => {
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) {
+                        toggle.addEventListener('change', (e) => this.handleToggle(toggleId, e.target.checked));
+                    }
+                });
+            }
+            
+            async handleToggle(toggleId, isEnabled) {
+                const actionMap = {
+                    'testing-mode': 'toggle_testing_mode',
+                    'time-constraints': 'toggle_time_constraints',
+                    'override-mode': 'toggle_override_mode',
+                    'force-stations': 'toggle_force_stations'
+                };
+                
+                const action = actionMap[toggleId];
+                if (!action) {
+                    console.error('Unknown toggle:', toggleId);
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('queue_settings_api.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: `action=${action}`
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        console.log(`${toggleId} toggled successfully:`, data.message);
+                        // Reload settings to ensure UI is in sync
+                        this.loadCurrentSettings();
+                        
+                        // Show feedback
+                        this.showToggleFeedback(toggleId, isEnabled);
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error(`Error toggling ${toggleId}:`, error);
+                    // Revert toggle on error
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) toggle.checked = !isEnabled;
+                    
+                    alert(`Error: ${error.message}`);
+                }
+            }
+            
+            showToggleFeedback(toggleId, isEnabled) {
+                const messages = {
+                    'testing-mode': `Testing mode ${isEnabled ? 'enabled' : 'disabled'}`,
+                    'time-constraints': `Time constraints ${isEnabled ? 'ignored' : 'enforced'}`,
+                    'override-mode': `Override mode ${isEnabled ? 'enabled' : 'disabled'}`,
+                    'force-stations': `Force stations ${isEnabled ? 'enabled' : 'disabled'}`
+                };
+                
+                const message = messages[toggleId] || 'Setting updated';
+                console.log('Queue Setting:', message);
+                
+                // Create temporary notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #28a745;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    z-index: 9999;
+                    font-weight: 500;
+                    font-size: 14px;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                // Auto-remove after 3 seconds
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 3000);
+            }
+        }
+        
+        // Initialize managers
+        let queueSettingsManager;
+        let queueOverviewManager;
+        
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            queueSettingsManager = new QueueSettingsManager();
+            queueOverviewManager = new QueueOverviewManager();
+            
+            // Make queue overview manager globally accessible
+            window.queueOverviewManager = queueOverviewManager;
         });
 
         console.log('Queue Management Dashboard loaded successfully');

@@ -27,7 +27,8 @@ if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
 
 // Database connection
 require_once $root_path . '/config/db.php';
-$baseurl = '/wbhsms-cho-koronadal-1';
+// Use relative path for assets - more reliable than absolute URLs
+$assets_path = '../../../../assets';
 
 // Check database connection
 if (!isset($conn) || $conn->connect_error) {
@@ -1130,7 +1131,7 @@ try {
                                 <tr data-appointment-id="<?php echo $appointment['appointment_id']; ?>">
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 10px;">
-                                            <img src="<?php echo $baseurl . '/assets/images/user-default.png'; ?>"
+                                            <img src="<?php echo $assets_path . '/images/user-default.png'; ?>"
                                                 alt="Profile" class="profile-img">
                                             <div>
                                                 <strong><?php echo htmlspecialchars($appointment['last_name'] . ', ' . $appointment['first_name']); ?></strong>

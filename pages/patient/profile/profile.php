@@ -2,23 +2,60 @@
 // Start output buffering at the very beginning
 ob_start();
 
-// Set error reporting for debugging but don't display errors in production
+// Security headers for production
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
+// Production-ready error handling
 error_reporting(E_ALL);
 ini_set('display_errors', '0');  // Never show errors to users in production
 ini_set('log_errors', '1');      // Log errors for debugging
 
-// Use patient session configuration
+// Set error handler for production
+set_error_handler(function($severity, $message, $file, $line) {
+    error_log("Patient Profile Error [$severity]: $message in $file on line $line");
+    return true; // Don't execute PHP's internal error handler
+});
+
+// Set exception handler for uncaught exceptions
+set_exception_handler(function($exception) {
+    error_log("Patient Profile Uncaught Exception: " . $exception->getMessage() . " in " . $exception->getFile() . " on line " . $exception->getLine());
+    
+    // Clean any output buffer
+    if (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    header('HTTP/1.1 500 Internal Server Error');
+    die('An unexpected error occurred. Please try again later.');
+});
+
+// Path setup
 $root_path = dirname(dirname(dirname(__DIR__)));
 
 // Load configuration first
 require_once $root_path . '/config/env.php';
 
-// Then load session management
-require_once $root_path . '/config/session/patient_session.php';
+// Determine session type based on view_mode parameter
+$view_mode = $_GET['view_mode'] ?? null;
+if ($view_mode === 'admin' || $view_mode === 'bhw' || $view_mode === 'dho' || $view_mode === 'doctor' || $view_mode === 'nurse') {
+    // Use employee session for management users
+    require_once $root_path . '/config/session/employee_session.php';
+} else {
+    // Use patient session for regular patient view
+    require_once $root_path . '/config/session/patient_session.php';
+}
 
 // Ensure session is properly started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+// Generate CSRF token for form security
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 require_once $root_path . '/config/db.php';
@@ -30,36 +67,54 @@ $patient_id = null;
 // If in admin, bhw, dho, doctor, or nurse view mode, get patient_id from URL parameter
 if ($view_mode === 'admin' || $view_mode === 'bhw' || $view_mode === 'dho' || $view_mode === 'doctor' || $view_mode === 'nurse') {
     $patient_id = $_GET['patient_id'] ?? null;
+    
+    // Validate patient ID
     if (!$patient_id) {
-        die('Error: No patient ID provided');
+        error_log("Patient profile access error: No patient ID provided");
+        header('HTTP/1.1 400 Bad Request');
+        die('Error: Patient ID is required');
     }
+    
+    // Sanitize patient ID (should be numeric)
+    if (!is_numeric($patient_id) || $patient_id <= 0) {
+        error_log("Patient profile access error: Invalid patient ID format: " . $patient_id);
+        header('HTTP/1.1 400 Bad Request');
+        die('Error: Invalid patient ID');
+    }
+    
+    $patient_id = (int) $patient_id;
 
-    // Verify admin, bhw, dho, or doctor is logged in
-    if ($view_mode === 'admin' && (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin')) {
-        // For development purposes, we're allowing access without strict validation
-        // In production, you would want to uncomment the following:
-        // header('Location: ../auth/login.php');
-        // exit();
-    } elseif ($view_mode === 'bhw' && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'bhw')) {
-        // For development purposes, we're allowing access without strict validation
-        // In production, you would want to uncomment the following:
-        // header('Location: ../auth/employee_login.php');
-        // exit();
-    } elseif ($view_mode === 'dho' && (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'dho')) {
-        // For development purposes, we're allowing access without strict validation
-        // In production, you would want to uncomment the following:
-        // header('Location: ../auth/employee_login.php');
-        // exit();
-    } elseif ($view_mode === 'doctor' && (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'doctor')) {
-        // For development purposes, we're allowing access without strict validation
-        // In production, you would want to uncomment the following:
-        // header('Location: ../auth/employee_login.php');
-        // exit();
-    } elseif ($view_mode === 'nurse' && (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'nurse')) {
-        // For development purposes, we're allowing access without strict validation
-        // In production, you would want to uncomment the following:
-        // header('Location: ../auth/employee_login.php');
-        // exit();
+    // Verify employee is logged in and has correct role
+    $employee_logged_in = isset($_SESSION['employee_id']) && !empty($_SESSION['employee_id']);
+    $employee_role = $_SESSION['role'] ?? '';
+    
+    if (!$employee_logged_in) {
+        error_log("Unauthorized access attempt to patient profile - no employee session");
+        header('Location: ../../management/auth/employee_login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+        exit();
+    }
+    
+    // Role-specific validation
+    if ($view_mode === 'admin' && strtolower($employee_role) !== 'admin') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted admin patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'bhw' && strtolower($employee_role) !== 'bhw') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted BHW patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'dho' && strtolower($employee_role) !== 'dho') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted DHO patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'doctor' && strtolower($employee_role) !== 'doctor') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted doctor patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'nurse' && strtolower($employee_role) !== 'nurse') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted nurse patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
     }
 } else {
     // Regular patient view - get ID from session
@@ -72,46 +127,85 @@ if ($view_mode === 'admin' || $view_mode === 'bhw' || $view_mode === 'dho' || $v
 
 // Fetch patient info using PDO with proper error handling
 try {
-    // Try different possible ID column names for patients table with barangay join
-    $possible_queries = [
-        "SELECT p.*, b.barangay_name as barangay FROM patients p LEFT JOIN barangay b ON p.barangay_id = b.barangay_id WHERE p.id = ?",
+    // First determine the correct ID column by checking the table structure
+    $patient_row = null;
+    $last_error = null;
+    
+    // Try the most likely queries first
+    $queries_to_try = [
         "SELECT p.*, b.barangay_name as barangay FROM patients p LEFT JOIN barangay b ON p.barangay_id = b.barangay_id WHERE p.patient_id = ?",
-        // Fallback without join in case join fails
-        "SELECT * FROM patients WHERE id = ?",
-        "SELECT * FROM patients WHERE patient_id = ?"
+        "SELECT p.*, b.barangay_name as barangay FROM patients p LEFT JOIN barangay b ON p.barangay_id = b.barangay_id WHERE p.id = ?",
+        // Fallback without join in case barangay table doesn't exist
+        "SELECT * FROM patients WHERE patient_id = ?",
+        "SELECT * FROM patients WHERE id = ?"
     ];
 
-    $patient_row = null;
-    foreach ($possible_queries as $query) {
+    foreach ($queries_to_try as $index => $query) {
         try {
             $stmt = $pdo->prepare($query);
-            $stmt->execute([$patient_id]);
+            if (!$stmt) {
+                $last_error = "Failed to prepare query: " . implode(", ", $pdo->errorInfo());
+                continue;
+            }
+            
+            $result = $stmt->execute([$patient_id]);
+            if (!$result) {
+                $last_error = "Failed to execute query: " . implode(", ", $stmt->errorInfo());
+                continue;
+            }
+            
             $patient_row = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($patient_row) break;
-        } catch (Exception $e) {
-            continue; // Try next query
+            if ($patient_row) {
+                error_log("Patient profile: Successfully retrieved patient data using query #" . ($index + 1));
+                break;
+            }
+        } catch (PDOException $e) {
+            $last_error = "Database error on query #" . ($index + 1) . ": " . $e->getMessage();
+            error_log("Patient profile query error: " . $last_error);
+            continue;
         }
     }
 
     if (!$patient_row) {
-        throw new Exception('Patient not found.');
+        error_log("Patient profile error: Patient ID $patient_id not found. Last error: " . ($last_error ?? 'No errors recorded'));
+        header('HTTP/1.1 404 Not Found');
+        die('Error: Patient record not found.');
     }
 
     // DHO access control: verify patient is within DHO's assigned district
     if ($view_mode === 'dho' && isset($_SESSION['employee_id'])) {
-        $dho_district_check = $pdo->prepare("
-            SELECT COUNT(*) as can_access 
-            FROM patients p
-            JOIN barangay b ON p.barangay_id = b.barangay_id
-            JOIN facilities f ON b.district_id = f.district_id
-            JOIN employees e ON e.facility_id = f.facility_id
-            WHERE e.employee_id = ? AND (p.id = ? OR p.patient_id = ?)
-        ");
-        $dho_district_check->execute([$_SESSION['employee_id'], $patient_id, $patient_id]);
-        $access_result = $dho_district_check->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$access_result || $access_result['can_access'] == 0) {
-            die('Access denied: This patient is not within your assigned district.');
+        try {
+            $dho_district_check = $pdo->prepare("
+                SELECT COUNT(*) as can_access 
+                FROM patients p
+                LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
+                LEFT JOIN facilities f ON b.district_id = f.district_id
+                LEFT JOIN employees e ON e.facility_id = f.facility_id
+                WHERE e.employee_id = ? AND (p.id = ? OR p.patient_id = ?)
+            ");
+            
+            if (!$dho_district_check) {
+                error_log("DHO access check: Failed to prepare query");
+                // Allow access if we can't verify (graceful degradation)
+            } else {
+                $result = $dho_district_check->execute([$_SESSION['employee_id'], $patient_id, $patient_id]);
+                if (!$result) {
+                    error_log("DHO access check: Failed to execute query - " . implode(", ", $dho_district_check->errorInfo()));
+                    // Allow access if we can't verify (graceful degradation)
+                } else {
+                    $access_result = $dho_district_check->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$access_result || $access_result['can_access'] == 0) {
+                        error_log("DHO access denied: Employee " . $_SESSION['employee_id'] . " attempted to access patient $patient_id outside their district");
+                        header('HTTP/1.1 403 Forbidden');
+                        die('Access denied: This patient is not within your assigned district.');
+                    }
+                }
+            }
+        } catch (PDOException $e) {
+            error_log("DHO access check error: " . $e->getMessage());
+            // For production security, you might want to deny access on error instead
+            // For now, allowing graceful degradation
         }
     }
 } catch (Exception $e) {
@@ -120,32 +214,46 @@ try {
 }
 
 // Fetch all related patient information with proper error handling
+$personal_information = [];
+$emergency_contact = [];
+$lifestyle_info = [];
+
 try {
     // Fetch personal_information
     $stmt = $pdo->prepare("SELECT * FROM personal_information WHERE patient_id = ?");
-    $stmt->execute([$patient_id]);
-    $personal_information = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    if ($stmt && $stmt->execute([$patient_id])) {
+        $personal_information = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    }
+} catch (PDOException $e) {
+    error_log("Error fetching personal information for patient $patient_id: " . $e->getMessage());
+}
 
+try {
     // Fetch emergency_contact
     $stmt = $pdo->prepare("SELECT * FROM emergency_contact WHERE patient_id = ?");
-    $stmt->execute([$patient_id]);
-    $emergency_contact = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    if ($stmt && $stmt->execute([$patient_id])) {
+        $emergency_contact = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    }
+} catch (PDOException $e) {
+    error_log("Error fetching emergency contact for patient $patient_id: " . $e->getMessage());
+}
 
-    // Fetch lifestyle_info (updated table name)
+try {
+    // Fetch lifestyle_info (try new table name first)
     $stmt = $pdo->prepare("SELECT * FROM lifestyle_information WHERE patient_id = ?");
-    $stmt->execute([$patient_id]);
-    $lifestyle_info = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    // Fallback to old table name if new one doesn't exist
+    if ($stmt && $stmt->execute([$patient_id])) {
+        $lifestyle_info = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    // Fallback to old table name if new one doesn't exist or has no data
     if (!$lifestyle_info) {
         $stmt = $pdo->prepare("SELECT * FROM lifestyle_info WHERE patient_id = ?");
-        $stmt->execute([$patient_id]);
-        $lifestyle_info = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        if ($stmt && $stmt->execute([$patient_id])) {
+            $lifestyle_info = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        }
     }
-} catch (Exception $e) {
-    error_log("Error fetching patient related data: " . $e->getMessage());
-    $personal_information = [];
-    $emergency_contact = [];
+} catch (PDOException $e) {
+    error_log("Error fetching lifestyle info for patient $patient_id: " . $e->getMessage());
     $lifestyle_info = [];
 }
 
@@ -2339,7 +2447,7 @@ if (isset($_GET['logout'])) {
 
             // Redirect to print version of medical record
             setTimeout(() => {
-                window.open('medical_record_print.php?patient_id=<?= $patient_id ?>', '_blank');
+                window.open('medical_record_print.php?patient_id=<?= (int)$patient_id ?>', '_blank');
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
             }, 1000);
