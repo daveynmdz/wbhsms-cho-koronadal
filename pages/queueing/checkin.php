@@ -501,7 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // 1. Update patient PhilHealth status if provided
                         if ($is_philhealth !== null) {
                             $update_params = [$is_philhealth];
-                            $philhealth_update_query = "UPDATE patients SET is_philhealth = ?";
+                            $philhealth_update_query = "UPDATE patients SET isPhilHealth = ?";
                             
                             if (!empty($philhealth_id) && $is_philhealth == 1) {
                                 $philhealth_update_query .= ", philhealth_id_number = ?";
