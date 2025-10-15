@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test View Appointment AJAX</title>
+</head>
+<body>
+    <h2>Test View Appointment AJAX</h2>
+    
+    <button onclick="testViewAppointment()">Test View Appointment</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testViewAppointment() {
+            // Test with known appointment data
+            fetch('/wbhsms-cho-koronadal-1/pages/queueing/checkin.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'ajax=1&action=get_appointment_details&appointment_id=62&patient_id=7'
+            })
+            .then(response => response.text()) // Get as text first
+            .then(text => {
+                console.log('Raw response:', text);
+                document.getElementById('result').innerHTML = '<h3>Raw Response:</h3><pre>' + text + '</pre>';
+                
+                // Try to parse as JSON
+                try {
+                    const data = JSON.parse(text);
+                    document.getElementById('result').innerHTML += '<h3>Parsed JSON:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    
+                    if (data.success) {
+                        document.getElementById('result').innerHTML += '<h3>✅ Success!</h3><p>Appointment data received correctly.</p>';
+                    } else {
+                        document.getElementById('result').innerHTML += '<h3>❌ Error:</h3><p>' + data.message + '</p>';
+                    }
+                } catch (e) {
+                    document.getElementById('result').innerHTML += '<h3>❌ JSON Parse Error:</h3><p>' + e.message + '</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = '<h3>❌ Network Error:</h3><p>' + error.message + '</p>';
+            });
+        }
+        
+        // Run test automatically
+        testViewAppointment();
+    </script>
+</body>
+</html>

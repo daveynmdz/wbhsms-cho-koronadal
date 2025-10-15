@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results Section Spacing Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-container { border: 2px solid #333; margin: 20px 0; }
+        .test-label { background: #f0f0f0; padding: 10px; font-weight: bold; }
+        .content-area { padding: 1.5rem; min-height: calc(100vh - 60px); }
+        .before-results, .after-results { 
+            background: #e8f5e8; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border: 1px solid #4CAF50;
+        }
+        
+        /* Results content area - remove spacing when hidden */
+        #resultsContentArea {
+            transition: all 0.3s ease;
+            background: #fff3cd;
+            border: 2px dashed #856404;
+        }
+        
+        #resultsContentArea[style*="display: none"] {
+            padding: 0 !important;
+            margin: 0 !important;
+            min-height: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+        
+        .results-section {
+            background: #d1ecf1;
+            padding: 20px;
+            border: 1px solid #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>Check-In Results Section Spacing Test</h1>
+    
+    <div class="test-container">
+        <div class="test-label">Test 1: No Search Results (Initial State) - Should have NO blank space</div>
+        
+        <div class="before-results">Content before results section</div>
+        
+        <!-- This simulates the actual results section when hidden -->
+        <div class="content-area" id="resultsContentArea" style="display: none;">
+            <div class="results-section">
+                <h3>Search Results</h3>
+                <p>This should be completely hidden with no space taken up</p>
+            </div>
+        </div>
+        
+        <div class="after-results">Content after results section</div>
+    </div>
+    
+    <div class="test-container">
+        <div class="test-label">Test 2: With Search Results - Should show the results section</div>
+        
+        <div class="before-results">Content before results section</div>
+        
+        <!-- This simulates the actual results section when visible -->
+        <div class="content-area" id="resultsContentArea2">
+            <div class="results-section">
+                <h3>Search Results</h3>
+                <p>Results table would appear here</p>
+                <table border="1" style="width: 100%;">
+                    <tr><th>Appointment ID</th><th>Patient</th><th>Status</th></tr>
+                    <tr><td>APT-00000024</td><td>John Doe</td><td>Confirmed</td></tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="after-results">Content after results section</div>
+    </div>
+    
+    <div class="test-container">
+        <div class="test-label">Interactive Test - Toggle Visibility</div>
+        
+        <div class="before-results">Content before results section</div>
+        
+        <div class="content-area" id="resultsContentArea3" style="display: none;">
+            <div class="results-section">
+                <h3>Interactive Results</h3>
+                <p>Watch how this appears and disappears without affecting layout</p>
+            </div>
+        </div>
+        
+        <div class="after-results">Content after results section</div>
+        
+        <button onclick="toggleResults()">Toggle Results Visibility</button>
+        <p id="status">Current state: Hidden</p>
+    </div>
+    
+    <script>
+        function toggleResults() {
+            const results = document.getElementById('resultsContentArea3');
+            const status = document.getElementById('status');
+            
+            if (results.style.display === 'none') {
+                results.style.display = 'block';
+                status.textContent = 'Current state: Visible';
+            } else {
+                results.style.display = 'none';
+                status.textContent = 'Current state: Hidden';
+            }
+        }
+        
+        // Add the same CSS rules as the actual check-in page
+        const style = document.createElement('style');
+        style.textContent = `
+            /* Ensure results content area doesn't create space when hidden */
+            #resultsContentArea[style*="display: none"],
+            #resultsContentArea3[style*="display: none"] {
+                margin: 0 !important;
+                padding: 0 !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        console.log('Test loaded. The "before" and "after" content should be adjacent when results are hidden.');
+    </script>
+</body>
+</html>

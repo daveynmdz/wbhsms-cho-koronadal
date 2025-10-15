@@ -38,17 +38,41 @@ $db   = getenv('DB_DATABASE') ?: 'wbhsms_database';
 $user = getenv('DB_USERNAME') ?: 'root';
 $pass = getenv('DB_PASSWORD') ?: '';
 
+// Handle host:port format in DB_HOST (for compatibility)
+if (strpos($host, ':') !== false) {
+    list($host, $port_from_host) = explode(':', $host, 2);
+    $port = $port_from_host; // Use port from host if specified
+}
+
 // Attempt database connection
 try {
-    $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
-    $pdo = new PDO($dsn, $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Force TCP/IP connection instead of socket by ensuring host format
+    $connection_host = $host;
+    if ($host === 'localhost') {
+        $connection_host = '127.0.0.1'; // Force TCP/IP for localhost
+    }
+    
+    $dsn = "mysql:host=$connection_host;port=$port;dbname=$db;charset=utf8mb4";
+    error_log("Attempting PDO connection with DSN: $dsn, user: $user");
+    
+    $pdo = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+        PDO::ATTR_TIMEOUT => 30, // 30 second timeout
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
+        PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true
+    ]);
+    
+    // Test the connection with a simple query
+    $pdo->query("SELECT 1");
     
     // Log successful connection for debugging (without output)
-    error_log("Database connection successful to {$db} on {$host}:{$port}");
+    error_log("PDO Database connection successful to {$db} on {$connection_host}:{$port}");
 } catch (PDOException $e) {
-    // Log error instead of outputting it to prevent headers issues
-    error_log("Database connection failed: " . $e->getMessage());
+    // Log detailed error information
+    error_log("PDO Database connection failed - DSN: $dsn, User: $user, Error: " . $e->getMessage());
+    error_log("PDO Error Code: " . $e->getCode() . ", SQL State: " . ($e->errorInfo[0] ?? 'unknown'));
     
     // Set $pdo to null so other parts of the application can handle gracefully
     $pdo = null;

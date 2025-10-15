@@ -1321,7 +1321,7 @@ class QueueManagementService {
                     (station_id, employee_id, start_date, shift_start_time, shift_end_time, assignment_type, assigned_by, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
                 ");
-                $insert_stmt->bind_param("iissssi", 
+                $insert_stmt->execute([
                     $assignment['station_id'], 
                     $assignment['employee_id'], 
                     $target_date,
@@ -1329,11 +1329,9 @@ class QueueManagementService {
                     $assignment['shift_end_time'], 
                     $assignment['assignment_type'],
                     $assigned_by
-                );
+                ]);
                 
-                if ($insert_stmt->execute()) {
-                    $copied_count++;
-                }
+                $copied_count++;
             }
             
             $this->conn->commit();
@@ -1666,7 +1664,7 @@ class QueueManagementService {
                 SELECT 
                     s.station_id,
                     s.station_name,
-                    s.station_code,
+                    s.station_type,
                     COUNT(qe.queue_entry_id) as waiting_count
                 FROM stations s
                 LEFT JOIN queue_entries qe ON s.station_id = qe.station_id 
@@ -1680,9 +1678,7 @@ class QueueManagementService {
                 LIMIT 1
             ");
             $station_stmt->execute();
-            $station_result = $station_stmt->get_result();
-            $station = $station_result->fetch_assoc();
-            $station_stmt->close();
+            $station = $station_stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$station) {
                 throw new Exception("No open triage stations available");
@@ -1696,35 +1692,33 @@ class QueueManagementService {
                     created_at, updated_at
                 ) VALUES (?, ?, ?, CURDATE(), NOW(), 'ongoing', NOW(), NOW())
             ");
-            $visit_stmt->bind_param("iii", 
+            $visit_stmt->execute([
                 $appointment['patient_id'], 
                 $appointment['facility_id'], 
                 $appointment_id
-            );
+            ]);
             
-            if (!$visit_stmt->execute()) {
-                throw new Exception("Failed to create visit record: " . $visit_stmt->error);
-            }
+            $visit_id = $this->conn->lastInsertId();
             
-            $visit_id = $this->conn->insert_id;
-            $visit_stmt->close();
+            // 4. Generate new queue_code in HHM-XXX format (Hour + Meridiem + Sequential Number)
+            $current_hour = (int)date('H');
+            $meridiem = $current_hour < 12 ? 'A' : 'P';
+            $hour_12 = $current_hour > 12 ? $current_hour - 12 : ($current_hour == 0 ? 12 : $current_hour);
+            $hour_12_padded = str_pad($hour_12, 2, '0', STR_PAD_LEFT);
+            $time_prefix = $hour_12_padded . $meridiem;
             
-            // 4. Generate new queue_code
-            $queue_prefix = $station['station_code'] ?: date('d') . 'A';
-            
-            // Get sequential number for today
+            // Get sequential number for this time prefix today
             $seq_stmt = $this->conn->prepare("
                 SELECT COUNT(*) + 1 as seq_num
                 FROM queue_entries 
                 WHERE DATE(created_at) = CURDATE()
+                AND queue_code LIKE ?
             ");
-            $seq_stmt->execute();
-            $seq_result = $seq_stmt->get_result();
-            $seq_data = $seq_result->fetch_assoc();
+            $seq_stmt->execute([$time_prefix . '-%']);
+            $seq_data = $seq_stmt->fetch(PDO::FETCH_ASSOC);
             $seq_num = (int)$seq_data['seq_num'];
-            $seq_stmt->close();
             
-            $queue_code = $queue_prefix . '-' . str_pad($seq_num, 3, '0', STR_PAD_LEFT);
+            $queue_code = $time_prefix . '-' . str_pad($seq_num, 3, '0', STR_PAD_LEFT);
             
             // 5. Determine priority based on patient status
             $priority = 'normal';
@@ -1740,18 +1734,13 @@ class QueueManagementService {
                     time_in, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, 'triage', ?, ?, ?, 'waiting', NOW(), NOW(), NOW())
             ");
-            $queue_stmt->bind_param("iiiiisis", 
+            $queue_stmt->execute([
                 $visit_id, $appointment_id, $appointment['patient_id'], 
                 $appointment['service_id'], $station['station_id'],
                 $seq_num, $queue_code, $priority
-            );
+            ]);
             
-            if (!$queue_stmt->execute()) {
-                throw new Exception("Failed to create queue entry: " . $queue_stmt->error);
-            }
-            
-            $queue_entry_id = $this->conn->insert_id;
-            $queue_stmt->close();
+            $queue_entry_id = $this->conn->lastInsertId();
             
             // 7. Update appointment status to 'checked_in'
             $appt_stmt = $this->conn->prepare("
@@ -1759,9 +1748,7 @@ class QueueManagementService {
                 SET status = 'checked_in', updated_at = NOW()
                 WHERE appointment_id = ?
             ");
-            $appt_stmt->bind_param("i", $appointment_id);
-            $appt_stmt->execute();
-            $appt_stmt->close();
+            $appt_stmt->execute([$appointment_id]);
             
             // 8. Insert audit log
             $this->logQueueAction($queue_entry_id, 'created', null, 'waiting', 
@@ -2082,13 +2069,14 @@ class QueueManagementService {
     // ============================================
 
     /**
-     * Route patient to a different station (Lab, Pharmacy, etc.)
-     * Creates a new queue entry at the target station type
+     * Route patient to next station (SINGLE QUEUE ENTRY SYSTEM)
+     * Updates the existing queue entry to move patient to next station
+     * Maintains the same queue_code throughout patient journey
      * 
-     * @param int $queue_entry_id Current queue entry ID
-     * @param string $target_station_type Target station type (lab, pharmacy, consultation)
+     * @param int $queue_entry_id Current queue entry ID  
+     * @param string $target_station_type Target station type
      * @param int $employee_id Employee performing the routing
-     * @param string $remarks Routing notes/reason
+     * @param string $remarks Optional remarks
      * @return array Result with success status
      */
     public function routePatientToStation($queue_entry_id, $target_station_type, $employee_id, $remarks = '') {
@@ -2104,6 +2092,7 @@ class QueueManagementService {
                     qe.service_id,
                     qe.status,
                     qe.queue_code,
+                    qe.station_id as current_station_id,
                     s.station_type as current_station_type,
                     s.station_name as current_station_name,
                     CONCAT(p.first_name, ' ', p.last_name) as patient_name
@@ -2112,11 +2101,8 @@ class QueueManagementService {
                 JOIN patients p ON qe.patient_id = p.patient_id
                 WHERE qe.queue_entry_id = ?
             ");
-            $current_stmt->bind_param("i", $queue_entry_id);
-            $current_stmt->execute();
-            $current_result = $current_stmt->get_result();
-            $current_entry = $current_result->fetch_assoc();
-            $current_stmt->close();
+            $current_stmt->execute([$queue_entry_id]);
+            $current_entry = $current_stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$current_entry) {
                 throw new Exception("Queue entry not found");
@@ -2143,83 +2129,32 @@ class QueueManagementService {
                 ORDER BY waiting_count ASC, s.station_number ASC
                 LIMIT 1
             ");
-            $target_stmt->bind_param("s", $target_station_type);
-            $target_stmt->execute();
-            $target_result = $target_stmt->get_result();
-            $target_station = $target_result->fetch_assoc();
-            $target_stmt->close();
+            $target_stmt->execute([$target_station_type]);
+            $target_station = $target_stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$target_station) {
                 throw new Exception("No open {$target_station_type} stations available");
             }
             
-            // 3. Complete current queue entry
-            $complete_stmt = $this->conn->prepare("
+            // 3. Log completion of current station
+            $this->logQueueAction($queue_entry_id, 'complete_station', 'in_progress', 'completed_station', 
+                "Completed {$current_entry['current_station_type']} - routing to {$target_station_type}: " . $remarks, $employee_id);
+            
+            // 4. Update queue entry to new station (KEEP SAME QUEUE CODE)
+            $update_stmt = $this->conn->prepare("
                 UPDATE queue_entries 
-                SET status = 'done',
+                SET station_id = ?,
+                    status = 'waiting',
                     time_completed = NOW(),
-                    turnaround_time = TIMESTAMPDIFF(MINUTE, time_in, NOW()),
-                    remarks = ?
+                    turnaround_time = TIMESTAMPDIFF(MINUTE, time_started, NOW()),
+                    updated_at = NOW()
                 WHERE queue_entry_id = ?
             ");
-            $routing_remarks = "Referred to {$target_station_type}: " . $remarks;
-            $complete_stmt->bind_param("si", $routing_remarks, $queue_entry_id);
+            $update_stmt->execute([$target_station['station_id'], $queue_entry_id]);
             
-            if (!$complete_stmt->execute()) {
-                throw new Exception("Failed to complete current queue entry");
-            }
-            $complete_stmt->close();
-            
-            // 4. Generate new queue number for target station
-            $queue_num_stmt = $this->conn->prepare("
-                SELECT COUNT(*) + 1 as next_number
-                FROM queue_entries 
-                WHERE station_id = ? AND DATE(created_at) = CURDATE()
-            ");
-            $queue_num_stmt->bind_param("i", $target_station['station_id']);
-            $queue_num_stmt->execute();
-            $queue_num_result = $queue_num_stmt->get_result();
-            $queue_num_data = $queue_num_result->fetch_assoc();
-            $new_queue_number = $queue_num_data['next_number'];
-            $queue_num_stmt->close();
-            
-            // 5. Create new queue entry at target station
-            $new_queue_stmt = $this->conn->prepare("
-                INSERT INTO queue_entries (
-                    visit_id, appointment_id, patient_id, service_id, station_id,
-                    queue_type, queue_number, queue_code, priority_level, status,
-                    time_in, remarks, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'normal', 'waiting', NOW(), ?, NOW(), NOW())
-            ");
-            
-            $new_queue_code = strtoupper(substr($target_station_type, 0, 3)) . '-' . str_pad($new_queue_number, 3, '0', STR_PAD_LEFT);
-            $new_remarks = "Referred from {$current_entry['current_station_name']}: " . $remarks;
-            
-            $new_queue_stmt->bind_param("iiiiisisss",
-                $current_entry['visit_id'],
-                $current_entry['appointment_id'],
-                $current_entry['patient_id'],
-                $current_entry['service_id'],
-                $target_station['station_id'],
-                $target_station_type,
-                $new_queue_number,
-                $new_queue_code,
-                $new_remarks
-            );
-            
-            if (!$new_queue_stmt->execute()) {
-                throw new Exception("Failed to create new queue entry");
-            }
-            
-            $new_queue_entry_id = $this->conn->insert_id;
-            $new_queue_stmt->close();
-            
-            // 6. Log both actions
-            $this->logQueueAction($queue_entry_id, 'completed', 'in_progress', 'done', 
-                "Patient routed to {$target_station_type}", $employee_id);
-            
-            $this->logQueueAction($new_queue_entry_id, 'created', null, 'waiting', 
-                "Patient routed from {$current_entry['current_station_type']} - {$remarks}", $employee_id);
+            // 5. Log routing to new station
+            $this->logQueueAction($queue_entry_id, 'route_to_station', 'completed_station', 'waiting', 
+                "Routed from {$current_entry['current_station_name']} to {$target_station['station_name']}", $employee_id);
             
             $this->conn->commit();
             
@@ -2230,8 +2165,8 @@ class QueueManagementService {
                     'patient_name' => $current_entry['patient_name'],
                     'from_station' => $current_entry['current_station_name'],
                     'to_station' => $target_station['station_name'],
-                    'new_queue_code' => $new_queue_code,
-                    'new_queue_entry_id' => $new_queue_entry_id
+                    'queue_code' => $current_entry['queue_code'], // SAME QUEUE CODE
+                    'queue_entry_id' => $queue_entry_id // SAME QUEUE ENTRY
                 ]
             ];
             
@@ -2271,11 +2206,8 @@ class QueueManagementService {
                 JOIN patients p ON qe.patient_id = p.patient_id
                 WHERE qe.queue_entry_id = ?
             ");
-            $entry_stmt->bind_param("i", $queue_entry_id);
-            $entry_stmt->execute();
-            $entry_result = $entry_stmt->get_result();
-            $entry_data = $entry_result->fetch_assoc();
-            $entry_stmt->close();
+            $entry_stmt->execute([$queue_entry_id]);
+            $entry_data = $entry_stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$entry_data) {
                 throw new Exception("Queue entry not found");
@@ -2291,12 +2223,7 @@ class QueueManagementService {
                 WHERE queue_entry_id = ?
             ");
             $final_remarks = "Visit completed: " . $remarks;
-            $complete_stmt->bind_param("si", $final_remarks, $queue_entry_id);
-            
-            if (!$complete_stmt->execute()) {
-                throw new Exception("Failed to complete queue entry");
-            }
-            $complete_stmt->close();
+            $complete_stmt->execute([$final_remarks, $queue_entry_id]);
             
             // 3. Mark visit as completed
             $visit_stmt = $this->conn->prepare("
@@ -2308,12 +2235,7 @@ class QueueManagementService {
                     updated_at = NOW()
                 WHERE visit_id = ?
             ");
-            $visit_stmt->bind_param("isi", $employee_id, $final_remarks, $entry_data['visit_id']);
-            
-            if (!$visit_stmt->execute()) {
-                throw new Exception("Failed to complete visit");
-            }
-            $visit_stmt->close();
+            $visit_stmt->execute([$employee_id, $final_remarks, $entry_data['visit_id']]);
             
             // 4. Mark appointment as completed
             $appt_stmt = $this->conn->prepare("
@@ -2322,9 +2244,7 @@ class QueueManagementService {
                     updated_at = NOW()
                 WHERE appointment_id = ?
             ");
-            $appt_stmt->bind_param("i", $entry_data['appointment_id']);
-            $appt_stmt->execute();
-            $appt_stmt->close();
+            $appt_stmt->execute([$entry_data['appointment_id']]);
             
             // 5. Log the completion
             $this->logQueueAction($queue_entry_id, 'completed', 'in_progress', 'done', 

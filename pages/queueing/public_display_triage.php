@@ -17,14 +17,16 @@ $current_date = date('Y-m-d');
 $display_date = date('F j, Y');
 $current_time = date('g:i A');
 
-// Get triage stations with current assignments and queue data for CHO (facility_id = 1)
+// Get all triage stations with current assignments and queue data for CHO (facility_id = 1)
 $stations_query = "
-    SELECT DISTINCT
+    SELECT 
         s.station_id,
         s.station_name,
         s.service_id,
         s.station_type,
         s.station_number,
+        s.is_active,
+        s.is_open,
         srv.name as service_name,
         -- Get assigned employee info
         e.first_name,
@@ -88,7 +90,6 @@ $stations_query = "
     LEFT JOIN roles r ON e.role_id = r.role_id
     WHERE s.station_type = 'triage'
     AND s.is_active = 1 
-    AND s.is_open = 1
     AND fs.facility_id = 1
     ORDER BY s.station_number
 ";
@@ -96,6 +97,42 @@ $stations_query = "
 $stmt = $pdo->prepare($stations_query);
 $stmt->execute([$current_date, $current_date, $current_date, $current_date, $current_date, $current_date, $current_date, $current_date]);
 $stations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get all called queue entries for today with their status
+$called_queue_query = "
+    SELECT 
+        qe.queue_code,
+        qe.status,
+        qe.time_started,
+        qe.time_completed,
+        s.station_name,
+        s.station_number,
+        CASE 
+            WHEN qe.status = 'done' THEN 'Completed'
+            WHEN qe.status = 'skipped' THEN 'Skipped'
+            WHEN qe.status = 'in_progress' THEN 'In Progress'
+            WHEN qe.status = 'no_show' THEN 'No Show'
+            ELSE 'Waiting'
+        END as status_display,
+        CASE 
+            WHEN qe.status = 'done' THEN 'success'
+            WHEN qe.status = 'skipped' THEN 'warning'
+            WHEN qe.status = 'in_progress' THEN 'info'
+            WHEN qe.status = 'no_show' THEN 'danger'
+            ELSE 'secondary'
+        END as status_class
+    FROM queue_entries qe
+    JOIN stations s ON qe.station_id = s.station_id
+    WHERE s.station_type = 'triage'
+    AND DATE(qe.time_in) = ?
+    AND qe.time_started IS NOT NULL
+    ORDER BY qe.time_started DESC
+    LIMIT 20
+";
+
+$stmt_called = $pdo->prepare($called_queue_query);
+$stmt_called->execute([$current_date]);
+$called_queues = $stmt_called->fetchAll(PDO::FETCH_ASSOC);
 
 // Get overall triage statistics for today
 $total_waiting = 0;
@@ -216,229 +253,218 @@ foreach ($stations as $station) {
 
         .main-content {
             flex: 1;
-            display: flex;
-            background: #f8f9fa;
+            padding: 36px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 18px;
+            height: calc(100vh - 200px);
         }
 
-        .sidebar {
-            width: 300px;
-            background: var(--text-light);
-            border-right: 1px solid var(--border-light);
-            padding: 2rem;
+        /* Left Side - Grid Layout */
+        .div1 {
+            grid-column: 1 / 4;
+            grid-row: 1 / 4;
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
         }
 
-        .sidebar h2 {
-            color: var(--text-dark);
-            font-size: 1.2rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .queue-list {
+        .div3, .div4, .div5 {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            justify-content: center;
         }
 
-        .queue-item {
-            background: var(--primary-blue);
-            color: var(--text-light);
-            padding: 1.5rem 1rem;
-            border-radius: var(--border-radius);
+        .triage-display {
             text-align: center;
-            font-weight: 600;
         }
 
-        .queue-item.waiting {
-            background: var(--secondary-blue);
-        }
-
-        .queue-item.completed {
-            background: var(--text-muted);
-            opacity: 0.7;
-        }
-
-        .queue-item .station-name {
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .queue-item .queue-number {
-            font-size: 2rem;
+        .triage-station-title {
+            font-size: 1.8em;
             font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--accent-blue);
+            padding-bottom: 10px;
         }
 
-        .display-area {
-            flex: 1;
+        .display-numbers {
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 3rem;
+            gap: 20px;
+            margin-top: 15px;
         }
 
-        .current-serving-card {
-            background: var(--text-light);
-            border-radius: var(--border-radius);
-            padding: 3rem;
-            box-shadow: var(--shadow);
+        .ticket-number {
+            font-size: 4em;
+            font-weight: 900;
+            color: var(--warning-orange);
+            font-family: 'Courier New', monospace;
+            background: rgba(251, 188, 4, 0.1);
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 2px solid var(--warning-orange);
+            min-width: 200px;
+        }
+
+        .arrow {
+            font-size: 3em;
+            color: var(--primary-blue);
+            font-weight: bold;
+        }
+
+        .counter-number {
+            font-size: 4em;
+            font-weight: 900;
+            color: var(--primary-blue);
+            font-family: 'Courier New', monospace;
+            background: var(--accent-blue);
+            padding: 15px 20px;
+            border-radius: 10px;
+            border: 2px solid var(--primary-blue);
+            min-width: 100px;
+        }
+
+        /* Right Side - Call Display */
+        .div2 {
+            grid-column: 4 / 7;
+            grid-row: 1 / 4;
+            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+            border-radius: 15px;
+            padding: 40px;
             text-align: center;
-            max-width: 500px;
-            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        .serving-header {
-            color: var(--text-muted);
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
+        /* Call Display Styles */
+        .call-header {
+            color: white;
+            font-size: 2.2em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .called-queue-code {
+            font-size: 6em;
+            font-weight: 900;
+            color: white;
+            font-family: 'Courier New', monospace;
+            margin: 30px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .called-queue-code.flashing {
+            animation: flash 0.5s ease-in-out 3;
+        }
+
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .proceed-instruction {
+            color: white;
+            font-size: 1.8em;
             font-weight: 500;
+            margin-bottom: 15px;
         }
 
-        .current-number {
-            color: var(--error-red);
-            font-size: 8rem;
+        .station-instruction {
+            color: white;
+            font-size: 2.5em;
             font-weight: 700;
-            margin: 1rem 0;
-            line-height: 1;
-        }
-
-        .proceed-message {
-            color: var(--text-dark);
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-top: 1.5rem;
-        }
-
-        .counter-info {
-            background: var(--accent-blue);
-            color: var(--primary-blue);
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-top: 1.5rem;
-        }
-
-        .next-patients {
-            margin-top: 2rem;
-        }
-
-        .next-header {
-            color: var(--text-muted);
-            font-size: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .next-list {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-        }
-
-        .next-number {
-            background: var(--accent-blue);
-            color: var(--primary-blue);
-            padding: 0.5rem 1rem;
-            border-radius: var(--border-radius);
-            font-weight: 600;
-        }
-
-        .no-current-serving {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 1.5rem;
-            padding: 3rem;
-        }
-
-        .stats-bar {
-            background: var(--text-light);
-            padding: 1rem 2rem;
-            border-top: 1px solid var(--border-light);
-            display: flex;
-            justify-content: center;
-            gap: 3rem;
-        }
-
-        .stat-item {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
             text-align: center;
         }
 
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-blue);
+        .no-current-call {
+            color: white;
+            font-size: 2.2em;
+            text-align: center;
+        }
+
+        .no-current-call i {
+            font-size: 3em;
+            margin-bottom: 20px;
             display: block;
         }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .waiting .stat-number { color: var(--secondary-blue); }
-        .in-progress .stat-number { color: var(--warning-orange); }
-        .completed .stat-number { color: var(--success-green); }
 
         /* Responsive Design */
         @media (max-width: 768px) {
             .main-content {
-                flex-direction: column;
+                grid-template-columns: 1fr;
+                grid-template-rows: 2fr 1fr;
+                gap: 15px;
+                padding: 20px;
             }
             
-            .sidebar {
-                width: 100%;
-                order: 2;
-                padding: 1rem;
+            .div1 {
+                grid-column: 1;
+                grid-row: 1;
             }
             
-            .display-area {
-                padding: 1.5rem;
-            }
-            
-            .current-number {
-                font-size: 6rem;
-            }
-            
-            .counter-info {
-                font-size: 2rem;
-                padding: 0.75rem 1.5rem;
-            }
-            
-            .stats-bar {
-                gap: 2rem;
-                padding: 1rem;
+            .div2 {
+                grid-column: 1;
+                grid-row: 2;
+                padding: 20px;
             }
             
             .header {
                 flex-direction: column;
                 gap: 1rem;
                 text-align: center;
+                padding: 1rem;
             }
             
             .header-right {
                 text-align: center;
             }
+            
+            .ticket-number, .counter-number {
+                font-size: 3em;
+                min-width: 150px;
+            }
+            
+            .arrow {
+                font-size: 2em;
+            }
         }
 
         @media (max-width: 480px) {
-            .current-number {
-                font-size: 4rem;
+            .ticket-number, .counter-number {
+                font-size: 2.5em;
+                min-width: 120px;
             }
             
-            .proceed-message {
-                font-size: 1.4rem;
+            .called-queue-code {
+                font-size: 4em;
             }
             
-            .counter-info {
-                font-size: 1.6rem;
+            .call-header {
+                font-size: 1.8em;
             }
             
-            .stats-bar {
-                flex-direction: column;
-                gap: 1rem;
+            .proceed-instruction {
+                font-size: 1.4em;
+            }
+            
+            .station-instruction {
+                font-size: 2em;
             }
         }
     </style>
@@ -468,123 +494,145 @@ foreach ($stations as $station) {
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Sidebar with waiting queue -->
-            <div class="sidebar">
-                <h2>Waiting Queue</h2>
-                <div class="queue-list">
-                    <?php 
-                    $waiting_count = 0;
-                    foreach ($stations as $station): 
-                        if ($station['waiting_count'] > 0):
-                            $waiting_count += $station['waiting_count'];
-                    ?>
-                        <div class="queue-item waiting">
-                            <div class="station-name"><?php echo htmlspecialchars($station['station_name']); ?></div>
-                            <div class="queue-number"><?php echo $station['waiting_count']; ?></div>
+            <!-- Left Side - Triage Stations Grid -->
+            <div class="div1">
+                <?php 
+                // Ensure we have exactly 3 triage stations displayed
+                $triage_stations = array_slice($stations, 0, 3);
+                $station_titles = ['TRIAGE 1', 'TRIAGE 2', 'TRIAGE 3'];
+                
+                for ($i = 0; $i < 3; $i++): 
+                    $station = isset($triage_stations[$i]) ? $triage_stations[$i] : null;
+                    $div_class = 'div' . ($i + 3); // div3, div4, div5
+                ?>
+                    <div class="<?php echo $div_class; ?>">
+                        <div class="triage-display">
+                            <div class="triage-station-title">
+                                <i class="fas fa-stethoscope"></i> 
+                                <?php echo $station_titles[$i]; ?>
+                            </div>
+                            
+                            <div class="display-numbers">
+                                <div class="ticket-number">
+                                    <?php 
+                                    if ($station && $station['current_queue_code']):
+                                        // Display the complete queue code (e.g., "08A-001")
+                                        echo htmlspecialchars($station['current_queue_code']);
+                                    else:
+                                        echo "---";
+                                    endif;
+                                    ?>
+                                </div>
+                                <div class="arrow">→</div>
+                                <div class="counter-number"><?php echo ($i + 1); ?></div>
+                            </div>
                         </div>
-                    <?php 
-                        endif;
-                    endforeach; 
-                    if ($waiting_count == 0):
-                    ?>
-                        <div class="queue-item completed">
-                            <div class="station-name">No Patients</div>
-                            <div class="queue-number">0</div>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                <?php endfor; ?>
             </div>
 
-            <!-- Main Display Area -->
-            <div class="display-area">
+            <!-- Right Side - Current Call Display -->
+            <div class="div2">
                 <?php 
-                $current_serving = null;
+                // Find the most recently called patient (the one currently in progress)
+                $current_call = null;
                 foreach ($stations as $station) {
                     if ($station['current_queue_code']) {
-                        $current_serving = $station;
-                        break;
+                        $current_call = $station;
+                        break; // Get the first one found (most recent)
                     }
                 }
                 
-                if ($current_serving): ?>
-                    <div class="current-serving-card">
-                        <div class="serving-header">Now Serving</div>
-                        <div class="current-number"><?php echo htmlspecialchars($current_serving['current_queue_code']); ?></div>
-                        <div class="proceed-message">Please Proceed To</div>
-                        <div class="counter-info"><?php echo htmlspecialchars($current_serving['station_name']); ?></div>
-                        
-                        <?php 
-                        // Get next 3 queue numbers
-                        $next_patients = [];
-                        foreach ($stations as $station) {
-                            if ($station['next_queue_code']) {
-                                $next_patients[] = $station['next_queue_code'];
-                            }
-                        }
-                        if (!empty($next_patients)): 
-                        ?>
-                            <div class="next-patients">
-                                <div class="next-header">Next in Queue</div>
-                                <div class="next-list">
-                                    <?php foreach (array_slice($next_patients, 0, 3) as $next): ?>
-                                        <div class="next-number"><?php echo htmlspecialchars($next); ?></div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
+                if ($current_call): ?>
+                    <div class="call-header">
+                        <i class="fas fa-bullhorn"></i> NOW CALLING
+                    </div>
+                    <div class="called-queue-code flashing" id="calledQueueCode">
+                        <?php echo htmlspecialchars($current_call['current_queue_code']); ?>
+                    </div>
+                    <div class="proceed-instruction">
+                        Please proceed to
+                    </div>
+                    <div class="station-instruction">
+                        #<?php echo $current_call['station_id']; ?> - <?php echo htmlspecialchars($current_call['station_name']); ?> for Triage
                     </div>
                 <?php else: ?>
-                    <div class="no-current-serving">
-                        <i class="fas fa-clock"></i>
-                        <div>No Patient Currently Being Served</div>
+                    <div class="no-current-call">
+                        <i class="fas fa-clock"></i><br>
+                        No patients currently being called
                     </div>
                 <?php endif; ?>
             </div>
         </div>
-
-        <!-- Statistics Bar -->
-        <div class="stats-bar">
-            <div class="stat-item waiting">
-                <span class="stat-number"><?php echo $total_waiting; ?></span>
-                <span class="stat-label">Waiting</span>
-            </div>
-            <div class="stat-item in-progress">
-                <span class="stat-number"><?php echo $total_in_progress; ?></span>
-                <span class="stat-label">In Progress</span>
-            </div>
-            <div class="stat-item completed">
-                <span class="stat-number"><?php echo $total_completed; ?></span>
-                <span class="stat-label">Completed</span>
-            </div>
     </div>
 
     <script>
-        // Update current time every second
-        function updateCurrentTime() {
+        let lastCalledQueue = '';
+
+        // Update current time and date every second
+        function updateDateTime() {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-            document.getElementById('current-time').textContent = timeString;
+            const datetime = now.getFullYear() + '-' + 
+                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0') + ' ' + 
+                String(now.getHours()).padStart(2, '0') + ':' + 
+                String(now.getMinutes()).padStart(2, '0') + ':' + 
+                String(now.getSeconds()).padStart(2, '0');
+            
+            const datetimeBar = document.getElementById('datetimeBar');
+            if (datetimeBar) {
+                datetimeBar.textContent = datetime;
+            }
+
+            const currentTimeElement = document.getElementById('current-time');
+            if (currentTimeElement) {
+                const timeString = String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0');
+                currentTimeElement.textContent = timeString;
+            }
         }
 
-        // Auto-refresh the display every 30 seconds
+        // Check for new queue calls and trigger flash
+        function checkNewCalls() {
+            const calledElement = document.getElementById('calledQueueCode');
+            if (calledElement) {
+                const currentQueue = calledElement.textContent.trim();
+                if (currentQueue && currentQueue !== lastCalledQueue) {
+                    // New call detected, trigger flash
+                    calledElement.classList.remove('flashing');
+                    // Force reflow
+                    void calledElement.offsetWidth;
+                    calledElement.classList.add('flashing');
+                    lastCalledQueue = currentQueue;
+                }
+            }
+        }
+
+        // Auto-refresh the page every 10 seconds to get latest data
         function autoRefresh() {
             window.location.reload();
         }
 
         // Update time every second
-        setInterval(updateCurrentTime, 1000);
+        setInterval(updateDateTime, 1000);
         
-        // Auto-refresh every 30 seconds
-        setInterval(autoRefresh, 30000);
+        // Check for new calls every 5 seconds
+        setInterval(checkNewCalls, 5000);
+        
+        // Auto-refresh every 10 seconds
+        setInterval(autoRefresh, 10000);
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Modern Triage Queue Display initialized');
-            updateCurrentTime();
+            console.log('Triage Queue Display initialized with new layout');
+            updateDateTime();
+            
+            // Set initial last called queue
+            const calledElement = document.getElementById('calledQueueCode');
+            if (calledElement) {
+                lastCalledQueue = calledElement.textContent.trim();
+            }
         });
     </script>
 </body>
