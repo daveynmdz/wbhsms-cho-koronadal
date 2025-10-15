@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 31.97.106.60:3307
--- Generation Time: Oct 13, 2025 at 05:27 AM
+-- Generation Time: Oct 15, 2025 at 11:16 AM
 -- Server version: 8.4.6
--- PHP Version: 8.2.12
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -91,7 +91,10 @@ INSERT INTO `appointments` (`appointment_id`, `patient_id`, `facility_id`, `refe
 (33, 7, 1, 13, 1, '2025-10-07', '16:00:00', 'cancelled', 'TESTING IF IT WORKS OR NOT', '2025-10-07 06:54:22', '2025-10-10 03:26:15', 0x89504e470d0a1a0a0000000d4948445200000128000001280103000000d1c9fe5a00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000116494441546881edd4c18ec430080350feffa79969c184246da51e2af960461b45cdcb1e10b1994af56979d47f73fc8e4d6ec789545758dd634debb69c4be5ea8e2f892f4ea47675fe610c6b28a56e543cd1ba2275a7aa8d79a92ecce752b13abe6dbf3c91eaaa0adf3cdb6a97251564c078b152372ae62d584b360775a9493559f70c5d95da544d9ef763436b5dea422de9b6bf5ea9de3ec69c60554d52e504ab7af16aa5a01873825591e604ab6a922a2758d58b572b05c59813ac8a34275855935439c1aa5ebc5a2928c69c2055cb287adfe65da9a646575baaa1c9e35f485533b1b6478b17ebd555a91167396f8f2927b5294c63ee4dea519de7317953da492d2ad7eaed927652b3aae9ebf7aaad528b52a93eab1f2bea6788758f97dc0000000049454e44ae426082),
 (34, 7, 1, 14, 1, '2025-10-07', '16:00:00', 'completed', NULL, '2025-10-07 07:51:36', '2025-10-07 08:02:08', NULL),
 (35, 7, 1, 15, 1, '2025-10-07', '16:00:00', 'cancelled', 'sasasasasasa', '2025-10-07 07:54:53', '2025-10-10 03:32:13', NULL),
-(43, 7, 1, 16, 1, '2025-10-13', '15:00:00', 'confirmed', NULL, '2025-10-13 03:23:58', '2025-10-13 03:24:00', '');
+(43, 7, 1, 16, 1, '2025-10-13', '15:00:00', 'cancelled', NULL, '2025-10-13 03:23:58', '2025-10-13 04:01:07', ''),
+(44, 7, 1, 17, 1, '2025-10-13', '15:00:00', 'cancelled', 'Automatically cancelled - appointment time has passed', '2025-10-13 04:36:58', '2025-10-14 06:08:18', ''),
+(45, 7, 1, 18, 1, '2025-10-15', '14:00:00', 'cancelled', 'sasasasasasas', '2025-10-15 05:22:43', '2025-10-15 07:13:21', 0x89504e470d0a1a0a0000000d49484452000000c8000000c8010300000097963cdd00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000393494441545885b598318ea34c10850b1190d11718c13526b0c49508c99acca1af84e4806b34f205da1901a2feafdab39b6df0b3b504e3310fb9bbaa5ebd7a8dc81fafa89aea5dc259bd96efa8225f32cc41f5bc848cc2ad618e9ac46ec959abee41a4f346744b83cea1e581660f41d34da610ce7f80bc0e963efb24c3fd91a557bd3ffe0249b5deb3a6af4175963edd78ee1f20e4edb9cbf8de0824e6dcd54b33ffcea81f020f5ecff5fe68bbafdbf734e6ad7cfb618823522e6e55a93e6c07f235ac04fcebfa9f48d44d894772f5824e319432e5bc25676464cd5bb38fe194dba0d0806aeda2a97346a2116c6107bd1eb038f754abd112a92b320a8521b6f7691b09c2630d094dd790f0e6f71734a4a759eeca0ab7612f1ae28ca8258c1d6cc7b0eeb1f426e582bdbe487cab1e88610bd1f4ce06ac3c3158467d11a4779146c1ebbdc999545a62d345a4d2e3d6680e899ea3cc8a0092befe7447cefa4035981807b772d12ac95de78cd086fc4fa068158509a95fbe2558c05790d07635bdcd5c30da86b0318dd0107adb19c945613f1343b3e9fa7a9f83edc01769a57f3231aa4d595a73674d29613b9d91314304b189f1b28f0c7d97295a46af20566dc6b254496ecd7d86cbcf959ee3ab3342cf15e5ab30033b3af8616fd7392352ba712a4a4e6b9607301fa73b422a61b24899a748973e97061f22d790c0c059711b4a7d30473faca2dabec8686bee137fcb3c65d0b10334243923f12352b0f7b8b11ddd8e7add47ad4e6704023099e28c924b331baf6d60844e2e21b1edfaa7e5cdd689d6730353a8cc0557a4549e7c1116dda2e66ad044312fe68bbccfe2264f6cda12b316f7c403de486cfb83111aa1b72ef07ab3d61435ff760141f998a0f7c7592155b48719e3090a74de8849e2f74433d7ac8db5c7ca22efc4e38b8c7423ea847618dfccfad19bb35e44acdae6567e2979ff2af3ae136724b2b439622b36a643b14a8bb1b77346a4ed51c1e2f09feb8ca21cb00a639c9c1124fc47c96b6bcac048c2d5180fae20d17e5926c1113f57a633a7a962bdc51909f9e302f4ec8d4e613b309a8fe2955d11693fef023051f06184ccc5d11adf7c118cc7613c304d9cecc482c59c43750db1332d6e23a2e4ccd3983b81558fc25e57649452f948da50f299f4215cc5f339239c78968fc32f3643cbe9a24c5a77a4bc43a9ec15c7e73c4797547f833009b6f2da4acce34ca29d782352bd5041f84a7d8cbd49cc62da0e5c11e30187f347db11e21ce9fa61e5e31467e48fd77ffd4d63610da897170000000049454e44ae426082),
+(46, 7, 1, 19, 1, '2025-10-15', '16:00:00', 'checked_in', NULL, '2025-10-15 07:15:53', '2025-10-15 07:23:55', 0x89504e470d0a1a0a0000000d49484452000000c8000000c8010300000097963cdd00000006504c5445ffffff00000055c2d37e000000097048597300000ec400000ec401952b0e1b00000396494441545885b5983192ab301044872220431770c1351c50c59508c9a48cd057a2ca01d710e50bc81901a5f9ddb237fcc1e7cf92ec7a9f6a9146ad9e9645fefa78d5381ee272f57aae5e456e3206a79a2f9149aa97ae1810a5d6e024d7aa8713e9ac89ee65062d66b01dce691c64762eff02799d4d70b98fd22c8f24bdeaf2f80f128766491a6fa36a903e0ea8db2f10d4ed1499de18203ea5ae5e319f9f8ada11e800055b1e6d771beef394f6f2e9ab1043c2877faa627d7206721b372cf8fbfc2bf1ba43462209e2d2c33b6cd3b8a4b44763e2daaed7ed985c966154c820d618a8b1332778f51624f57ade7d48fdeb7934ca95da92093358a549ef7c1b280055e840245e23bec2ef785dee5fe7b828de308cc7c75d4c099efab96206fb396e87e7d9c451a77a6d896b71cc37d596425b30016e8f77a5a296041585ae1b553d710e5342291b7862bc461ceb0639b978e300d1d7daa07c7db626a9d48e1de3944653f12a495d674c7ce214e024f0aafb2c2ef6eb1dc3a9b70bc4c13504b26dab222eb7bfb0ba203cdba6a4748ca2de621e9848bd2dc171e74c89e0349ee818d5ce6dd204a36dd0f6f66c4c3cdd690bfe5d263261ddf53afb52eb0b0475eb57fce72a0ada5dd058a3490b3fda127ac879a793c7114e2efd47bd549529710e2da9f93839da4719807493ad094b0925c39c6e45d7aa702ee410b94650a9956943b13f33d5fba4aab8dba644de78a7d2bb4b3f2d3a807341cbb604c100e7bc817acf011a4317870e26adb231119ebfc387b61c7ee85ad8301c0dec029960adb470e57b3ccfdc882e54fa82298193235b162767c1986ae089a2d9984007e5ee9011d3364d5a2c0b03ac095b85c24f206ffc8049d18259e64b4472c7853c7205abc2f160309ebd43163326bcffe04292bb1aef46b4bf515ca9cfd6843aa59347ea0dd10fe3608d57495b9d3f4e0e634afd39f2c2c0e5d892379cef93f021aaa4884a2bd5db99131c8fe2e430a93039a49a7141308ec6844ebeca0c27474b5a92434b42aaa10eae100fcf5b11e091889f0892bc4d95e82dc604fd14f68482e5fe2ca98689ec5112b12991f673c16a3b7e09303986a846bf7ab324ccdaebd7c967de58907182abae11de69215b0f27473ff5c8ad50d583eab525b8a3c7f1983dca06270f281f16f74983b604d9f2a9818da3c40c8d65567dfc0d52be61c235f77b9fc329a9ae9313dbebd856d178987166d14eac091c16a7047ac5fe50bdfc02282867604aa80344ee07af7563f0aec265143fb21893bf3e7f0038d75116252704e00000000049454e44ae426082);
 
 -- --------------------------------------------------------
 
@@ -138,7 +141,10 @@ INSERT INTO `appointment_logs` (`log_id`, `appointment_id`, `patient_id`, `actio
 (12, 34, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:51:36'),
 (13, 35, 7, 'created', NULL, 'confirmed', NULL, '2025-10-07', NULL, '16:00:00', 'Appointment created', NULL, '', 7, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', '2025-10-07 07:54:53'),
 (14, 33, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'TESTING IF IT WORKS OR NOT', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:26:15'),
-(15, 35, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'sasasasasasa', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:32:13');
+(15, 35, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'sasasasasasa', NULL, 'employee', 1, NULL, NULL, '2025-10-10 03:32:13'),
+(16, 45, 7, 'updated', NULL, NULL, NULL, NULL, NULL, NULL, 'Patient checked in successfully', NULL, 'employee', 1, NULL, NULL, '2025-10-15 06:43:36'),
+(17, 45, 7, 'cancelled', 'confirmed', 'cancelled', NULL, NULL, NULL, NULL, 'sasasasasasas', NULL, 'employee', 1, NULL, NULL, '2025-10-15 07:13:21'),
+(18, 46, 7, 'updated', NULL, NULL, NULL, NULL, NULL, NULL, 'Patient checked in successfully', NULL, 'employee', 1, NULL, NULL, '2025-10-15 07:23:55');
 
 -- --------------------------------------------------------
 
@@ -1156,7 +1162,9 @@ INSERT INTO `queue_entries` (`queue_entry_id`, `visit_id`, `appointment_id`, `pa
 (7, 7, 34, 7, 1, 'consultation', 5, 2, '071025-04P-002', 'normal', 'done', '2025-10-07 15:51:36', '2025-10-07 15:58:29', '2025-10-07 16:02:08', 6, 10, 'Visit completed: ', '2025-10-07 07:51:36', '2025-10-07 08:02:08'),
 (8, 8, 35, 7, 1, 'consultation', 5, 3, '071025-04P-003', 'normal', 'in_progress', '2025-10-07 15:54:53', '2025-10-07 15:59:30', NULL, 4, NULL, 'Called to station', '2025-10-07 07:54:53', '2025-10-07 07:59:30'),
 (9, 9, 35, 7, 1, 'triage', 2, 6, '07A-006', 'normal', 'done', '2025-10-07 15:55:21', '2025-10-07 15:56:02', '2025-10-07 15:56:54', 0, 1, 'Called to station', '2025-10-07 07:55:21', '2025-10-07 07:56:54'),
-(10, 10, 43, 7, 1, 'consultation', 1, 1, '131025-03P-001', 'normal', 'waiting', '2025-10-13 03:23:59', NULL, NULL, NULL, NULL, NULL, '2025-10-13 03:23:59', '2025-10-13 03:23:59');
+(10, 10, 43, 7, 1, 'consultation', 1, 1, '131025-03P-001', 'normal', 'waiting', '2025-10-13 03:23:59', NULL, NULL, NULL, NULL, NULL, '2025-10-13 03:23:59', '2025-10-13 03:23:59'),
+(13, 21, 45, 7, 1, 'triage', 1, 1, 'CHO-20251015-001', 'normal', 'done', '2025-10-15 06:43:36', NULL, NULL, NULL, NULL, NULL, '2025-10-15 06:43:36', '2025-10-15 06:59:20'),
+(14, 23, 46, 7, 1, 'triage', 5, 1, '151025-04P-001', 'normal', 'waiting', '2025-10-15 07:23:55', '2025-10-15 08:48:59', '2025-10-15 08:49:41', 85, 0, 'Called to station', '2025-10-15 07:23:55', '2025-10-15 08:49:41');
 
 -- --------------------------------------------------------
 
@@ -1199,7 +1207,35 @@ INSERT INTO `queue_logs` (`queue_log_id`, `queue_entry_id`, `action`, `old_statu
 (17, 7, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:58:29'),
 (18, 8, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-07 07:59:30'),
 (19, 7, 'status_changed', 'in_progress', 'done', 'Visit completed - no further treatment needed: ', 1, '2025-10-07 08:02:08'),
-(20, 10, 'created', NULL, 'waiting', 'Queue created with code: 131025-03P-001', NULL, '2025-10-13 03:23:59');
+(20, 10, 'created', NULL, 'waiting', 'Queue created with code: 131025-03P-001', NULL, '2025-10-13 03:23:59'),
+(23, 13, 'created', NULL, 'waiting', 'Queue created with code: CHO-20251015-001', 1, '2025-10-15 06:43:36'),
+(24, 14, 'created', NULL, 'waiting', 'Queue created with code: 151025-04P-001', 1, '2025-10-15 07:23:55'),
+(25, 14, 'status_changed', 'waiting', 'in_progress', 'Called to station', 1, '2025-10-15 08:48:59');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `queue_settings`
+--
+
+CREATE TABLE `queue_settings` (
+  `setting_id` int NOT NULL,
+  `setting_key` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `setting_value` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `enabled` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `queue_settings`
+--
+
+INSERT INTO `queue_settings` (`setting_id`, `setting_key`, `setting_value`, `enabled`, `created_at`, `updated_at`) VALUES
+(1, 'queue_override_mode', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18'),
+(2, 'ignore_time_constraints', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18'),
+(3, 'testing_mode', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18'),
+(4, 'force_all_stations_open', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18');
 
 -- --------------------------------------------------------
 
@@ -1264,7 +1300,10 @@ INSERT INTO `referrals` (`referral_id`, `referral_num`, `patient_id`, `referring
 (13, 'REF-20251007-0001', 7, 1, 1, '', NULL, 1, 'city_office', 'Need check-up', 1, '2025-10-07 14:51:39', 'accepted', '2025-10-07 06:54:38', NULL),
 (14, 'REF-20251007-0002', 7, 1, 1, '', NULL, 1, 'city_office', 'afd', 1, '2025-10-07 15:50:58', 'accepted', '2025-10-07 07:51:58', NULL),
 (15, 'REF-20251007-0003', 7, 1, 1, '', 8, 1, 'city_office', 'Need Doctor Checkup', 1, '2025-10-07 15:52:44', 'cancelled', '2025-10-10 01:22:54', NULL),
-(16, 'REF-20251012-0001', 7, 1, 1, '', 9, 1, 'city_office', 'Need Doctor Check-up', 1, '2025-10-12 14:15:13', 'accepted', '2025-10-13 03:23:59', 'Used for appointment #APT-00000043');
+(16, 'REF-20251012-0001', 7, 1, 1, '', 9, 1, 'city_office', 'Need Doctor Check-up', 1, '2025-10-12 14:15:13', 'accepted', '2025-10-13 03:23:59', 'Used for appointment #APT-00000043'),
+(17, 'REF-20251013-0001', 7, 1, 1, '', 10, 1, 'city_office', 'Feeling Dizzy and needs to see a Doctor', 1, '2025-10-13 04:36:24', 'accepted', '2025-10-13 04:36:58', 'Used for appointment #APT-00000044'),
+(18, 'REF-20251015-0001', 7, 1, 1, '', 11, 1, 'city_office', 'Feels Nauseous; Needs to see a Doctor', 1, '2025-10-15 05:18:26', 'accepted', '2025-10-15 07:12:43', 'Used for appointment #APT-00000045'),
+(19, 'REF-20251015-0002', 7, 1, 1, '', NULL, 1, 'city_office', 'sasasasasasasasasa', 1, '2025-10-15 07:15:42', 'accepted', '2025-10-15 07:15:53', 'Used for appointment #APT-00000046');
 
 -- --------------------------------------------------------
 
@@ -1555,7 +1594,10 @@ INSERT INTO `visits` (`visit_id`, `patient_id`, `facility_id`, `appointment_id`,
 (7, 7, 1, 34, NULL, '2025-10-07', NULL, '2025-10-07 16:02:08', 1, 'Visit completed: ', 'completed', 'on_time', '2025-10-07 07:51:36', '2025-10-07 08:02:08'),
 (8, 7, 1, 35, NULL, '2025-10-07', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:54:53', '2025-10-07 07:54:53'),
 (9, 7, 1, 35, NULL, '2025-10-07', '2025-10-07 15:55:21', NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-07 07:55:21', '2025-10-07 07:55:21'),
-(10, 7, 1, 43, NULL, '2025-10-13', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-13 03:23:59', '2025-10-13 03:23:59');
+(10, 7, 1, 43, NULL, '2025-10-13', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-13 03:23:59', '2025-10-13 03:23:59'),
+(21, 7, 1, 45, NULL, '2025-10-15', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-15 06:43:36', '2025-10-15 06:43:36'),
+(23, 7, 1, 46, NULL, '2025-10-15', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-15 07:23:55', '2025-10-15 07:23:55'),
+(24, 7, 1, 46, NULL, '2025-10-15', NULL, NULL, NULL, NULL, 'ongoing', 'on_time', '2025-10-15 07:23:55', '2025-10-15 07:23:55');
 
 -- --------------------------------------------------------
 
@@ -1592,7 +1634,9 @@ INSERT INTO `vitals` (`vitals_id`, `patient_id`, `systolic_bp`, `diastolic_bp`, 
 (6, 26, 90, 40, 75, 45, 45.00, 111.00, 202.00, 27.00, 1, '2025-09-28 23:13:47', ''),
 (7, 37, 120, 80, NULL, NULL, 36.00, 70.00, 175.00, 22.00, 63, '2025-09-30 16:38:18', ''),
 (8, 7, NULL, NULL, NULL, NULL, 37.00, NULL, NULL, NULL, 1, '2025-10-07 15:52:44', 'Feverish'),
-(9, 7, NULL, NULL, NULL, NULL, 36.00, 70.00, 170.00, 24.00, 1, '2025-10-12 14:15:13', '');
+(9, 7, NULL, NULL, NULL, NULL, 36.00, 70.00, 170.00, 24.00, 1, '2025-10-12 14:15:13', ''),
+(10, 7, 120, 80, 72, 18, 36.00, 75.00, 173.00, 25.00, 1, '2025-10-13 04:36:24', 'Vitals look stable'),
+(11, 7, 120, 80, 72, 18, 35.50, 75.00, 173.00, 25.00, 1, '2025-10-15 05:18:26', 'Stable but feeling dizzy.');
 
 -- --------------------------------------------------------
 
@@ -1942,6 +1986,13 @@ ALTER TABLE `queue_logs`
   ADD KEY `idx_queue_entry_id` (`queue_entry_id`);
 
 --
+-- Indexes for table `queue_settings`
+--
+ALTER TABLE `queue_settings`
+  ADD PRIMARY KEY (`setting_id`),
+  ADD UNIQUE KEY `setting_key` (`setting_key`);
+
+--
 -- Indexes for table `receipts`
 --
 ALTER TABLE `receipts`
@@ -2076,13 +2127,13 @@ ALTER TABLE `allergies`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `appointment_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `appointment_logs`
 --
 ALTER TABLE `appointment_logs`
-  MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `assignment_logs`
@@ -2262,13 +2313,19 @@ ALTER TABLE `queue_counters`
 -- AUTO_INCREMENT for table `queue_entries`
 --
 ALTER TABLE `queue_entries`
-  MODIFY `queue_entry_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `queue_entry_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `queue_logs`
 --
 ALTER TABLE `queue_logs`
-  MODIFY `queue_log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `queue_log_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+
+--
+-- AUTO_INCREMENT for table `queue_settings`
+--
+ALTER TABLE `queue_settings`
+  MODIFY `setting_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `receipts`
@@ -2280,7 +2337,7 @@ ALTER TABLE `receipts`
 -- AUTO_INCREMENT for table `referrals`
 --
 ALTER TABLE `referrals`
-  MODIFY `referral_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `referral_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `referral_logs`
@@ -2340,13 +2397,13 @@ ALTER TABLE `user_activity_logs`
 -- AUTO_INCREMENT for table `visits`
 --
 ALTER TABLE `visits`
-  MODIFY `visit_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `visit_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `vitals`
 --
 ALTER TABLE `vitals`
-  MODIFY `vitals_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `vitals_id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- Constraints for dumped tables

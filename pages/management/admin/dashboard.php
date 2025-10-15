@@ -800,6 +800,174 @@ try {
             margin-top: 5px;
         }
 
+        /* Queue Settings Panel Styles */
+        .queue-settings-panel {
+            background: white;
+            border-radius: var(--cho-border-radius);
+            box-shadow: var(--cho-shadow);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .settings-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--cho-dark);
+        }
+
+        .queue-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-normal {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-testing {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-modified {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: var(--cho-border-radius);
+            transition: all 0.3s ease;
+        }
+
+        .setting-card:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-color: var(--cho-primary);
+        }
+
+        .setting-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .setting-icon {
+            font-size: 1.25rem;
+            color: var(--cho-primary);
+            width: 24px;
+            text-align: center;
+        }
+
+        .setting-info h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--cho-dark);
+        }
+
+        .setting-info p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--cho-secondary);
+            line-height: 1.3;
+        }
+
+        .setting-control {
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--cho-primary);
+        }
+
+        .toggle-switch input:focus + .toggle-slider {
+            box-shadow: 0 0 1px var(--cho-primary);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        .settings-note {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: var(--cho-border-radius);
+            font-size: 0.85rem;
+            color: #856404;
+        }
+
+        .settings-note i {
+            color: #f39c12;
+        }
+
         .queue-current-patient {
             background: linear-gradient(135deg, var(--cho-info) 0%, #0dcaf0 100%);
             color: white;
@@ -1150,6 +1318,85 @@ try {
                     <h3 class="action-title">Billing Management</h3>
                     <p class="action-description">Process payments and manage billing operations</p>
                 </a>
+            </div>
+        </section>
+
+        <!-- Queue Settings Panel (Admin Only) -->
+        <section class="queue-settings-panel">
+            <h2 class="settings-title">
+                <i class="fas fa-cogs"></i> Queue System Settings
+                <span id="queue-system-status" class="queue-status status-normal">Normal Operations</span>
+            </h2>
+            
+            <div class="settings-grid">
+                <div class="setting-card">
+                    <div class="setting-header">
+                        <i class="fas fa-flask setting-icon"></i>
+                        <div class="setting-info">
+                            <h4>Testing Mode</h4>
+                            <p>Enable comprehensive testing without restrictions</p>
+                        </div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="testing-mode">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <div class="setting-header">
+                        <i class="fas fa-clock setting-icon"></i>
+                        <div class="setting-info">
+                            <h4>Time Constraints</h4>
+                            <p>Ignore business hours and time restrictions</p>
+                        </div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="time-constraints">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <div class="setting-header">
+                        <i class="fas fa-hand-paper setting-icon"></i>
+                        <div class="setting-info">
+                            <h4>Override Mode</h4>
+                            <p>Allow queue overrides and manual interventions</p>
+                        </div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="override-mode">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <div class="setting-header">
+                        <i class="fas fa-door-open setting-icon"></i>
+                        <div class="setting-info">
+                            <h4>Force Stations Open</h4>
+                            <p>Keep all stations available regardless of schedule</p>
+                        </div>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="force-stations">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-note">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span><strong>Note:</strong> These settings are intended for testing and development purposes. Changes will affect the entire queue system.</span>
             </div>
         </section>
 
@@ -1610,11 +1857,162 @@ try {
             return queueCode;
         }
         
-        // Initialize dashboard manager
+        // Queue Settings Management
+        class QueueSettingsManager {
+            constructor() {
+                this.init();
+            }
+            
+            init() {
+                this.loadCurrentSettings();
+                this.attachEventListeners();
+            }
+            
+            async loadCurrentSettings() {
+                try {
+                    const response = await fetch('../../queueing/queue_settings_api.php?action=get_status', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.updateUI(data.data);
+                    } else {
+                        console.error('Failed to load settings:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error loading queue settings:', error);
+                }
+            }
+            
+            updateUI(settings) {
+                // Update toggle switches if they exist
+                const toggles = {
+                    'testing-mode': settings.testing_mode,
+                    'time-constraints': settings.ignore_time_constraints,
+                    'override-mode': settings.queue_override_mode,
+                    'force-stations': settings.force_all_stations_open
+                };
+                
+                Object.entries(toggles).forEach(([key, value]) => {
+                    const toggle = document.getElementById(key);
+                    if (toggle) {
+                        toggle.checked = value === '1';
+                    }
+                });
+                
+                // Update status indicators
+                this.updateStatusIndicators(settings);
+            }
+            
+            updateStatusIndicators(settings) {
+                const statusElement = document.getElementById('queue-system-status');
+                if (statusElement) {
+                    const isTestMode = settings.testing_mode === '1';
+                    const ignoreTime = settings.ignore_time_constraints === '1';
+                    
+                    let statusText = 'Normal Operations';
+                    let statusClass = 'status-normal';
+                    
+                    if (isTestMode) {
+                        statusText = 'Testing Mode Active';
+                        statusClass = 'status-testing';
+                    } else if (ignoreTime) {
+                        statusText = 'Time Constraints Disabled';
+                        statusClass = 'status-modified';
+                    }
+                    
+                    statusElement.className = `queue-status ${statusClass}`;
+                    statusElement.textContent = statusText;
+                }
+            }
+            
+            attachEventListeners() {
+                // Add event listeners for toggle switches
+                const toggles = ['testing-mode', 'time-constraints', 'override-mode', 'force-stations'];
+                
+                toggles.forEach(toggleId => {
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) {
+                        toggle.addEventListener('change', (e) => this.handleToggle(toggleId, e.target.checked));
+                    }
+                });
+            }
+            
+            async handleToggle(toggleId, isEnabled) {
+                const actionMap = {
+                    'testing-mode': 'toggle_testing_mode',
+                    'time-constraints': 'toggle_time_constraints',
+                    'override-mode': 'toggle_override_mode',
+                    'force-stations': 'toggle_force_stations'
+                };
+                
+                const action = actionMap[toggleId];
+                if (!action) {
+                    console.error('Unknown toggle:', toggleId);
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('../../queueing/queue_settings_api.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: `action=${action}`
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        console.log(`${toggleId} toggled successfully:`, data.message);
+                        // Reload settings to ensure UI is in sync
+                        this.loadCurrentSettings();
+                        
+                        // Show feedback
+                        this.showToggleFeedback(toggleId, isEnabled);
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error(`Error toggling ${toggleId}:`, error);
+                    // Revert toggle on error
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) toggle.checked = !isEnabled;
+                    
+                    alert(`Error: ${error.message}`);
+                }
+            }
+            
+            showToggleFeedback(toggleId, isEnabled) {
+                const messages = {
+                    'testing-mode': `Testing mode ${isEnabled ? 'enabled' : 'disabled'}`,
+                    'time-constraints': `Time constraints ${isEnabled ? 'ignored' : 'enforced'}`,
+                    'override-mode': `Override mode ${isEnabled ? 'enabled' : 'disabled'}`,
+                    'force-stations': `Force stations ${isEnabled ? 'enabled' : 'disabled'}`
+                };
+                
+                const message = messages[toggleId] || 'Setting updated';
+                console.log('Queue Setting:', message);
+                
+                // You could add a toast notification here if desired
+            }
+        }
+        
+        // Initialize managers
         let dashboardManager;
+        let queueSettingsManager;
         
         document.addEventListener('DOMContentLoaded', function() {
             dashboardManager = new AdminDashboardManager();
+            queueSettingsManager = new QueueSettingsManager();
         });
         
         // Global function for manual refresh button
