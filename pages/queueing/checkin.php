@@ -494,12 +494,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $priority_level = 'priority';
                     }
 
-                    // **SINGLE TRANSACTION for all operations**
-                    $pdo->beginTransaction();
-                    
-                    try {
-                        // 1. Update patient PhilHealth status if provided
-                        if ($is_philhealth !== null) {
+                    // 1. Update patient PhilHealth status if provided (separate transaction)
+                    if ($is_philhealth !== null) {
+                        try {
+                            $pdo->beginTransaction();
                             $update_params = [$is_philhealth];
                             $philhealth_update_query = "UPDATE patients SET isPhilHealth = ?";
                             
@@ -513,9 +511,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             $stmt = $pdo->prepare($philhealth_update_query);
                             $stmt->execute($update_params);
+                            $pdo->commit();
+                        } catch (Exception $e) {
+                            $pdo->rollBack();
+                            throw new Exception("Failed to update PhilHealth status: " . $e->getMessage());
                         }
+                    }
 
-                        // 2. Create visit record
+                    // 2. Create visit record (separate transaction)
+                    try {
+                        $pdo->beginTransaction();
                         $stmt = $pdo->prepare("
                             INSERT INTO visits (
                                 patient_id, facility_id, appointment_id, visit_date, 
@@ -524,116 +529,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ");
                         $stmt->execute([$patient_id, $appointment_id, $appointment_data['scheduled_date']]);
                         $visit_id = $pdo->lastInsertId();
+                        $pdo->commit();
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        throw new Exception("Failed to create visit record: " . $e->getMessage());
+                    }
 
-                        // 3. Generate queue code for CHO appointments using QueueManagementService
-                        $queue_code = null;
-                        $queue_number = null;
-                        
-                        // Use QueueManagementService to create proper queue entry with time-slot codes
-                        $queue_result = $queueService->createQueueEntry(
-                            $appointment_id, 
-                            $patient_id, 
-                            $appointment_data['service_id'], 
-                            'triage', 
-                            $priority_level, 
-                            $employee_id
-                        );
-                        
-                        if ($queue_result['success']) {
-                            $queue_code = $queue_result['queue_code'];
-                            $queue_entry_id = $queue_result['queue_entry_id'];
-                            // Skip manual queue entry creation since QueueManagementService handled it
-                            $skip_manual_queue_creation = true;
-                        } else {
-                            throw new Exception("Failed to create queue entry: " . $queue_result['message']);
-                        }
+                    // 3. Use QueueManagementService (handles its own transaction)
+                    $queue_result = $queueService->createQueueEntry(
+                        $appointment_id, 
+                        $patient_id, 
+                        $appointment_data['service_id'], 
+                        'triage', 
+                        $priority_level, 
+                        $employee_id
+                    );
+                    
+                    if (!$queue_result['success']) {
+                        throw new Exception("Failed to create queue entry: " . $queue_result['message']);
+                    }
+                    
+                    $queue_code = $queue_result['queue_code'];
+                    $queue_entry_id = $queue_result['queue_entry_id'];
 
-                        // 4. Get station for this service
-                        $stmt = $pdo->prepare("
-                            SELECT station_id FROM stations 
-                            WHERE service_id = ? AND station_type = 'triage' AND is_active = 1 AND is_open = 1
-                            LIMIT 1
-                        ");
-                        $stmt->execute([$appointment_data['service_id']]);
-                        $station_result = $stmt->fetch();
-                        
-                        if (!$station_result) {
-                            // Fallback to any open triage station
-                            $stmt = $pdo->prepare("
-                                SELECT station_id FROM stations 
-                                WHERE station_type = 'triage' AND is_active = 1 AND is_open = 1 
-                                LIMIT 1
-                            ");
-                            $stmt->execute();
-                            $station_result = $stmt->fetch();
-                        }
-                        
-                        if (!$station_result) {
-                            throw new Exception("No open triage stations available. Please contact administrator.");
-                        }
-                        
-                        $station_id = $station_result['station_id'];
+                    // 4. Update the queue entry with visit_id (separate transaction)
+                    try {
+                        $pdo->beginTransaction();
+                        $stmt = $pdo->prepare("UPDATE queue_entries SET visit_id = ? WHERE queue_entry_id = ?");
+                        $stmt->execute([$visit_id, $queue_entry_id]);
+                        $pdo->commit();
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        throw new Exception("Failed to link visit to queue: " . $e->getMessage());
+                    }
 
-                        // 5. Create queue entry (skip if QueueManagementService already handled it)
-                        if (!isset($skip_manual_queue_creation)) {
-                            $stmt = $pdo->prepare("
-                                INSERT INTO queue_entries (
-                                    visit_id, appointment_id, patient_id, service_id, station_id,
-                                    queue_type, queue_number, queue_code, priority_level, status
-                                ) VALUES (?, ?, ?, ?, ?, 'triage', ?, ?, ?, 'waiting')
-                            ");
-                            $stmt->execute([
-                                $visit_id, $appointment_id, $patient_id, $appointment_data['service_id'], 
-                                $station_id, $queue_number, $queue_code, $priority_level
-                            ]);
-                            $queue_entry_id = $pdo->lastInsertId();
-                        } else {
-                            // Update the existing queue entry with visit_id
-                            $stmt = $pdo->prepare("UPDATE queue_entries SET visit_id = ? WHERE queue_entry_id = ?");
-                            $stmt->execute([$visit_id, $queue_entry_id]);
-                        }
-
-                        // 6. Update appointment status
+                    // 5. Update appointment status (separate transaction)  
+                    try {
+                        $pdo->beginTransaction();
                         $stmt = $pdo->prepare("UPDATE appointments SET status = 'checked_in' WHERE appointment_id = ?");
                         $stmt->execute([$appointment_id]);
+                        $pdo->commit();
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        throw new Exception("Failed to update appointment status: " . $e->getMessage());
+                    }
 
-                        // 7. Log queue creation
-                        $stmt = $pdo->prepare("
-                            INSERT INTO queue_logs (queue_entry_id, action, old_status, new_status, remarks, performed_by, created_at)
-                            VALUES (?, 'created', null, 'waiting', ?, ?, NOW())
-                        ");
-                        $queue_remarks = $queue_code ? "Queue created with code: {$queue_code}" : 'Queue entry created';
-                        $stmt->execute([$queue_entry_id, $queue_remarks, $employee_id]);
-
-                        // 8. Log the check-in action
+                    // 6. Log the check-in action (separate transaction)
+                    try {
+                        $pdo->beginTransaction();
                         $stmt = $pdo->prepare("
                             INSERT INTO appointment_logs (appointment_id, patient_id, action, reason, created_by_type, created_by_id, created_at)
                             VALUES (?, ?, 'updated', ?, 'employee', ?, NOW())
                         ");
-                        $log_details = json_encode([
-                            'queue_code' => $queue_code ?? 'N/A',
-                            'priority_level' => $priority_level,
-                            'station' => 'triage',
-                            'philhealth_status' => $is_philhealth ? 'Member' : 'Non-member'
-                        ]);
                         $stmt->execute([$appointment_id, $patient_id, 'Patient checked in successfully', $employee_id]);
-
-                        // Commit all operations
                         $pdo->commit();
-
-                        // Success message
-                        $queue_code_display = $queue_code ?? 'N/A';
-                        $success = "Patient checked in successfully! Queue Code: " . $queue_code_display .
-                            " | Priority: " . ucfirst($priority_level) . " | Next Station: Triage" .
-                            " | PhilHealth: " . ($is_philhealth ? 'Member' : 'Non-member');
-
-                        // Log success
-                        error_log("Check-in successful for appointment {$appointment_id}: Queue Code {$queue_code_display}");
-                        
                     } catch (Exception $e) {
                         $pdo->rollBack();
-                        throw $e; // Re-throw to be caught by outer catch
+                        // Log error but don't fail the check-in
+                        error_log("Failed to log check-in action: " . $e->getMessage());
                     }
+
+                    // Success message
+                    $queue_code_display = $queue_code ?? 'N/A';
+                    $success = "Patient checked in successfully! Queue Code: " . $queue_code_display .
+                        " | Priority: " . ucfirst($priority_level) . " | Next Station: Triage" .
+                        " | PhilHealth: " . ($is_philhealth ? 'Member' : 'Non-member');
+
+                    // Log success
+                    error_log("Check-in successful for appointment {$appointment_id}: Queue Code {$queue_code_display}");
                         
                 } catch (Exception $e) {
                     // Clean up any open transactions
