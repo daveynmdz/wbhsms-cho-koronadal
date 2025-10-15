@@ -646,6 +646,197 @@ try {
         .stat-card.revenue .stat-icon { color: #fa709a; }
         .stat-card.queue .stat-icon { color: #a8edea; }
 
+        /* Queue Overview Section */
+        .queue-overview {
+            margin-bottom: 30px;
+        }
+
+        .section-header-with-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-header-with-action h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--cho-primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .queue-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-btn, .monitor-btn, .display-btn {
+            background: linear-gradient(135deg, var(--cho-primary) 0%, var(--cho-primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: var(--cho-border-radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--cho-transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover, .monitor-btn:hover, .display-btn:hover {
+            background: linear-gradient(135deg, var(--cho-primary-dark) 0%, #001d3d 100%);
+            transform: translateY(-2px);
+            box-shadow: var(--cho-shadow-lg);
+            color: white;
+            text-decoration: none;
+        }
+
+        .queue-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .queue-station-card {
+            background: white;
+            border: 2px solid var(--cho-border);
+            border-radius: var(--cho-border-radius-lg);
+            padding: 20px;
+            box-shadow: var(--cho-shadow);
+            transition: var(--cho-transition);
+            position: relative;
+        }
+
+        .queue-station-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--cho-shadow-lg);
+            border-color: var(--cho-primary);
+        }
+
+        .queue-station-card.active {
+            border-color: var(--cho-success);
+            background: linear-gradient(135deg, #f8fff9 0%, white 100%);
+        }
+
+        .queue-station-card.inactive {
+            border-color: var(--cho-danger);
+            background: #fdf2f2;
+            opacity: 0.8;
+        }
+
+        .queue-station-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .queue-station-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--cho-primary-dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .queue-station-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .queue-station-status.active {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--cho-success);
+        }
+
+        .queue-station-status.inactive {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--cho-danger);
+        }
+
+        .queue-stats-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .queue-stat-item {
+            text-align: center;
+            padding: 10px;
+            background: var(--cho-light);
+            border-radius: var(--cho-border-radius);
+        }
+
+        .queue-stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--cho-primary);
+            display: block;
+        }
+
+        .queue-stat-label {
+            font-size: 12px;
+            color: var(--cho-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        .queue-current-patient {
+            background: linear-gradient(135deg, var(--cho-info) 0%, #0dcaf0 100%);
+            color: white;
+            padding: 12px;
+            border-radius: var(--cho-border-radius);
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .queue-current-patient .patient-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .queue-current-patient .patient-details {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .loading-state, .error-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--cho-secondary);
+            grid-column: 1 / -1;
+        }
+
+        .error-state {
+            color: var(--cho-danger);
+        }
+
+        .loading-state i, .error-state i {
+            font-size: 24px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
         .stat-number {
             font-size: 2.5rem;
             font-weight: 700;
@@ -962,6 +1153,34 @@ try {
             </div>
         </section>
 
+        <!-- Queue Overview Section -->
+        <section class="queue-overview">
+            <div class="section-header-with-action">
+                <h2><i class="fas fa-tv"></i> Queue Overview</h2>
+                <div class="queue-actions">
+                    <button onclick="refreshQueueOverview()" class="refresh-btn" title="Refresh Queue Data">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <a href="../../queueing/admin_monitor.php" class="monitor-btn" title="Open Queue Monitor">
+                        <i class="fas fa-external-link-alt"></i> Full Monitor
+                    </a>
+                    <a href="../../queueing/public_display_selector.php" class="display-btn" title="Open Display Selector">
+                        <i class="fas fa-tv"></i> Public Displays
+                    </a>
+                </div>
+            </div>
+            
+            <div class="queue-cards-grid" id="queueOverview">
+                <!-- Queue overview content will be loaded here -->
+                <div class="loading-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading queue data...</p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="section-divider">
+
         <!-- Info Layout -->
         <div class="info-layout">
             <!-- Left Column -->
@@ -1104,14 +1323,316 @@ try {
         </div>
     </main>
     
+    <!-- Universal Framework Integration -->
+    <script src="../../../assets/js/station-manager.js"></script>
+    <script src="../../../assets/js/queue-sync.js"></script>
+
     <script>
-        // Simple animation for the cards
+        class AdminDashboardManager {
+            constructor() {
+                this.refreshInterval = null;
+                this.refreshRate = 8000; // 8 seconds for dashboard
+                this.isRefreshing = false;
+                this.errorCount = 0;
+                this.maxErrors = 3;
+                
+                this.initializeDashboard();
+                this.loadQueueOverview();
+                this.startAutoRefresh();
+                this.setupEventListeners();
+            }
+            
+            initializeDashboard() {
+                console.log('📊 Admin Dashboard Manager initialized');
+                
+                // Simple animation for the cards
+                const cards = document.querySelectorAll('.animated-card');
+                cards.forEach(card => {
+                    card.style.opacity = '1';
+                });
+                
+                // Request notification permission
+                this.requestNotificationPermission();
+            }
+            
+            async requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                }
+            }
+            
+            setupEventListeners() {
+                // Listen for queue updates from other windows
+                window.addEventListener('message', (event) => {
+                    if (event.data.type === 'queue_updated') {
+                        console.log('📡 Received queue update notification - refreshing dashboard');
+                        this.loadQueueOverview();
+                    }
+                });
+                
+                // Handle visibility changes
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        this.pauseRefresh();
+                    } else {
+                        this.resumeRefresh();
+                    }
+                });
+            }
+            
+            startAutoRefresh() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                }
+                
+                this.refreshInterval = setInterval(() => {
+                    if (!document.hidden && !this.isRefreshing) {
+                        this.loadQueueOverview();
+                    }
+                }, this.refreshRate);
+                
+                console.log(`⏱️ Dashboard auto-refresh started (${this.refreshRate/1000}s intervals)`);
+            }
+            
+            pauseRefresh() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                    this.refreshInterval = null;
+                    console.log('⏸️ Dashboard auto-refresh paused');
+                }
+            }
+            
+            resumeRefresh() {
+                if (!this.refreshInterval) {
+                    this.startAutoRefresh();
+                    this.loadQueueOverview(); // Immediate refresh when tab becomes visible
+                    console.log('▶️ Dashboard auto-refresh resumed');
+                }
+            }
+            
+            async loadQueueOverview() {
+                if (this.isRefreshing) return;
+                
+                this.isRefreshing = true;
+                const queueOverview = document.getElementById('queueOverview');
+                
+                try {
+                    console.log('🔄 Loading queue overview...');
+                    
+                    // Fetch queue overview data
+                    const response = await fetch('dashboard_queue_api.php', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.renderQueueOverview(data.stations);
+                        this.updateQueueStatistic(data.overall_stats);
+                        console.log('✅ Queue overview loaded successfully');
+                        this.errorCount = 0; // Reset error count on success
+                    } else {
+                        throw new Error(data.message || 'Failed to load queue data');
+                    }
+                    
+                    // Broadcast update to other windows
+                    this.broadcastUpdate();
+                    
+                } catch (error) {
+                    console.error('❌ Error loading queue overview:', error);
+                    this.errorCount++;
+                    
+                    if (this.errorCount >= this.maxErrors) {
+                        this.showErrorState('Too many errors occurred. Please refresh the page.');
+                    } else {
+                        this.showErrorState(`Error loading queue data: ${error.message}`);
+                    }
+                } finally {
+                    this.isRefreshing = false;
+                }
+            }
+            
+            renderQueueOverview(stations) {
+                const queueOverview = document.getElementById('queueOverview');
+                
+                if (!stations || stations.length === 0) {
+                    queueOverview.innerHTML = `
+                        <div class="error-state">
+                            <i class="fas fa-info-circle"></i>
+                            <p>No active stations found</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const stationsHtml = stations.map(station => {
+                    const isActive = station.is_active && station.assigned_employee;
+                    const hasCurrentPatient = station.current_patient;
+                    
+                    return `
+                        <div class="queue-station-card ${isActive ? 'active' : 'inactive'}">
+                            <div class="queue-station-header">
+                                <h4 class="queue-station-title">
+                                    <i class="${this.getStationIcon(station.station_type)}"></i>
+                                    ${station.station_name}
+                                </h4>
+                                <div class="queue-station-status ${isActive ? 'active' : 'inactive'}">
+                                    <i class="fas fa-circle"></i>
+                                    ${isActive ? 'Active' : 'Inactive'}
+                                </div>
+                            </div>
+                            
+                            ${isActive ? `
+                                <div class="queue-stats-row">
+                                    <div class="queue-stat-item">
+                                        <span class="queue-stat-number">${station.queue_stats?.waiting_count || 0}</span>
+                                        <div class="queue-stat-label">Waiting</div>
+                                    </div>
+                                    <div class="queue-stat-item">
+                                        <span class="queue-stat-number">${station.queue_stats?.in_progress_count || 0}</span>
+                                        <div class="queue-stat-label">In Progress</div>
+                                    </div>
+                                </div>
+                                
+                                ${hasCurrentPatient ? `
+                                    <div class="queue-current-patient">
+                                        <div class="patient-name">
+                                            <i class="fas fa-user"></i> ${station.current_patient.patient_name}
+                                        </div>
+                                        <div class="patient-details">
+                                            ${station.current_patient.formatted_code || `#${station.current_patient.queue_number}`} • 
+                                            Started: ${this.formatTime(station.current_patient.time_started)}
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div style="text-align: center; padding: 15px; color: var(--cho-secondary);">
+                                        <i class="fas fa-check-circle"></i> No current patient
+                                    </div>
+                                `}
+                                
+                                <div style="text-align: center; margin-top: 10px;">
+                                    <small style="color: var(--cho-success); font-weight: 600;">
+                                        <i class="fas fa-user"></i> ${station.assigned_employee}
+                                    </small>
+                                </div>
+                            ` : `
+                                <div style="text-align: center; padding: 20px; color: var(--cho-danger);">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <p>Station inactive or no staff assigned</p>
+                                </div>
+                            `}
+                        </div>
+                    `;
+                }).join('');
+                
+                queueOverview.innerHTML = stationsHtml;
+            }
+            
+            getStationIcon(stationType) {
+                const iconMap = {
+                    'triage': 'fas fa-user-md',
+                    'consultation': 'fas fa-stethoscope',
+                    'lab': 'fas fa-microscope',
+                    'pharmacy': 'fas fa-pills',
+                    'billing': 'fas fa-file-invoice-dollar',
+                    'document': 'fas fa-file-alt'
+                };
+                return iconMap[stationType] || 'fas fa-hospital';
+            }
+            
+            formatTime(timeString) {
+                const time = new Date(timeString);
+                return time.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+            }
+            
+            updateQueueStatistic(overallStats) {
+                // Update the main queue statistic card if data is available
+                const queueStatCard = document.querySelector('.stat-card.queue .stat-number');
+                if (queueStatCard && overallStats) {
+                    const totalWaiting = overallStats.total_waiting || 0;
+                    queueStatCard.textContent = new Intl.NumberFormat().format(totalWaiting);
+                }
+            }
+            
+            showErrorState(message) {
+                const queueOverview = document.getElementById('queueOverview');
+                queueOverview.innerHTML = `
+                    <div class="error-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>${message}</p>
+                        <button onclick="dashboardManager.loadQueueOverview()" class="refresh-btn" style="margin-top: 10px;">
+                            <i class="fas fa-retry"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+            
+            broadcastUpdate() {
+                // Notify other windows about the update
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'dashboard_updated',
+                        timestamp: Date.now()
+                    }, '*');
+                }
+            }
+            
+            // Manual refresh method
+            manualRefresh() {
+                console.log('🔄 Manual refresh triggered');
+                this.loadQueueOverview();
+            }
+        }
+        
+        // JavaScript implementation of queue code formatter
+        function formatQueueCodeForDisplay(queueCode) {
+            if (!queueCode) return '';
+            const parts = queueCode.split('-');
+            if (parts.length >= 3) {
+                const timeSlot = parts[1];
+                const sequence = parts[2];
+                if (timeSlot.length === 3) {
+                    const hours = timeSlot.substring(0, 2);
+                    const slotLetter = timeSlot.substring(2);
+                    const minuteMap = { 'A': '00', 'B': '15', 'C': '30', 'D': '45' };
+                    const minutes = minuteMap[slotLetter] || '00';
+                    return `${hours}${minutes.charAt(0)}-${sequence}`;
+                }
+                return `${timeSlot}-${sequence}`;
+            }
+            return queueCode;
+        }
+        
+        // Initialize dashboard manager
+        let dashboardManager;
+        
         document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('.animated-card');
-            cards.forEach(card => {
-                card.style.opacity = '1';
-            });
+            dashboardManager = new AdminDashboardManager();
         });
+        
+        // Global function for manual refresh button
+        function refreshQueueOverview() {
+            if (dashboardManager) {
+                dashboardManager.manualRefresh();
+                
+                // Add visual feedback
+                const refreshBtn = document.querySelector('.refresh-btn i');
+                if (refreshBtn) {
+                    refreshBtn.style.transform = 'rotate(360deg)';
+                    refreshBtn.style.transition = 'transform 0.5s ease';
+                    setTimeout(() => {
+                        refreshBtn.style.transform = 'rotate(0deg)';
+                    }, 500);
+                }
+            }
+        }
     </script>
 </body>
 

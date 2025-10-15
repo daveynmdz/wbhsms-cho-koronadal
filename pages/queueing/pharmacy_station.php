@@ -18,6 +18,7 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
 // Include database connection and queue management service
 require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
+require_once $root_path . '/utils/queue_code_formatter.php';
 
 $employee_id = $_SESSION['employee_id'];
 $employee_role = $_SESSION['role'];
@@ -120,6 +121,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         $station_id = $pharmacy_station['station_id'];
         
         switch ($action) {
+            case 'get_queue_data':
+                // Get updated queue data for pharmacy station
+                $waiting_queue = $queueService->getStationQueue($station_id, 'waiting');
+                $in_progress_queue = $queueService->getStationQueue($station_id, 'in_progress');
+                $completed_queue = $queueService->getStationQueue($station_id, 'done', $current_date, 10);
+                $skipped_queue = $queueService->getStationQueue($station_id, 'skipped');
+                $queue_stats = $queueService->getStationQueueStats($station_id, $current_date);
+                
+                // Format queue code for display
+                foreach ($waiting_queue as &$entry) {
+                    $entry['display_queue_code'] = formatQueueCodeForDisplay($entry['queue_code']);
+                }
+                foreach ($in_progress_queue as &$entry) {
+                    $entry['display_queue_code'] = formatQueueCodeForDisplay($entry['queue_code']);
+                }
+                foreach ($completed_queue as &$entry) {
+                    $entry['display_queue_code'] = formatQueueCodeForDisplay($entry['queue_code']);
+                }
+                foreach ($skipped_queue as &$entry) {
+                    $entry['display_queue_code'] = formatQueueCodeForDisplay($entry['queue_code']);
+                }
+                
+                echo json_encode([
+                    'success' => true,
+                    'data' => [
+                        'waiting_queue' => $waiting_queue,
+                        'in_progress_queue' => $in_progress_queue,
+                        'completed_queue' => $completed_queue,
+                        'skipped_queue' => $skipped_queue,
+                        'stats' => $queue_stats
+                    ]
+                ]);
+                break;
+                
             case 'call_next':
                 $result = $queueService->callNextPatient('pharmacy', $station_id, $employee_id);
                 if ($result['success']) {
@@ -308,6 +343,10 @@ $employee_info = [
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/edit.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Universal Station Management Framework -->
+    <script src="../../assets/js/station-manager.js"></script>
+    <script src="../../assets/js/queue-sync.js"></script>
     <style>
         /* Pharmacy Station Layout - inheriting dashboard styles */
 
@@ -2213,6 +2252,40 @@ $employee_info = [
                 }
             });
         };
+        
+        // Initialize Universal Station Management Framework
+        document.addEventListener('DOMContentLoaded', function() {
+            // Station configuration for pharmacy station
+            const stationConfig = {
+                stationType: 'pharmacy',
+                stationId: <?php echo json_encode($pharmacy_station['station_id'] ?? null); ?>,
+                stationName: <?php echo json_encode($pharmacy_station['station_name'] ?? 'Pharmacy Station'); ?>,
+                employeeId: <?php echo json_encode($employee_id); ?>,
+                employeeName: <?php echo json_encode($employee_info['name'] ?? ''); ?>,
+                canManageQueue: <?php echo json_encode($can_manage_queue); ?>,
+                ajaxUrl: 'pharmacy_station.php',
+                refreshInterval: 5000,
+                nextStations: [],
+                allowedActions: ['call_next', 'skip_patient', 'recall_patient', 'force_call', 'complete_patient']
+            };
+            
+            // Initialize station manager
+            if (typeof StationManager !== 'undefined') {
+                window.stationManager = new StationManager(stationConfig);
+                console.log('✅ Pharmacy Station Manager initialized successfully');
+            } else {
+                console.error('❌ StationManager class not found. Make sure station-manager.js is loaded.');
+            }
+            
+            // Initialize queue synchronization
+            if (typeof QueueSyncManager !== 'undefined') {
+                window.queueSync = new QueueSyncManager();
+                window.queueSync.registerStation(stationConfig.stationType, stationConfig.stationId);
+                console.log('✅ Queue Synchronization Manager initialized successfully');
+            } else {
+                console.error('❌ QueueSyncManager class not found. Make sure queue-sync.js is loaded.');
+            }
+        });
     </script>
 </body>
 </html>

@@ -31,6 +31,7 @@ $root_path = dirname(dirname(__DIR__));
 require_once $root_path . '/config/session/employee_session.php';
 require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
+require_once $root_path . '/utils/queue_code_formatter.php';
 
 // CORS headers for frontend requests
 header('Access-Control-Allow-Origin: *');
@@ -124,6 +125,10 @@ try {
             handleGetQueue($data);
             break;
             
+        case 'get_queue_data':
+            handleGetQueueData($data);
+            break;
+            
         case 'get_stats':
             handleGetStats($data);
             break;
@@ -199,6 +204,68 @@ function handleGetQueue($data) {
     ];
     
     sendResponse(true, 'Queue data retrieved successfully', $queue_data);
+}
+
+/**
+ * Get formatted queue data for universal framework (supporting div3-div7)
+ */
+function handleGetQueueData($data) {
+    global $queueService, $pdo;
+    
+    $station_id = $data['station_id'] ?? 0;
+    
+    if (!$station_id) {
+        sendResponse(false, 'Station ID is required', null, 400);
+    }
+    
+    // Verify access to station
+    if (!hasStationAccess($station_id)) {
+        sendResponse(false, 'Access denied to this station', null, 403);
+    }
+    
+    try {
+        // Get current queue data
+        $waiting_queue = $queueService->getStationQueue($station_id, ['waiting'], date('Y-m-d'));
+        $in_progress_queue = $queueService->getStationQueue($station_id, ['in_progress'], date('Y-m-d'));
+        $skipped_queue = $queueService->getStationQueue($station_id, ['skipped'], date('Y-m-d'));
+        $completed_today = $queueService->getStationQueue($station_id, ['completed'], date('Y-m-d'));
+        
+        // Format queue codes for display
+        foreach ([$waiting_queue, $in_progress_queue, $skipped_queue, $completed_today] as &$queue) {
+            foreach ($queue as &$entry) {
+                if (isset($entry['queue_code'])) {
+                    $entry['formatted_code'] = formatQueueCodeForDisplay($entry['queue_code']);
+                }
+            }
+        }
+        
+        // Get queue statistics
+        $stats = $queueService->getStationQueueStats($station_id);
+        
+        // Prepare response data matching universal framework expectations
+        $response_data = [
+            'station_id' => $station_id,
+            'timestamp' => time(),
+            'div3' => $waiting_queue, // Next patients
+            'div4' => $in_progress_queue, // Current patients
+            'div5' => $skipped_queue, // Skipped patients (for recall)
+            'div6' => $completed_today, // Completed today
+            'div7' => $stats, // Statistics and counters
+            'queue_data' => [
+                'waiting_queue' => $waiting_queue,
+                'in_progress_queue' => $in_progress_queue,
+                'skipped_queue' => $skipped_queue,
+                'completed_today' => $completed_today,
+                'statistics' => $stats
+            ]
+        ];
+        
+        sendResponse(true, 'Queue data retrieved successfully', $response_data);
+        
+    } catch (Exception $e) {
+        error_log("Error in handleGetQueueData: " . $e->getMessage());
+        sendResponse(false, 'Failed to retrieve queue data', null, 500);
+    }
 }
 
 /**

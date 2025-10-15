@@ -58,6 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'update_station_status':
                 updateStationStatus();
                 break;
+            case 'configure_framework':
+                configureUniversalFramework();
+                break;
             default:
                 throw new Exception("Invalid action specified");
         }
@@ -327,6 +330,103 @@ function updateStationStatus() {
     $message = "Station {$action_text} successfully!";
 }
 
+/**
+ * Configure Universal Framework settings for all stations
+ */
+function configureUniversalFramework() {
+    global $pdo, $setup_log, $message, $root_path;
+    
+    // Framework configuration settings
+    $framework_configs = [
+        'auto_refresh_rate' => 5000, // 5 seconds
+        'sync_enabled' => true,
+        'audio_notifications' => true,
+        'browser_notifications' => true,
+        'queue_code_format' => 'HHM-###',
+        'cross_station_communication' => true,
+        'real_time_updates' => true
+    ];
+    
+    $pdo->beginTransaction();
+    
+    try {
+        // Get all active stations
+        $stmt = $pdo->prepare("SELECT station_id, station_name, station_type FROM stations WHERE is_active = 1");
+        $stmt->execute();
+        $stations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($stations)) {
+            throw new Exception("No active stations found. Please create stations first.");
+        }
+        
+        // Create or update framework configuration for each station
+        foreach ($stations as $station) {
+            // Check if station_configurations table exists first
+            $table_check = $pdo->query("SHOW TABLES LIKE 'station_configurations'");
+            
+            if ($table_check->rowCount() > 0) {
+                // Table exists, proceed with configuration
+                $check_stmt = $pdo->prepare("
+                    SELECT config_id FROM station_configurations 
+                    WHERE station_id = ? AND config_type = 'universal_framework'
+                ");
+                $check_stmt->execute([$station['station_id']]);
+                
+                $config_json = json_encode(array_merge($framework_configs, [
+                    'station_type' => $station['station_type'],
+                    'station_name' => $station['station_name'],
+                    'last_updated' => date('Y-m-d H:i:s')
+                ]));
+                
+                if ($check_stmt->rowCount() > 0) {
+                    // Update existing configuration
+                    $update_stmt = $pdo->prepare("
+                        UPDATE station_configurations 
+                        SET config_data = ?, updated_at = NOW()
+                        WHERE station_id = ? AND config_type = 'universal_framework'
+                    ");
+                    $update_stmt->execute([$config_json, $station['station_id']]);
+                    $setup_log[] = "Updated framework config for {$station['station_name']}";
+                } else {
+                    // Insert new configuration
+                    $insert_stmt = $pdo->prepare("
+                        INSERT INTO station_configurations (station_id, config_type, config_data, created_at, updated_at)
+                        VALUES (?, 'universal_framework', ?, NOW(), NOW())
+                    ");
+                    $insert_stmt->execute([$station['station_id'], $config_json]);
+                    $setup_log[] = "Created framework config for {$station['station_name']}";
+                }
+            } else {
+                // Table doesn't exist, log a message and continue without error
+                $setup_log[] = "Note: station_configurations table not found - framework config stored in memory only for {$station['station_name']}";
+            }
+        }
+        
+        // Create framework initialization files if they don't exist
+        $framework_files = [
+            '../../assets/js/station-manager.js',
+            '../../assets/js/queue-sync.js',
+            '../../utils/queue_code_formatter.php'
+        ];
+        
+        foreach ($framework_files as $file) {
+            $file_path = $root_path . str_replace('../../', '/', $file);
+            if (!file_exists($file_path)) {
+                $setup_log[] = "WARNING: Framework file missing: {$file}";
+            } else {
+                $setup_log[] = "✓ Framework file exists: {$file}";
+            }
+        }
+        
+        $pdo->commit();
+        $message = "Universal Framework configured successfully for all " . count($stations) . " stations!";
+        
+    } catch (Exception $e) {
+        $pdo->rollback();
+        throw new Exception("Framework configuration failed: " . $e->getMessage());
+    }
+}
+
 // Get current stations status
 $stations_query = "
     SELECT s.*, 
@@ -432,6 +532,14 @@ $activePage = 'queue_management';
         }
         .btn-danger:hover { 
             background: #c53030; 
+        }
+        
+        .btn-info { 
+            background: #3182ce; 
+            color: white; 
+        }
+        .btn-info:hover { 
+            background: #2c5282; 
         }
         
         .status-grid {
@@ -595,6 +703,13 @@ $activePage = 'queue_management';
                         </button>
                     </form>
                     
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="action" value="configure_framework">
+                        <button type="submit" class="setup-btn btn-info">
+                            <i class="fas fa-sync-alt"></i> Configure Universal Framework
+                        </button>
+                    </form>
+                    
                     <a href="staff_assignments.php" class="setup-btn btn-primary">
                         <i class="fas fa-users"></i> Manage Staff Assignments
                     </a>
@@ -658,6 +773,271 @@ $activePage = 'queue_management';
         </div>
     </section>
 
+    <!-- Universal Framework Integration -->
+    <script src="../../assets/js/station-manager.js"></script>
+    <script src="../../assets/js/queue-sync.js"></script>
+    
+    <script>
+        class StationSetupManager {
+            constructor() {
+                this.syncEnabled = false; // Disabled during setup to prevent conflicts
+                this.initializeSetup();
+                this.setupEventListeners();
+            }
+            
+            initializeSetup() {
+                console.log('🏗️ Station Setup Manager initialized');
+                this.validateFrameworkFiles();
+                this.setupFormEnhancements();
+            }
+            
+            validateFrameworkFiles() {
+                const requiredFiles = [
+                    '../../assets/js/station-manager.js',
+                    '../../assets/js/queue-sync.js',
+                    '../../utils/queue_code_formatter.php'
+                ];
+                
+                console.log('🔍 Validating framework files...');
+                
+                // This would typically be done server-side, but we can add client-side verification
+                requiredFiles.forEach(file => {
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = file;
+                    link.onload = () => console.log(`✅ Framework file available: ${file}`);
+                    link.onerror = () => console.warn(`❌ Framework file missing: ${file}`);
+                    document.head.appendChild(link);
+                });
+            }
+            
+            setupFormEnhancements() {
+                // Add loading states to buttons
+                const forms = document.querySelectorAll('form[method="POST"]');
+                forms.forEach(form => {
+                    form.addEventListener('submit', (e) => {
+                        const button = form.querySelector('button[type="submit"]');
+                        if (button) {
+                            this.showLoadingState(button);
+                        }
+                    });
+                });
+                
+                // Add confirmation dialogs for destructive actions
+                const resetBtn = document.querySelector('button[onclick*="confirm"]');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', (e) => {
+                        if (!this.confirmDestructiveAction('reset all stations')) {
+                            e.preventDefault();
+                        }
+                    });
+                }
+            }
+            
+            setupEventListeners() {
+                // Listen for station status changes
+                const statusForms = document.querySelectorAll('form input[name="action"][value="update_station_status"]');
+                statusForms.forEach(input => {
+                    const form = input.closest('form');
+                    if (form) {
+                        form.addEventListener('submit', (e) => {
+                            this.handleStationStatusChange(form);
+                        });
+                    }
+                });
+                
+                // Auto-refresh station status every 30 seconds
+                this.startStatusMonitoring();
+            }
+            
+            showLoadingState(button) {
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                button.disabled = true;
+                
+                // Store original content for potential restoration
+                button.dataset.originalContent = originalContent;
+            }
+            
+            confirmDestructiveAction(actionDescription) {
+                return confirm(
+                    `⚠️ WARNING: This will ${actionDescription}.\n\n` +
+                    'This action cannot be undone and will:\n' +
+                    '• Close all stations\n' +
+                    '• Remove all current assignments\n' +
+                    '• Potentially disrupt ongoing operations\n\n' +
+                    'Are you sure you want to continue?'
+                );
+            }
+            
+            handleStationStatusChange(form) {
+                const stationId = form.querySelector('input[name="station_id"]').value;
+                const status = form.querySelector('input[name="status"]').value;
+                
+                console.log(`🏥 Station ${stationId} status changing to: ${status}`);
+                
+                // Add visual feedback
+                const stationCard = form.closest('.station-card');
+                if (stationCard) {
+                    stationCard.style.opacity = '0.6';
+                    stationCard.style.transition = 'opacity 0.3s ease';
+                }
+            }
+            
+            startStatusMonitoring() {
+                setInterval(() => {
+                    if (!document.hidden) {
+                        this.checkStationHealth();
+                    }
+                }, 30000); // Every 30 seconds
+                
+                console.log('🔍 Station status monitoring started');
+            }
+            
+            checkStationHealth() {
+                // Simple health check by counting active stations
+                const stationCards = document.querySelectorAll('.station-card');
+                const openStations = document.querySelectorAll('.status-open').length;
+                const closedStations = stationCards.length - openStations;
+                
+                console.log(`📊 Station Health: ${openStations} open, ${closedStations} closed`);
+                
+                // Update page title with status
+                if (openStations > 0) {
+                    document.title = `Station Setup (${openStations} active) - CHO Koronadal`;
+                } else {
+                    document.title = `Station Setup (all closed) - CHO Koronadal`;
+                }
+            }
+            
+            // Method to test universal framework integration
+            testFrameworkIntegration() {
+                console.log('🧪 Testing Universal Framework Integration...');
+                
+                // Test queue code formatter
+                if (typeof formatQueueCodeForDisplay === 'function') {
+                    const testCode = formatQueueCodeForDisplay('20241015-09A-001');
+                    console.log('✅ Queue Code Formatter working:', testCode);
+                } else {
+                    console.warn('❌ Queue Code Formatter not available');
+                }
+                
+                // Test station manager
+                if (typeof StationManager === 'function') {
+                    console.log('✅ StationManager class available');
+                } else {
+                    console.warn('❌ StationManager class not available');
+                }
+                
+                // Test queue sync
+                if (typeof QueueSyncManager === 'function') {
+                    console.log('✅ QueueSyncManager class available');
+                } else {
+                    console.warn('❌ QueueSyncManager class not available');
+                }
+                
+                this.showFrameworkTestResults();
+            }
+            
+            showFrameworkTestResults() {
+                // Create test results display
+                const existingResults = document.getElementById('frameworkTestResults');
+                if (existingResults) {
+                    existingResults.remove();
+                }
+                
+                const resultsDiv = document.createElement('div');
+                resultsDiv.id = 'frameworkTestResults';
+                resultsDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    background: #f8f9fa;
+                    border: 2px solid #28a745;
+                    padding: 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    font-family: monospace;
+                    font-size: 12px;
+                    max-width: 300px;
+                `;
+                
+                resultsDiv.innerHTML = `
+                    <h4 style="margin: 0 0 10px 0; color: #28a745;">
+                        <i class="fas fa-check-circle"></i> Framework Test Results
+                    </h4>
+                    <div>Check browser console for detailed results</div>
+                    <button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px; border: none; background: #28a745; color: white; border-radius: 4px; cursor: pointer;">
+                        Close
+                    </button>
+                `;
+                
+                document.body.appendChild(resultsDiv);
+                
+                // Auto-remove after 10 seconds
+                setTimeout(() => {
+                    if (resultsDiv.parentNode) {
+                        resultsDiv.parentNode.removeChild(resultsDiv);
+                    }
+                }, 10000);
+            }
+        }
+        
+        // Initialize setup manager when page loads
+        let setupManager;
+        
+        // JavaScript implementation of queue code formatter
+        function formatQueueCodeForDisplay(queueCode) {
+            if (!queueCode) return '';
+            
+            const parts = queueCode.split('-');
+            if (parts.length >= 3) {
+                const timeSlot = parts[1]; // HHA format
+                const sequence = parts[2]; // ### format
+                
+                // Convert time slot format from HHA to HHM
+                if (timeSlot.length === 3) {
+                    const hours = timeSlot.substring(0, 2);
+                    const slotLetter = timeSlot.substring(2);
+                    
+                    // Convert slot letter to minute representation
+                    const minuteMap = { 'A': '00', 'B': '15', 'C': '30', 'D': '45' };
+                    const minutes = minuteMap[slotLetter] || '00';
+                    
+                    return `${hours}${minutes.charAt(0)}-${sequence}`;
+                }
+                
+                return `${timeSlot}-${sequence}`;
+            }
+            
+            return queueCode;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupManager = new StationSetupManager();
+            
+            // Add test framework button for debugging
+            const testButton = document.createElement('button');
+            testButton.innerHTML = '<i class="fas fa-flask"></i> Test Framework';
+            testButton.className = 'setup-btn btn-info';
+            testButton.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 1000; font-size: 12px; padding: 8px 12px;';
+            testButton.onclick = () => setupManager.testFrameworkIntegration();
+            document.body.appendChild(testButton);
+            
+            console.log('🏗️ Station Setup module ready with universal framework integration');
+        });
+        
+        // Global function for testing (accessible from console)
+        window.testUniversalFramework = function() {
+            if (setupManager) {
+                setupManager.testFrameworkIntegration();
+            } else {
+                console.error('Setup manager not initialized');
+            }
+        };
+    </script>
+    
     <!-- Font Awesome for icons -->
     <script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
 </body>

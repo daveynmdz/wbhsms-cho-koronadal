@@ -570,73 +570,274 @@ foreach ($stations as $station) {
     </div>
 
     <script>
+        // Enhanced Public Display with Queue Synchronization
         let lastCalledQueue = '';
+        let lastUpdateTime = Date.now();
+        let refreshInterval = 8000; // 8 seconds for triage (faster refresh)
+        let isRefreshing = false;
+        
+        // Initialize enhanced public display
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Enhanced Triage Queue Display initialized');
+            initializeDisplay();
+            setupQueueSync();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        });
+        
+        // Initialize display components
+        function initializeDisplay() {
+            // Set initial last called queue
+            const calledElement = document.getElementById('calledQueueCode');
+            if (calledElement) {
+                lastCalledQueue = calledElement.textContent.trim();
+            }
+            
+            // Notify parent window that display is ready
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.postMessage({
+                        type: 'public-display-ready',
+                        stationType: 'triage',
+                        window: window
+                    }, '*');
+                } catch (error) {
+                    console.warn('Could not notify parent window:', error);
+                }
+            }
+            
+            // Add smooth transitions
+            const elements = document.querySelectorAll('.station-card, .called-item');
+            elements.forEach(el => {
+                el.style.transition = 'all 0.3s ease';
+            });
+        }
+        
+        // Setup queue synchronization
+        function setupQueueSync() {
+            // Listen for messages from station windows
+            window.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'queue-update' && event.data.stationType === 'triage') {
+                    console.log('Received triage queue update signal');
+                    smartRefresh();
+                }
+            });
+            
+            // Start intelligent auto-refresh
+            setInterval(intelligentRefresh, 3000); // Check every 3 seconds
+            
+            // Check for new calls periodically
+            setInterval(checkNewCalls, 2000); // Check every 2 seconds
+        }
+        
+        // Intelligent refresh that adapts to activity
+        function intelligentRefresh() {
+            const timeSinceLastUpdate = Date.now() - lastUpdateTime;
+            
+            // Refresh more frequently during active periods
+            if (timeSinceLastUpdate >= refreshInterval && !isRefreshing) {
+                smartRefresh();
+            }
+        }
+        
+        // Smart refresh with better error handling
+        async function smartRefresh() {
+            if (isRefreshing) return;
+            
+            isRefreshing = true;
+            try {
+                const response = await fetch(window.location.href + '?t=' + Date.now(), {
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'X-Refresh-Request': 'true'
+                    }
+                });
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    updateDisplayContent(html);
+                    lastUpdateTime = Date.now();
+                } else {
+                    throw new Error('Refresh failed with status: ' + response.status);
+                }
+            } catch (error) {
+                console.error('Smart refresh failed:', error);
+                // Fallback to full reload after multiple failures
+                setTimeout(() => window.location.reload(), 5000);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+        
+        // Update display content with smooth animations
+        function updateDisplayContent(html) {
+            const parser = new DOMParser();
+            const newDoc = parser.parseFromString(html, 'text/html');
+            
+            // Update station cards with fade effect
+            updateSection('.station-grid', newDoc);
+            
+            // Update called queue section
+            updateSection('.called-queue-section', newDoc);
+            
+            // Update statistics
+            updateSection('.stats-container', newDoc);
+            
+            // Trigger new call check
+            setTimeout(checkNewCalls, 500);
+        }
+        
+        // Update a specific section with smooth transition
+        function updateSection(selector, newDoc) {
+            const currentSection = document.querySelector(selector);
+            const newSection = newDoc.querySelector(selector);
+            
+            if (currentSection && newSection) {
+                currentSection.style.opacity = '0.7';
+                setTimeout(() => {
+                    currentSection.innerHTML = newSection.innerHTML;
+                    currentSection.style.opacity = '1';
+                }, 150);
+            }
+        }
 
-        // Update current time and date every second
+        // Enhanced new call detection with visual effects
+        function checkNewCalls() {
+            const calledElement = document.getElementById('calledQueueCode');
+            if (calledElement) {
+                const currentQueue = calledElement.textContent.trim();
+                if (currentQueue && currentQueue !== lastCalledQueue && lastCalledQueue !== '') {
+                    // New call detected - trigger enhanced visual effects
+                    triggerNewCallAlert(calledElement, currentQueue);
+                    lastCalledQueue = currentQueue;
+                } else if (currentQueue) {
+                    lastCalledQueue = currentQueue;
+                }
+            }
+        }
+        
+        // Enhanced visual alert for new calls
+        function triggerNewCallAlert(element, queueCode) {
+            // Remove existing animations
+            element.classList.remove('flashing', 'new-call');
+            
+            // Force reflow
+            void element.offsetWidth;
+            
+            // Add new call animation
+            element.classList.add('new-call');
+            
+            // Add sound effect if available
+            playNotificationSound();
+            
+            // Enhanced flashing for visibility
+            let flashCount = 0;
+            const flashInterval = setInterval(() => {
+                element.style.backgroundColor = flashCount % 2 === 0 ? '#ff6b6b' : '#4ecdc4';
+                element.style.color = 'white';
+                element.style.transform = flashCount % 2 === 0 ? 'scale(1.05)' : 'scale(1)';
+                
+                flashCount++;
+                if (flashCount >= 6) { // Flash 3 times
+                    clearInterval(flashInterval);
+                    element.style.backgroundColor = '';
+                    element.style.color = '';
+                    element.style.transform = '';
+                }
+            }, 300);
+            
+            console.log('New call alert triggered for:', queueCode);
+        }
+        
+        // Play notification sound (if supported)
+        function playNotificationSound() {
+            try {
+                // Create audio context for notification sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (error) {
+                // Silently fail if audio not supported
+            }
+        }
+
+        // Enhanced date/time update with better formatting
         function updateDateTime() {
             const now = new Date();
-            const datetime = now.getFullYear() + '-' + 
-                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                String(now.getDate()).padStart(2, '0') + ' ' + 
-                String(now.getHours()).padStart(2, '0') + ':' + 
-                String(now.getMinutes()).padStart(2, '0') + ':' + 
-                String(now.getSeconds()).padStart(2, '0');
+            
+            // Update datetime bar
+            const datetime = now.toLocaleString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
             
             const datetimeBar = document.getElementById('datetimeBar');
             if (datetimeBar) {
                 datetimeBar.textContent = datetime;
             }
 
+            // Update current time display
             const currentTimeElement = document.getElementById('current-time');
             if (currentTimeElement) {
-                const timeString = String(now.getHours()).padStart(2, '0') + ':' + 
-                    String(now.getMinutes()).padStart(2, '0') + ':' + 
-                    String(now.getSeconds()).padStart(2, '0');
+                const timeString = now.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
                 currentTimeElement.textContent = timeString;
             }
         }
-
-        // Check for new queue calls and trigger flash
-        function checkNewCalls() {
-            const calledElement = document.getElementById('calledQueueCode');
-            if (calledElement) {
-                const currentQueue = calledElement.textContent.trim();
-                if (currentQueue && currentQueue !== lastCalledQueue) {
-                    // New call detected, trigger flash
-                    calledElement.classList.remove('flashing');
-                    // Force reflow
-                    void calledElement.offsetWidth;
-                    calledElement.classList.add('flashing');
-                    lastCalledQueue = currentQueue;
-                }
-            }
-        }
-
-        // Auto-refresh the page every 10 seconds to get latest data
-        function autoRefresh() {
-            window.location.reload();
-        }
-
-        // Update time every second
-        setInterval(updateDateTime, 1000);
         
-        // Check for new calls every 5 seconds
-        setInterval(checkNewCalls, 5000);
-        
-        // Auto-refresh every 10 seconds
-        setInterval(autoRefresh, 10000);
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Triage Queue Display initialized with new layout');
-            updateDateTime();
-            
-            // Set initial last called queue
-            const calledElement = document.getElementById('calledQueueCode');
-            if (calledElement) {
-                lastCalledQueue = calledElement.textContent.trim();
+        // Handle window focus for refresh control
+        window.addEventListener('focus', function() {
+            if ((Date.now() - lastUpdateTime) > 15000) { // 15 seconds
+                smartRefresh();
             }
         });
+        
+        // Handle visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                if ((Date.now() - lastUpdateTime) > 15000) {
+                    smartRefresh();
+                }
+            }
+        });
+        
+        // Format queue codes consistently (matching the PHP formatter)
+        function formatQueueCodeForDisplay(queueCode) {
+            if (!queueCode) return '';
+            
+            // Handle sophisticated queue codes (DDMMYY-HHA-###)
+            const match = queueCode.match(/\d{6}-(\d{2}[AP])-(\d{3})/);
+            if (match) {
+                const timeSlot = match[1];
+                const sequence = match[2];
+                const hour = timeSlot.substring(0, 2);
+                const period = timeSlot.substring(2, 1);
+                return hour + period + 'M-' + sequence;
+            }
+            
+            return queueCode;
+        }
     </script>
 </body>
 </html>

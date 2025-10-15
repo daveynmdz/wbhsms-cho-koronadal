@@ -120,6 +120,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         $station_id = $triage_station['station_id'];
         
         switch ($action) {
+            case 'get_queue_data':
+                // Return current queue data for frontend updates
+                $current_patient = null;
+                $waiting_queue = [];
+                $in_progress_queue = [];
+                $completed_queue = [];
+                $skipped_queue = [];
+                
+                // Get current patient
+                $current_query = "SELECT qe.*, p.patient_id, p.first_name, p.last_name,
+                                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                                p.date_of_birth, p.barangay, v.priority_level, s.name as service_name
+                                FROM queue_entries qe
+                                JOIN visits v ON qe.visit_id = v.visit_id
+                                JOIN patients p ON v.patient_id = p.patient_id
+                                LEFT JOIN services s ON v.service_id = s.service_id
+                                WHERE qe.station_id = ? AND qe.status = 'in_progress' 
+                                AND DATE(qe.time_in) = CURDATE()
+                                ORDER BY qe.time_started DESC LIMIT 1";
+                $stmt = $pdo->prepare($current_query);
+                $stmt->execute([$station_id]);
+                $current_patient = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // Get waiting queue
+                $waiting_query = "SELECT qe.*, p.patient_id, p.first_name, p.last_name,
+                                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                                p.date_of_birth, p.barangay, v.priority_level, s.name as service_name
+                                FROM queue_entries qe
+                                JOIN visits v ON qe.visit_id = v.visit_id
+                                JOIN patients p ON v.patient_id = p.patient_id
+                                LEFT JOIN services s ON v.service_id = s.service_id
+                                WHERE qe.station_id = ? AND qe.status = 'waiting' 
+                                AND DATE(qe.time_in) = CURDATE()
+                                ORDER BY v.priority_level DESC, qe.time_in ASC";
+                $stmt = $pdo->prepare($waiting_query);
+                $stmt->execute([$station_id]);
+                $waiting_queue = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Get skipped queue
+                $skipped_query = "SELECT qe.*, p.patient_id, p.first_name, p.last_name,
+                                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                                p.date_of_birth, p.barangay, v.priority_level, s.name as service_name
+                                FROM queue_entries qe
+                                JOIN visits v ON qe.visit_id = v.visit_id
+                                JOIN patients p ON v.patient_id = p.patient_id
+                                LEFT JOIN services s ON v.service_id = s.service_id
+                                WHERE qe.station_id = ? AND qe.status = 'skipped' 
+                                AND DATE(qe.time_in) = CURDATE()
+                                ORDER BY qe.time_started DESC";
+                $stmt = $pdo->prepare($skipped_query);
+                $stmt->execute([$station_id]);
+                $skipped_queue = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Get completed queue
+                $completed_query = "SELECT qe.*, p.patient_id, p.first_name, p.last_name,
+                                  CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                                  p.date_of_birth, p.barangay, v.priority_level, s.name as service_name
+                                  FROM queue_entries qe
+                                  JOIN visits v ON qe.visit_id = v.visit_id
+                                  JOIN patients p ON v.patient_id = p.patient_id
+                                  LEFT JOIN services s ON v.service_id = s.service_id
+                                  WHERE qe.station_id = ? AND qe.status = 'completed' 
+                                  AND DATE(qe.time_in) = CURDATE()
+                                  ORDER BY qe.time_completed DESC LIMIT 20";
+                $stmt = $pdo->prepare($completed_query);
+                $stmt->execute([$station_id]);
+                $completed_queue = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                echo json_encode([
+                    'success' => true,
+                    'data' => [
+                        'current_patient' => $current_patient,
+                        'waiting_queue' => $waiting_queue,
+                        'skipped_queue' => $skipped_queue,
+                        'completed_queue' => $completed_queue,
+                        'in_progress_queue' => $in_progress_queue
+                    ]
+                ]);
+                break;
+                
             case 'call_next':
                 $result = $queueService->callNextPatient('triage', $station_id, $employee_id);
                 if ($result['success']) {
@@ -130,13 +210,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                 break;
                 
             case 'skip_patient':
+                if (!$queue_entry_id) {
+                    echo json_encode(['success' => false, 'message' => 'Queue entry ID required']);
+                    break;
+                }
                 $reason = $_POST['reason'] ?? 'Patient skipped by triage staff';
                 $result = $queueService->updateQueueStatus($queue_entry_id, 'skipped', 'in_progress', $employee_id, $reason);
                 echo json_encode($result);
                 break;
                 
             case 'recall_patient':
+                if (!$queue_entry_id) {
+                    echo json_encode(['success' => false, 'message' => 'Queue entry ID required']);
+                    break;
+                }
                 $result = $queueService->updateQueueStatus($queue_entry_id, 'waiting', 'skipped', $employee_id, 'Patient recalled to waiting queue');
+                echo json_encode($result);
+                break;
+                
+            case 'force_call':
+                if (!$queue_entry_id) {
+                    echo json_encode(['success' => false, 'message' => 'Queue entry ID required']);
+                    break;
+                }
+                // Force call by updating status from waiting to in_progress
+                $result = $queueService->updateQueueStatus($queue_entry_id, 'in_progress', 'waiting', $employee_id, 'Patient force called');
+                echo json_encode($result);
+                break;
+                
+            case 'push_to_station':
+                if (!$queue_entry_id) {
+                    echo json_encode(['success' => false, 'message' => 'Queue entry ID required']);
+                    break;
+                }
+                $target_station = $_POST['target_station'] ?? 'consultation';
+                
+                // Complete current station and create entry for target station
+                $pdo->beginTransaction();
+                try {
+                    // Complete at current station
+                    $complete_result = $queueService->updateQueueStatus($queue_entry_id, 'completed', 'in_progress', $employee_id, "Pushed to {$target_station}");
+                    
+                    if ($complete_result['success']) {
+                        // Get visit_id for creating new queue entry
+                        $visit_query = "SELECT visit_id, patient_id FROM queue_entries WHERE queue_entry_id = ?";
+                        $stmt = $pdo->prepare($visit_query);
+                        $stmt->execute([$queue_entry_id]);
+                        $visit_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($visit_data) {
+                            // Get target station info
+                            $station_query = "SELECT station_id FROM stations WHERE station_type = ? AND is_active = 1 LIMIT 1";
+                            $stmt = $pdo->prepare($station_query);
+                            $stmt->execute([$target_station]);
+                            $target_station_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($target_station_data) {
+                                // Create new queue entry for target station
+                                $new_queue_query = "INSERT INTO queue_entries (visit_id, station_id, status, time_in, created_by) VALUES (?, ?, 'waiting', NOW(), ?)";
+                                $stmt = $pdo->prepare($new_queue_query);
+                                $stmt->execute([$visit_data['visit_id'], $target_station_data['station_id'], $employee_id]);
+                                
+                                $pdo->commit();
+                                echo json_encode(['success' => true, 'message' => "Patient pushed to {$target_station} successfully"]);
+                            } else {
+                                $pdo->rollback();
+                                echo json_encode(['success' => false, 'message' => "Target station {$target_station} not found"]);
+                            }
+                        } else {
+                            $pdo->rollback();
+                            echo json_encode(['success' => false, 'message' => 'Visit data not found']);
+                        }
+                    } else {
+                        $pdo->rollback();
+                        echo json_encode(['success' => false, 'message' => 'Failed to complete at current station']);
+                    }
+                } catch (Exception $e) {
+                    $pdo->rollback();
+                    echo json_encode(['success' => false, 'message' => 'Error pushing patient: ' . $e->getMessage()]);
+                }
+                break;
+                
+            case 'complete_patient':
+                if (!$queue_entry_id) {
+                    echo json_encode(['success' => false, 'message' => 'Queue entry ID required']);
+                    break;
+                }
+                $result = $queueService->updateQueueStatus($queue_entry_id, 'completed', 'in_progress', $employee_id, 'Patient completed at triage');
                 echo json_encode($result);
                 break;
                 
@@ -311,6 +471,23 @@ $employee_info = [
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/edit.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Queue Management Framework -->
+    <script src="../../assets/js/queue-sync.js"></script>
+    <script src="../../assets/js/station-manager.js"></script>
+    
+    <!-- Queue Code Formatter -->
+    <?php include 'queue_code_formatter.php'; ?>
+    <script>
+        // Make PHP formatter available to JavaScript
+        function formatQueueCodeForPublicDisplay(queueCode) {
+            return '<?php echo "' + queueCode + '"; ?>'.replace(/(\d{6}-(\d{2}[AP])-(\d{3}))/, function(match, full, timeSlot, sequence) {
+                const hour = timeSlot.substring(0, 2);
+                const period = timeSlot.substring(2, 1);
+                return hour + period + 'M-' + sequence;
+            });
+        }
+    </script>
     <style>
         /* Triage Station Layout - inheriting dashboard styles */
 
@@ -1676,15 +1853,58 @@ $employee_info = [
     </div>
 
     <script>
-        // Current patient data
+        // Current patient data and configuration
         const currentPatient = <?php echo json_encode($current_patient); ?>;
         const canManageQueue = <?php echo json_encode($can_manage_queue); ?>;
+        const stationConfig = {
+            stationType: 'triage',
+            stationId: <?php echo json_encode($triage_station['station_id'] ?? null); ?>,
+            employeeId: <?php echo json_encode($employee_id); ?>,
+            stationName: <?php echo json_encode($triage_station['station_name'] ?? 'Triage Station'); ?>
+        };
+        
+        // Initialize station manager when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (canManageQueue && stationConfig.stationId) {
+                // Initialize the station manager
+                initializeStationManager(stationConfig);
+                
+                // Register with queue sync manager
+                registerStationManager(stationConfig.stationType, stationConfig.stationId, window.stationManager);
+                
+                console.log('Triage station initialized with new framework');
+            } else {
+                console.warn('Station management not available - user not authorized or station not assigned');
+            }
+        });
         
         // Public display window reference
         let publicDisplayWindow = null;
         
-        // Function to open public display in popup window
+        // Function to open public display in popup window using new framework
         function openPublicDisplay() {
+            // Use the new queue synchronization framework
+            publicDisplayWindow = openPublicDisplay('triage');
+            
+            if (publicDisplayWindow) {
+                // Show success message using station manager if available
+                if (window.stationManager) {
+                    window.stationManager.showAlert('Public display opened successfully', 'success');
+                } else {
+                    showAlert('Public display opened successfully', 'success');
+                }
+            } else {
+                // Show error message
+                if (window.stationManager) {
+                    window.stationManager.showAlert('Failed to open public display. Please check popup blockers.', 'error');
+                } else {
+                    showAlert('Failed to open public display. Please check popup blockers.', 'error');
+                }
+            }
+        }
+        
+        // Legacy function for compatibility
+        function openPublicDisplayOld() {
             // Check if public display is already open
             if (publicDisplayWindow && !publicDisplayWindow.closed) {
                 publicDisplayWindow.focus();
@@ -2131,12 +2351,18 @@ $employee_info = [
             });
         }
 
-        // Alert system
-        function showAlert(message, type) {
-            // Remove existing alerts
+        // Alert system - enhanced with station manager integration
+        function showAlert(message, type = 'info') {
+            // Use station manager alert if available, otherwise fallback to legacy
+            if (window.stationManager && typeof window.stationManager.showAlert === 'function') {
+                window.stationManager.showAlert(message, type);
+                return;
+            }
+            
+            // Legacy alert implementation with improved error handling
             const existingAlerts = document.querySelectorAll('.alert');
             existingAlerts.forEach(alert => {
-                if (!alert.parentElement.classList.contains('modal-content')) {
+                if (!alert.parentElement || !alert.parentElement.classList.contains('modal-content')) {
                     alert.remove();
                 }
             });
@@ -2147,6 +2373,7 @@ $employee_info = [
             let icon = 'fa-info-circle';
             if (type === 'success') icon = 'fa-check-circle';
             else if (type === 'error') icon = 'fa-exclamation-triangle';
+            else if (type === 'warning') icon = 'fa-exclamation-circle';
             
             alertDiv.innerHTML = `
                 <i class="fas ${icon}"></i>
@@ -2154,9 +2381,24 @@ $employee_info = [
                 <button type="button" class="btn-close" onclick="this.parentElement.remove()">&times;</button>
             `;
             
-            const container = document.querySelector('.triage-container');
+            // Try multiple container selectors
+            let container = document.querySelector('.queue-dashboard-container');
+            if (!container) container = document.querySelector('.triage-container');
+            if (!container) container = document.querySelector('.homepage');
+            if (!container) container = document.body;
+            
             const header = document.querySelector('.page-header');
-            container.insertBefore(alertDiv, header.nextSibling);
+            
+            try {
+                if (header && container.contains(header)) {
+                    container.insertBefore(alertDiv, header.nextSibling);
+                } else {
+                    container.insertBefore(alertDiv, container.firstChild);
+                }
+            } catch (error) {
+                console.warn('Failed to insert alert, appending to container:', error);
+                container.appendChild(alertDiv);
+            }
             
             // Auto-remove success and info alerts after 5 seconds
             if (type === 'success' || type === 'info') {

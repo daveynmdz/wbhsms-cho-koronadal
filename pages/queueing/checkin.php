@@ -574,6 +574,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception("Failed to update appointment status: " . $e->getMessage());
                     }
 
+                    // ** SYNC TRIGGER: Broadcast queue update after successful check-in **
+                    $_SESSION['queue_sync_trigger'] = [
+                        'type' => 'patient_checked_in',
+                        'queue_entry_id' => $queue_entry_id,
+                        'station_type' => 'triage', // Initial station
+                        'patient_id' => $patient_id,
+                        'appointment_id' => $appointment_id,
+                        'timestamp' => time()
+                    ];
+
                     // 6. Log the check-in action (separate transaction)
                     try {
                         $pdo->beginTransaction();
@@ -3909,7 +3919,193 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 event.target.classList.remove('show');
             }
         }
+        
+        // === UNIVERSAL FRAMEWORK INTEGRATION FOR CHECK-IN ===
+        
+        class CheckInQueueSync {
+            constructor() {
+                this.syncEnabled = true;
+                this.initializeSync();
+                this.setupSyncTriggers();
+                this.checkForSyncTrigger();
+            }
+            
+            initializeSync() {
+                console.log('🔄 Check-In Queue Sync initialized');
+            }
+            
+            setupSyncTriggers() {
+                // Listen for successful check-ins to broadcast updates
+                const originalSubmit = HTMLFormElement.prototype.submit;
+                const self = this;
+                
+                // Override form submissions to detect check-in completion
+                HTMLFormElement.prototype.submit = function() {
+                    const form = this;
+                    
+                    // Check if this is a check-in form
+                    if (form.id === 'checkinForm' || form.classList.contains('checkin-form')) {
+                        console.log('📋 Check-in form submitted - will broadcast on success');
+                        
+                        // Set a flag to broadcast after successful submission
+                        sessionStorage.setItem('pending_checkin_broadcast', 'true');
+                    }
+                    
+                    return originalSubmit.call(this);
+                };
+                
+                // Listen for page changes that indicate successful check-in
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'childList') {
+                            // Check for success messages or modal appearances
+                            const successElements = document.querySelectorAll('.success, .alert-success, #successModal.show');
+                            if (successElements.length > 0) {
+                                const pendingBroadcast = sessionStorage.getItem('pending_checkin_broadcast');
+                                if (pendingBroadcast === 'true') {
+                                    console.log('✅ Check-in success detected - broadcasting update');
+                                    this.broadcastQueueUpdate('patient_checked_in');
+                                    sessionStorage.removeItem('pending_checkin_broadcast');
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+            
+            checkForSyncTrigger() {
+                // Check if there's a sync trigger from PHP session
+                <?php if (isset($_SESSION['queue_sync_trigger'])): ?>
+                const syncTrigger = <?php echo json_encode($_SESSION['queue_sync_trigger']); ?>;
+                console.log('📡 PHP Sync Trigger detected:', syncTrigger);
+                this.broadcastQueueUpdate(syncTrigger.type, syncTrigger);
+                
+                // Clear the trigger to prevent duplicate broadcasts
+                <?php unset($_SESSION['queue_sync_trigger']); ?>
+                <?php endif; ?>
+            }
+            
+            broadcastQueueUpdate(eventType, data = {}) {
+                if (!this.syncEnabled) return;
+                
+                const updateData = {
+                    type: 'queue_updated',
+                    source: 'checkin',
+                    event: eventType,
+                    timestamp: Date.now(),
+                    station_type: data.station_type || 'triage',
+                    ...data
+                };
+                
+                console.log('📢 Broadcasting queue update:', updateData);
+                
+                // Broadcast to parent window (if opened from another window)
+                if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage(updateData, '*');
+                }
+                
+                // Broadcast to all open windows in the same origin
+                try {
+                    localStorage.setItem('queue_sync_broadcast', JSON.stringify(updateData));
+                    localStorage.removeItem('queue_sync_broadcast'); // Immediate cleanup
+                } catch (e) {
+                    console.warn('Failed to broadcast via localStorage:', e);
+                }
+                
+                // Show user notification
+                this.showSyncNotification(eventType);
+            }
+            
+            showSyncNotification(eventType) {
+                let message = 'Queue updated';
+                
+                switch (eventType) {
+                    case 'patient_checked_in':
+                        message = '✅ Patient successfully checked in to queue';
+                        break;
+                    case 'appointment_cancelled':
+                        message = '❌ Appointment cancelled and removed from queue';
+                        break;
+                    default:
+                        message = '🔄 Queue status updated';
+                }
+                
+                // Show browser notification if permitted
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('CHO Koronadal - Check-In', {
+                        body: message,
+                        icon: '../../assets/images/cho-logo.png',
+                        tag: 'checkin-sync',
+                        silent: false
+                    });
+                }
+                
+                // Also show in-page notification
+                this.showInPageAlert(message, 'info');
+            }
+            
+            showInPageAlert(message, type = 'info') {
+                // Create alert element
+                const alert = document.createElement('div');
+                alert.className = `sync-alert alert-${type}`;
+                alert.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    background: ${type === 'info' ? '#d1ecf1' : '#d4edda'};
+                    color: ${type === 'info' ? '#0c5460' : '#155724'};
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    font-weight: 500;
+                    max-width: 300px;
+                    opacity: 0;
+                    transform: translateX(100%);
+                    transition: all 0.3s ease;
+                `;
+                
+                alert.innerHTML = `
+                    <i class="fas fa-${type === 'info' ? 'info-circle' : 'check-circle'}" style="margin-right: 8px;"></i>
+                    ${message}
+                `;
+                
+                document.body.appendChild(alert);
+                
+                // Animate in
+                setTimeout(() => {
+                    alert.style.opacity = '1';
+                    alert.style.transform = 'translateX(0)';
+                }, 100);
+                
+                // Auto-remove after 4 seconds
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (alert.parentNode) {
+                            alert.parentNode.removeChild(alert);
+                        }
+                    }, 300);
+                }, 4000);
+            }
+        }
+        
+        // Initialize check-in sync when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            window.checkinSync = new CheckInQueueSync();
+            console.log('🏥 Check-In module ready with queue synchronization');
+        });
+        
     </script>
+    
+    <!-- Universal Framework Integration -->
+    <script src="../../assets/js/queue-sync.js"></script>
     </div>
 </body>
 

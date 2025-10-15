@@ -733,45 +733,248 @@ $activePage = 'queue_management';
         <i class="fas fa-sync-alt"></i>
     </button>
 
+    <!-- Universal Framework Integration -->
+    <script src="../../assets/js/station-manager.js"></script>
+    <script src="../../assets/js/queue-sync.js"></script>
+
     <script>
-        function refreshMonitor() {
-            // Add rotation animation to refresh button
-            const btn = document.querySelector('.refresh-btn i');
-            btn.style.transform = 'rotate(360deg)';
-            setTimeout(() => {
-                btn.style.transform = 'rotate(0deg)';
-            }, 500);
+        class AdminMonitorManager {
+            constructor() {
+                this.refreshInterval = null;
+                this.refreshRate = 5000; // 5 seconds for admin monitoring
+                this.isRefreshing = false;
+                this.lastRefreshTime = 0;
+                this.errorCount = 0;
+                this.maxErrors = 3;
+                
+                this.initializeMonitor();
+                this.startAutoRefresh();
+                this.setupEventListeners();
+            }
             
-            // Reload the page to refresh data
-            window.location.reload();
+            initializeMonitor() {
+                console.log('🏥 Admin Monitor Manager initialized');
+                
+                // Initialize pulse animation for active stations
+                this.updatePulseAnimations();
+                
+                // Add notification permission request
+                this.requestNotificationPermission();
+            }
+            
+            async requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                }
+            }
+            
+            setupEventListeners() {
+                // Listen for queue updates from other windows
+                window.addEventListener('message', (event) => {
+                    if (event.data.type === 'queue_updated') {
+                        console.log('📡 Received queue update notification');
+                        this.refreshMonitorData();
+                    }
+                });
+                
+                // Handle visibility changes to pause/resume updates
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        this.pauseRefresh();
+                    } else {
+                        this.resumeRefresh();
+                    }
+                });
+            }
+            
+            startAutoRefresh() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                }
+                
+                this.refreshInterval = setInterval(() => {
+                    if (!document.hidden && !this.isRefreshing) {
+                        this.refreshMonitorData();
+                    }
+                }, this.refreshRate);
+                
+                console.log(`⏱️ Auto-refresh started (${this.refreshRate/1000}s intervals)`);
+            }
+            
+            pauseRefresh() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                    this.refreshInterval = null;
+                    console.log('⏸️ Auto-refresh paused (tab hidden)');
+                }
+            }
+            
+            resumeRefresh() {
+                if (!this.refreshInterval) {
+                    this.startAutoRefresh();
+                    this.refreshMonitorData(); // Immediate refresh when tab becomes visible
+                    console.log('▶️ Auto-refresh resumed');
+                }
+            }
+            
+            async refreshMonitorData() {
+                if (this.isRefreshing) return;
+                
+                this.isRefreshing = true;
+                const refreshBtn = document.querySelector('.refresh-btn i');
+                
+                try {
+                    // Add rotation animation
+                    if (refreshBtn) {
+                        refreshBtn.style.transform = 'rotate(360deg)';
+                        refreshBtn.style.transition = 'transform 0.5s ease';
+                    }
+                    
+                    console.log('🔄 Refreshing admin monitor data...');
+                    
+                    // Fetch updated monitor data
+                    const response = await fetch('admin_monitor_api.php', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const html = await response.text();
+                    
+                    // Parse the new content
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Update monitor grid
+                    const newMonitorGrid = doc.querySelector('.monitor-grid');
+                    const currentMonitorGrid = document.querySelector('.monitor-grid');
+                    
+                    if (newMonitorGrid && currentMonitorGrid) {
+                        // Preserve scroll position
+                        const scrollY = window.scrollY;
+                        
+                        // Update content
+                        currentMonitorGrid.innerHTML = newMonitorGrid.innerHTML;
+                        
+                        // Restore scroll position
+                        window.scrollTo(0, scrollY);
+                        
+                        // Update pulse animations
+                        this.updatePulseAnimations();
+                        
+                        console.log('✅ Monitor data refreshed successfully');
+                        this.errorCount = 0; // Reset error count on success
+                    }
+                    
+                    // Update overall statistics if present
+                    const newOverallStats = doc.querySelector('.overall-stats');
+                    const currentOverallStats = document.querySelector('.overall-stats');
+                    
+                    if (newOverallStats && currentOverallStats) {
+                        currentOverallStats.innerHTML = newOverallStats.innerHTML;
+                    }
+                    
+                    this.lastRefreshTime = Date.now();
+                    
+                    // Broadcast update to other windows
+                    this.broadcastUpdate();
+                    
+                } catch (error) {
+                    console.error('❌ Error refreshing monitor data:', error);
+                    this.errorCount++;
+                    
+                    if (this.errorCount >= this.maxErrors) {
+                        console.warn('⚠️ Too many errors, falling back to page reload');
+                        window.location.reload();
+                        return;
+                    }
+                } finally {
+                    this.isRefreshing = false;
+                    
+                    // Reset refresh button animation
+                    if (refreshBtn) {
+                        setTimeout(() => {
+                            refreshBtn.style.transform = 'rotate(0deg)';
+                        }, 500);
+                    }
+                }
+            }
+            
+            updatePulseAnimations() {
+                // Remove existing animations
+                document.querySelectorAll('.station-card').forEach(card => {
+                    card.style.animation = '';
+                });
+                
+                // Add pulse animation to active stations with current patients
+                const activeStations = document.querySelectorAll('.station-card:not(.unassigned-station):not(.inactive-station)');
+                activeStations.forEach(station => {
+                    const currentPatient = station.querySelector('.current-patient');
+                    if (currentPatient) {
+                        station.style.animation = 'pulse 2s infinite';
+                    }
+                });
+            }
+            
+            broadcastUpdate() {
+                // Notify other windows about the update
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'admin_monitor_updated',
+                        timestamp: Date.now()
+                    }, '*');
+                }
+            }
+            
+            // Manual refresh method
+            manualRefresh() {
+                console.log('🔄 Manual refresh triggered');
+                this.refreshMonitorData();
+            }
         }
         
-        // Auto-refresh every 10 seconds
-        setInterval(function() {
-            refreshMonitor();
-        }, 10000);
+        // Initialize admin monitor manager
+        let adminMonitor;
         
-        // Add pulse animation to active stations with patients
         document.addEventListener('DOMContentLoaded', function() {
-            const activeStations = document.querySelectorAll('.station-card:not(.unassigned-station):not(.inactive-station)');
-            activeStations.forEach(station => {
-                const currentPatient = station.querySelector('.current-patient');
-                if (currentPatient) {
-                    station.style.animation = 'pulse 2s infinite';
+            adminMonitor = new AdminMonitorManager();
+            
+            // Add CSS for pulse animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0% { box-shadow: 0 0 0 0 rgba(0, 119, 182, 0.4); }
+                    70% { box-shadow: 0 0 0 10px rgba(0, 119, 182, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(0, 119, 182, 0); }
                 }
-            });
+                
+                .refresh-btn i {
+                    transition: transform 0.5s ease;
+                }
+                
+                .station-card {
+                    transition: all 0.3s ease, box-shadow 0.3s ease;
+                }
+                
+                .station-card.updating {
+                    opacity: 0.8;
+                    transform: scale(0.98);
+                }
+            `;
+            document.head.appendChild(style);
         });
         
-        // Add CSS for pulse animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0% { box-shadow: 0 0 0 0 rgba(0, 119, 182, 0.4); }
-                70% { box-shadow: 0 0 0 10px rgba(0, 119, 182, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(0, 119, 182, 0); }
+        // Legacy function for manual refresh button
+        function refreshMonitor() {
+            if (adminMonitor) {
+                adminMonitor.manualRefresh();
             }
-        `;
-        document.head.appendChild(style);
+        }
     </script>
 </body>
 </html>

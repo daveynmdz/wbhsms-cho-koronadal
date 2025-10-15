@@ -22,37 +22,49 @@ if (strtolower($_SESSION['role']) !== 'admin') {
 
 require_once $root_path . '/config/db.php';
 
-// Define the 6 relevant station types and their display file mappings
+// Define all station types with their display file mappings
 $station_types = [
     'triage' => [
         'name' => 'Triage Station',
         'icon' => 'fas fa-user-md',
-        'file' => 'public_display_triage.php'
+        'file' => 'public_display_triage.php',
+        'color' => '#28a745',
+        'description' => 'Vital signs and initial assessment'
     ],
     'consultation' => [
         'name' => 'Consultation',
         'icon' => 'fas fa-stethoscope', 
-        'file' => 'public_display_consultation.php'
+        'file' => 'public_display_consultation.php',
+        'color' => '#007bff',
+        'description' => 'Doctor consultations and medical care'
     ],
     'lab' => [
         'name' => 'Laboratory',
         'icon' => 'fas fa-microscope',
-        'file' => 'public_display_lab.php'
+        'file' => 'public_display_lab.php',
+        'color' => '#6f42c1',
+        'description' => 'Laboratory tests and results'
     ],
     'pharmacy' => [
         'name' => 'Pharmacy',
         'icon' => 'fas fa-pills',
-        'file' => 'public_display_pharmacy.php'
+        'file' => 'public_display_pharmacy.php',
+        'color' => '#fd7e14',
+        'description' => 'Prescription dispensing'
     ],
     'billing' => [
         'name' => 'Billing',
         'icon' => 'fas fa-file-invoice-dollar',
-        'file' => 'public_display_billing.php'
+        'file' => 'public_display_billing.php',
+        'color' => '#dc3545',
+        'description' => 'Payment processing and receipts'
     ],
     'document' => [
         'name' => 'Document Processing',
         'icon' => 'fas fa-file-alt',
-        'file' => 'public_display_document.php'
+        'file' => 'public_display_document.php',
+        'color' => '#17a2b8',
+        'description' => 'Medical certificates and documentation'
     ]
 ];
 
@@ -217,21 +229,50 @@ $current_datetime = date('F j, Y g:i A');
             background: white;
             border: 2px solid var(--cho-border);
             border-radius: var(--cho-border-radius-lg);
-            padding: 30px;
+            padding: 25px;
             box-shadow: var(--cho-shadow);
             transition: var(--cho-transition);
             text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: 220px;
+            justify-content: space-between;
+            min-height: 280px;
+            position: relative;
+            overflow: hidden;
         }
 
         .station-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--cho-shadow-lg);
             border-color: var(--cho-primary);
+        }
+
+        .station-card.inactive {
+            opacity: 0.7;
+            border-color: #dc3545;
+            background: #fdf2f2;
+        }
+
+        .station-card.unassigned {
+            border-color: #ffc107;
+            background: #fffdf2;
+        }
+
+        .station-status-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .station-icon {
@@ -242,12 +283,34 @@ $current_datetime = date('F j, Y g:i A');
         }
 
         .station-name {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
             color: var(--cho-primary-dark);
-            margin: 0 0 25px 0;
+            margin: 15px 0 10px 0;
             text-align: center;
             line-height: 1.3;
+        }
+
+        .station-description {
+            color: var(--cho-secondary);
+            font-size: 14px;
+            margin: 0 0 15px 0;
+            line-height: 1.4;
+        }
+
+        .station-info {
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .assigned-staff {
+            color: var(--cho-success);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 13px;
         }
 
         /* Open Display Button */
@@ -376,9 +439,35 @@ $current_datetime = date('F j, Y g:i A');
                     <!-- Stations Grid -->
                     <div class="stations-grid">
                         <?php foreach ($station_types as $type => $config): ?>
-                            <div class="station-card">
-                                <i class="station-icon <?php echo $config['icon']; ?>"></i>
+                            <?php 
+                            $station_data = $stations_data[$type] ?? null;
+                            $is_active = $station_data && $station_data['is_active'] && $station_data['is_open'];
+                            $has_assignment = $station_data && $station_data['assigned_employee'];
+                            ?>
+                            <div class="station-card <?php echo !$is_active ? 'inactive' : (!$has_assignment ? 'unassigned' : ''); ?>" data-station-type="<?php echo $type; ?>">
+                                <div class="station-status-badge">
+                                    <?php if ($is_active && $has_assignment): ?>
+                                        <i class="fas fa-circle" style="color: #28a745;"></i> Active
+                                    <?php elseif ($is_active && !$has_assignment): ?>
+                                        <i class="fas fa-circle" style="color: #ffc107;"></i> No Staff
+                                    <?php else: ?>
+                                        <i class="fas fa-circle" style="color: #dc3545;"></i> Inactive
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <i class="station-icon <?php echo $config['icon']; ?>" style="color: <?php echo $config['color']; ?>;"></i>
                                 <h3 class="station-name"><?php echo htmlspecialchars($config['name']); ?></h3>
+                                
+                                <p class="station-description"><?php echo htmlspecialchars($config['description']); ?></p>
+                                
+                                <?php if ($station_data && $has_assignment): ?>
+                                    <div class="station-info">
+                                        <small class="assigned-staff">
+                                            <i class="fas fa-user"></i> <?php echo htmlspecialchars($station_data['assigned_employee']); ?>
+                                        </small>
+                                    </div>
+                                <?php endif; ?>
+                                
                                 <a href="#" onclick="openPublicDisplay('<?php echo $config['file']; ?>', '<?php echo $config['name']; ?>'); return false;" class="open-display-btn">
                                     <i class="fas fa-external-link-alt"></i>
                                     Open Display
@@ -396,6 +485,10 @@ $current_datetime = date('F j, Y g:i A');
             </div>
         </div>
     </div>
+
+    <!-- Universal Framework Integration -->
+    <script src="../../assets/js/station-manager.js"></script>
+    <script src="../../assets/js/queue-sync.js"></script>
 
     <!-- Scripts -->
     <script>
@@ -588,9 +681,16 @@ $current_datetime = date('F j, Y g:i A');
         
         // Open all displays function (enhanced sequential opening to bypass popup blockers)
         function openAllDisplays() {
+            // Get display data from PHP
+            const stationData = <?php echo json_encode(array_map(function($config) { 
+                return ['file' => $config['file'], 'name' => $config['name']]; 
+            }, $station_types)); ?>;
+            
+            const displayCount = stationData.length;
+            
             // Show instructions dialog
             const userConfirmed = confirm(
-                "This will open all 6 station displays one by one.\n\n" +
+                `This will open all ${displayCount} station displays one by one.\n\n` +
                 "For best results:\n" +
                 "• Allow popups when prompted by your browser\n" +
                 "• Click 'Always allow' if asked\n" +
@@ -603,14 +703,7 @@ $current_datetime = date('F j, Y g:i A');
                 return;
             }
             
-            const displayFiles = [
-                { file: 'public_display_triage.php', name: 'Triage Station' },
-                { file: 'public_display_consultation.php', name: 'Consultation' },
-                { file: 'public_display_lab.php', name: 'Laboratory' },
-                { file: 'public_display_pharmacy.php', name: 'Pharmacy' },
-                { file: 'public_display_billing.php', name: 'Billing' },
-                { file: 'public_display_document.php', name: 'Document Processing' }
-            ];
+            const displayFiles = stationData;
             
             let currentIndex = 0;
             let successCount = 0;
@@ -730,6 +823,172 @@ $current_datetime = date('F j, Y g:i A');
             // Start the sequential opening process
             setTimeout(openNextDisplay, 500);
         }
+        
+        // Real-time status updates integration
+        class PublicDisplaySelectorManager {
+            constructor() {
+                this.refreshInterval = null;
+                this.refreshRate = 10000; // 10 seconds for selector page
+                this.isRefreshing = false;
+                
+                this.initializeSelector();
+                this.startStatusUpdates();
+                this.setupEventListeners();
+            }
+            
+            initializeSelector() {
+                console.log('📺 Public Display Selector Manager initialized');
+            }
+            
+            setupEventListeners() {
+                // Listen for queue updates from station windows
+                window.addEventListener('message', (event) => {
+                    if (event.data.type === 'queue_updated') {
+                        console.log('📡 Received queue update notification - refreshing status');
+                        this.updateStationStatus();
+                    }
+                });
+                
+                // Handle visibility changes
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        this.pauseStatusUpdates();
+                    } else {
+                        this.resumeStatusUpdates();
+                    }
+                });
+            }
+            
+            startStatusUpdates() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                }
+                
+                this.refreshInterval = setInterval(() => {
+                    if (!document.hidden && !this.isRefreshing) {
+                        this.updateStationStatus();
+                    }
+                }, this.refreshRate);
+                
+                console.log(`⏱️ Status updates started (${this.refreshRate/1000}s intervals)`);
+            }
+            
+            pauseStatusUpdates() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                    this.refreshInterval = null;
+                    console.log('⏸️ Status updates paused');
+                }
+            }
+            
+            resumeStatusUpdates() {
+                if (!this.refreshInterval) {
+                    this.startStatusUpdates();
+                    this.updateStationStatus(); // Immediate update when tab becomes visible
+                    console.log('▶️ Status updates resumed');
+                }
+            }
+            
+            async updateStationStatus() {
+                if (this.isRefreshing) return;
+                
+                this.isRefreshing = true;
+                
+                try {
+                    console.log('🔄 Updating station status...');
+                    
+                    // Fetch updated station status
+                    const response = await fetch('public_display_selector_api.php', {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.updateStationCards(data.stations);
+                        console.log('✅ Station status updated successfully');
+                    } else {
+                        throw new Error(data.message || 'Failed to fetch station status');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Error updating station status:', error);
+                } finally {
+                    this.isRefreshing = false;
+                }
+            }
+            
+            updateStationCards(stationsData) {
+                Object.keys(stationsData).forEach(stationType => {
+                    const stationCard = document.querySelector(`[data-station-type="${stationType}"]`);
+                    if (!stationCard) return;
+                    
+                    const station = stationsData[stationType];
+                    const isActive = station.is_active && station.is_open;
+                    const hasAssignment = station.assigned_employee;
+                    
+                    // Update card classes
+                    stationCard.classList.remove('inactive', 'unassigned');
+                    if (!isActive) {
+                        stationCard.classList.add('inactive');
+                    } else if (!hasAssignment) {
+                        stationCard.classList.add('unassigned');
+                    }
+                    
+                    // Update status badge
+                    const statusBadge = stationCard.querySelector('.station-status-badge');
+                    if (statusBadge) {
+                        if (isActive && hasAssignment) {
+                            statusBadge.innerHTML = '<i class="fas fa-circle" style="color: #28a745;"></i> Active';
+                        } else if (isActive && !hasAssignment) {
+                            statusBadge.innerHTML = '<i class="fas fa-circle" style="color: #ffc107;"></i> No Staff';
+                        } else {
+                            statusBadge.innerHTML = '<i class="fas fa-circle" style="color: #dc3545;"></i> Inactive';
+                        }
+                    }
+                    
+                    // Update assigned staff info
+                    const stationInfo = stationCard.querySelector('.station-info');
+                    if (hasAssignment && station.assigned_employee) {
+                        if (!stationInfo) {
+                            // Create station info element if it doesn't exist
+                            const newStationInfo = document.createElement('div');
+                            newStationInfo.className = 'station-info';
+                            newStationInfo.innerHTML = `
+                                <small class="assigned-staff">
+                                    <i class="fas fa-user"></i> ${station.assigned_employee}
+                                </small>
+                            `;
+                            const button = stationCard.querySelector('.open-display-btn');
+                            button.parentNode.insertBefore(newStationInfo, button);
+                        } else {
+                            // Update existing staff info
+                            const assignedStaff = stationInfo.querySelector('.assigned-staff');
+                            if (assignedStaff) {
+                                assignedStaff.innerHTML = `<i class="fas fa-user"></i> ${station.assigned_employee}`;
+                            }
+                        }
+                    } else if (stationInfo) {
+                        // Remove station info if no assignment
+                        stationInfo.remove();
+                    }
+                });
+            }
+        }
+        
+        // Initialize the selector manager when page loads
+        let selectorManager;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            selectorManager = new PublicDisplaySelectorManager();
+        });
     </script>
 </body>
 </html>

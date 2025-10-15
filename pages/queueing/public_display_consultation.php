@@ -558,15 +558,151 @@ foreach ($stations as $station) {
     </div>
 
     <script>
+        let lastCalledQueue = '';
+        let refreshInterval;
+        let newCallCheckInterval;
+        let isRefreshing = false;
+
+        // Smart refresh system - only update when necessary
+        async function smartRefresh() {
+            if (isRefreshing) return;
+            
+            isRefreshing = true;
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (response.ok) {
+                    const html = await response.text();
+                    
+                    // Parse the response to extract current queue data
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Check for changes in the current call
+                    const newCallElement = doc.querySelector('.called-queue-code');
+                    const currentCallElement = document.querySelector('.called-queue-code');
+                    
+                    if (newCallElement && currentCallElement) {
+                        const newCallCode = newCallElement.textContent.trim();
+                        const currentCallCode = currentCallElement.textContent.trim();
+                        
+                        if (newCallCode !== currentCallCode && newCallCode !== 'No Current Call') {
+                            // New call detected - update and trigger alert
+                            currentCallElement.textContent = newCallCode;
+                            triggerNewCallAlert(newCallCode);
+                            
+                            // Update other elements that might have changed
+                            updateDisplayElements(doc);
+                        } else if (newCallCode !== currentCallCode) {
+                            // Call cleared or changed to no call
+                            updateDisplayElements(doc);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Smart refresh failed:', error);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
+        // Update display elements from new document
+        function updateDisplayElements(newDoc) {
+            // Update all consultation station displays
+            const consultationStations = ['div1', 'div2', 'div3', 'div4', 'div5', 'div6', 'div7'];
+            consultationStations.forEach(divClass => {
+                const newDiv = newDoc.querySelector(`.${divClass}`);
+                const currentDiv = document.querySelector(`.${divClass}`);
+                if (newDiv && currentDiv) {
+                    currentDiv.innerHTML = newDiv.innerHTML;
+                }
+            });
+
+            // Update main call display (div8)
+            const newCallDisplay = newDoc.querySelector('.div8');
+            const currentCallDisplay = document.querySelector('.div8');
+            if (newCallDisplay && currentCallDisplay) {
+                currentCallDisplay.innerHTML = newCallDisplay.innerHTML;
+            }
+
+            // Update header time
+            const newTime = newDoc.querySelector('.current-time');
+            const currentTime = document.querySelector('.current-time');
+            if (newTime && currentTime) {
+                currentTime.textContent = newTime.textContent;
+            }
+
+            const newDate = newDoc.querySelector('.current-date');
+            const currentDate = document.querySelector('.current-date');
+            if (newDate && currentDate) {
+                currentDate.textContent = newDate.textContent;
+            }
+        }
+
+        // Check for new calls specifically
+        function checkNewCalls() {
+            const currentCall = document.querySelector('.called-queue-code');
+            if (currentCall) {
+                const currentCallCode = currentCall.textContent.trim();
+                
+                // If there's a current call and it's different from last known
+                if (currentCallCode !== 'No Current Call' && currentCallCode !== lastCalledQueue) {
+                    if (lastCalledQueue !== '') {
+                        // This is a new call (not the initial load)
+                        triggerNewCallAlert(currentCallCode);
+                    }
+                    lastCalledQueue = currentCallCode;
+                }
+            }
+        }
+
+        // Trigger visual and audio alert for new call
+        function triggerNewCallAlert(queueCode) {
+            console.log(`🔔 New consultation call: ${queueCode}`);
+            
+            // Flash the queue code
+            flashCalledQueue();
+
+            // Play notification sound if available
+            playNotificationSound();
+
+            // Show browser notification if permitted
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('New Consultation Call', {
+                    body: `Queue ${queueCode} - Please proceed to consultation room`,
+                    icon: '/assets/images/favicon.ico',
+                    requireInteraction: true
+                });
+            }
+        }
+
         // Update current time and date every second
         function updateDateTime() {
             const now = new Date();
-            const currentTimeElement = document.getElementById('current-time');
-            if (currentTimeElement) {
-                const timeString = String(now.getHours()).padStart(2, '0') + ':' + 
-                    String(now.getMinutes()).padStart(2, '0') + ':' + 
-                    String(now.getSeconds()).padStart(2, '0');
-                currentTimeElement.textContent = timeString;
+            const timeElement = document.querySelector('.current-time');
+            const dateElement = document.querySelector('.current-date');
+            
+            if (timeElement) {
+                timeElement.textContent = now.toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+
+            if (dateElement) {
+                dateElement.textContent = now.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
             }
         }
 
@@ -577,28 +713,84 @@ foreach ($stations as $station) {
                 calledQueueCode.classList.add('flashing');
                 setTimeout(() => {
                     calledQueueCode.classList.remove('flashing');
-                }, 1500); // Flash for 1.5 seconds
+                }, 2000); // Flash for 2 seconds
             }
         }
 
-        // Auto-refresh the page every 10 seconds to get latest data
-        function autoRefresh() {
-            window.location.reload();
+        // Play notification sound
+        function playNotificationSound() {
+            try {
+                // Create audio context for notification sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create a simple notification tone
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(900, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(1100, audioContext.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(900, audioContext.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (error) {
+                console.log('Audio notification not available:', error);
+            }
+        }
+
+        // Listen for messages from station windows
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'queueUpdate' && event.data.stationType === 'consultation') {
+                console.log('📨 Received queue update for consultation station:', event.data);
+                
+                // Trigger immediate refresh when station updates queue
+                setTimeout(() => {
+                    smartRefresh();
+                }, 500); // Small delay to ensure backend is updated
+            }
+        });
+
+        // Request notification permission on load
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().then(function(permission) {
+                    console.log('Notification permission:', permission);
+                });
+            }
         }
 
         // Update time every second
         setInterval(updateDateTime, 1000);
         
-        // Auto-refresh every 10 seconds
-        setInterval(autoRefresh, 10000);
-
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Consultation Grid Display initialized');
+            console.log('🏥 Enhanced Consultation Grid Display initialized');
             updateDateTime();
+            
+            // Get initial call state
+            checkNewCalls();
+            
+            // Request notification permission
+            requestNotificationPermission();
             
             // Flash the called queue after initial load
             setTimeout(flashCalledQueue, 1000);
+
+            // Start smart refresh system
+            refreshInterval = setInterval(smartRefresh, 8000); // Every 8 seconds
+            newCallCheckInterval = setInterval(checkNewCalls, 3000); // Check for new calls every 3 seconds
+        });
+
+        // Clean up intervals when page unloads
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            if (newCallCheckInterval) clearInterval(newCallCheckInterval);
         });
     </script>
 </body>
