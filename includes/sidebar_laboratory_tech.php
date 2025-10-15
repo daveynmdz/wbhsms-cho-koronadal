@@ -148,7 +148,7 @@ $nav_base = $base_path . 'pages/';
         </a>
     </div>
 
-    <a href="<?= $nav_base ?>user/laboratory_tech_profile.php"
+    <a href="<?= $nav_base ?>user/admin_profile.php"
         class="<?= $activePage === 'profile' ? 'active' : '' ?>" aria-label="View profile">
         <div class="user-profile">
             <div class="user-info">
@@ -175,7 +175,7 @@ $nav_base = $base_path . 'pages/';
     </a>
 
     <div class="user-actions">
-        <a href="<?= $nav_base ?>user/laboratory_tech_settings.php"><i class="fas fa-cog"></i> Settings</a>
+        <a href="<?= $nav_base ?>user/admin_settings.php"><i class="fas fa-cog"></i> Settings</a>
         <a href="#" onclick="showLogoutModal(event)"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </nav>

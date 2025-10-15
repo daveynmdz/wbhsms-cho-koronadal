@@ -64,8 +64,8 @@ require_once $root_path . '/config/db.php';
 $view_mode = $_GET['view_mode'] ?? null;
 $patient_id = null;
 
-// If in admin, bhw, dho, doctor, or nurse view mode, get patient_id from URL parameter
-if ($view_mode === 'admin' || $view_mode === 'bhw' || $view_mode === 'dho' || $view_mode === 'doctor' || $view_mode === 'nurse') {
+// If in employee view mode, get patient_id from URL parameter
+if ($view_mode === 'admin' || $view_mode === 'bhw' || $view_mode === 'dho' || $view_mode === 'doctor' || $view_mode === 'nurse' || $view_mode === 'records_officer' || $view_mode === 'cashier' || $view_mode === 'laboratory_tech' || $view_mode === 'pharmacist') {
     $patient_id = $_GET['patient_id'] ?? null;
     
     // Validate patient ID
@@ -113,6 +113,22 @@ if ($view_mode === 'admin' || $view_mode === 'bhw' || $view_mode === 'dho' || $v
         exit();
     } elseif ($view_mode === 'nurse' && strtolower($employee_role) !== 'nurse') {
         error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted nurse patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'records_officer' && strtolower($employee_role) !== 'records_officer') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted records officer patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'cashier' && strtolower($employee_role) !== 'cashier') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted cashier patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'laboratory_tech' && strtolower($employee_role) !== 'laboratory_tech') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted laboratory tech patient view");
+        header('Location: ../../management/auth/employee_login.php?error=access_denied');
+        exit();
+    } elseif ($view_mode === 'pharmacist' && strtolower($employee_role) !== 'pharmacist') {
+        error_log("Access denied: Employee " . $_SESSION['employee_id'] . " with role '$employee_role' attempted pharmacist patient view");
         header('Location: ../../management/auth/employee_login.php?error=access_denied');
         exit();
     }
@@ -551,7 +567,11 @@ if (isset($_GET['logout'])) {
         ($view_mode === 'bhw' ? "BHW View - Patient Profile" : 
         ($view_mode === 'dho' ? "DHO View - Patient Profile" : 
         ($view_mode === 'doctor' ? "Doctor View - Patient Profile" : 
-        ($view_mode === 'nurse' ? "Nurse View - Patient Profile" : "Patient Profile")))) 
+        ($view_mode === 'nurse' ? "Nurse View - Patient Profile" : 
+        ($view_mode === 'records_officer' ? "Records Officer View - Patient Profile" : 
+        ($view_mode === 'cashier' ? "Cashier View - Patient Profile" : 
+        ($view_mode === 'laboratory_tech' ? "Lab Tech View - Patient Profile" : 
+        ($view_mode === 'pharmacist' ? "Pharmacist View - Patient Profile" : "Patient Profile")))))))) 
     ?> - WBHSMS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -1013,6 +1033,18 @@ if (isset($_GET['logout'])) {
     } elseif ($view_mode === 'nurse') {
         $activePage = 'patients';
         include '../../../includes/sidebar_nurse.php';
+    } elseif ($view_mode === 'records_officer') {
+        $activePage = 'patient_records';
+        include '../../../includes/sidebar_records_officer.php';
+    } elseif ($view_mode === 'cashier') {
+        $activePage = 'patients';
+        include '../../../includes/sidebar_cashier.php';
+    } elseif ($view_mode === 'laboratory_tech') {
+        $activePage = 'patients';
+        include '../../../includes/sidebar_laboratory_tech.php';
+    } elseif ($view_mode === 'pharmacist') {
+        $activePage = 'patients';
+        include '../../../includes/sidebar_pharmacist.php';
     } else {
         $activePage = 'profile';
         include '../../../includes/sidebar_patient.php';
@@ -1034,6 +1066,14 @@ if (isset($_GET['logout'])) {
                     <i class="fas fa-stethoscope"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">DOCTOR VIEW</span>
                 <?php elseif ($view_mode === 'nurse'): ?>
                     <i class="fas fa-user-nurse"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">NURSE VIEW</span>
+                <?php elseif ($view_mode === 'records_officer'): ?>
+                    <i class="fas fa-folder-open"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">RECORDS OFFICER VIEW</span>
+                <?php elseif ($view_mode === 'cashier'): ?>
+                    <i class="fas fa-cash-register"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">CASHIER VIEW</span>
+                <?php elseif ($view_mode === 'laboratory_tech'): ?>
+                    <i class="fas fa-flask"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">LAB TECH VIEW</span>
+                <?php elseif ($view_mode === 'pharmacist'): ?>
+                    <i class="fas fa-pills"></i> PATIENT PROFILE <span style="font-size: 0.65em; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; vertical-align: middle;">PHARMACIST VIEW</span>
                 <?php else: ?>
                     <i class="fas fa-user"></i> PATIENT PROFILE
                 <?php endif; ?>
@@ -1041,7 +1081,7 @@ if (isset($_GET['logout'])) {
             <div class="utility-btn-group" style="display:flex;gap:0.7em;flex-wrap:wrap;">
                 <?php if ($view_mode === 'admin'): ?>
                     <!-- Admin view buttons -->
-                    <a href="../../management/admin/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
+                    <a href="../../management/admin/patient-records/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
                         style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
                         <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Records</span>
                     </a>
@@ -1101,6 +1141,50 @@ if (isset($_GET['logout'])) {
                         style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
                         <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Patient Info</span>
                     </button>
+                <?php elseif ($view_mode === 'records_officer'): ?>
+                    <!-- Records Officer view buttons -->
+                    <a href="../../management/records_officer/patient_records_management.php" class="utility-btn" title="Back to Patient Records"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Records</span>
+                    </a>
+                    <button class="utility-btn" onclick="downloadPatientFile()" title="Download Patient File"
+                        style="background:#2980b9;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(41,128,185,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-file-download"></i> <span class="hide-on-mobile">Export Medical Record</span>
+                    </button>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Medical Record</span>
+                    </button>
+                <?php elseif ($view_mode === 'cashier'): ?>
+                    <!-- Cashier view buttons -->
+                    <a href="../../management/cashier/dashboard.php" class="utility-btn" title="Back to Dashboard"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Dashboard</span>
+                    </a>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Patient Info</span>
+                    </button>
+                <?php elseif ($view_mode === 'laboratory_tech'): ?>
+                    <!-- Laboratory Tech view buttons -->
+                    <a href="../../management/laboratory_tech/dashboard.php" class="utility-btn" title="Back to Dashboard"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Dashboard</span>
+                    </a>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Patient Info</span>
+                    </button>
+                <?php elseif ($view_mode === 'pharmacist'): ?>
+                    <!-- Pharmacist view buttons -->
+                    <a href="../../management/pharmacist/dashboard.php" class="utility-btn" title="Back to Dashboard"
+                        style="background:#f39c12;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(243,156,18,0.08);cursor:pointer;transition:background 0.18s;text-decoration:none;">
+                        <i class="fas fa-arrow-left"></i> <span class="hide-on-mobile">Back to Dashboard</span>
+                    </a>
+                    <button class="utility-btn" onclick="printPatientFile()" title="Print Patient File"
+                        style="background:#16a085;color:#fff;border:none;padding:0.6em 1.2em;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:0.5em;box-shadow:0 2px 8px rgba(22,160,133,0.08);cursor:pointer;transition:background 0.18s;">
+                        <i class="fas fa-print"></i> <span class="hide-on-mobile">Print Patient Info</span>
+                    </button>
                 <?php else: ?>
                     <!-- Regular patient view buttons -->
                     <button class="utility-btn" onclick="downloadPatientFile()" title="Download Patient File"
@@ -1119,7 +1203,7 @@ if (isset($_GET['logout'])) {
             </div>
         </div>
 
-        <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
+        <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw', 'cashier', 'laboratory_tech', 'pharmacist'])): ?>
             <div class="completion-row" style="display: flex; align-items: stretch; gap: 2em; width: 100%; flex-wrap: wrap;">
                 <!-- Profile Completion Card -->
                 <div class="completion-card" style="flex: 1; display: flex; flex-direction: column; justify-content: stretch; min-width: 350px;">
@@ -1453,7 +1537,7 @@ if (isset($_GET['logout'])) {
                     </div>
 
                     <!-- Edit Profile Button - Only shown in patient view -->
-                    <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
+                    <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw', 'cashier', 'laboratory_tech', 'pharmacist'])): ?>
                         <div class="profile-actions" style="z-index: 2; position: relative;">
                             <a href="profile_edit.php" style="
                                 background: linear-gradient(135deg, #007bff, #0056b3);
@@ -2018,7 +2102,7 @@ if (isset($_GET['logout'])) {
             <div class="summary-card enhanced-card medical-history-section">
                 <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5em; flex-wrap: wrap; gap: 0.5em;">
                     <h2><i class="fas fa-notes-medical"></i> Medical History</h2>
-                    <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw'])): ?>
+                    <?php if (!in_array($view_mode, ['admin', 'doctor', 'nurse', 'records_officer', 'dho', 'bhw', 'cashier', 'laboratory_tech', 'pharmacist'])): ?>
                         <a href="medical_history_edit.php" style="
                                 background: linear-gradient(135deg, #007bff, #0056b3);
                                 color: white;
