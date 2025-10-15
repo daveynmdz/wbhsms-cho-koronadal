@@ -550,10 +550,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // 4. Get station for this service
                         $stmt = $pdo->prepare("
-                            SELECT s.station_id FROM stations s
-                            JOIN station_services ss ON s.station_id = ss.station_id
-                            WHERE ss.service_id = ? AND s.facility_id = 1 
-                            AND s.station_type = 'triage' AND s.status = 'open'
+                            SELECT station_id FROM stations 
+                            WHERE service_id = ? AND station_type = 'triage' AND is_active = 1 AND is_open = 1
                             LIMIT 1
                         ");
                         $stmt->execute([$appointment_data['service_id']]);
@@ -563,7 +561,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             // Fallback to any open triage station
                             $stmt = $pdo->prepare("
                                 SELECT station_id FROM stations 
-                                WHERE facility_id = 1 AND station_type = 'triage' AND status = 'open' 
+                                WHERE station_type = 'triage' AND is_active = 1 AND is_open = 1 
                                 LIMIT 1
                             ");
                             $stmt->execute();
