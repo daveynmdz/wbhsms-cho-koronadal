@@ -149,7 +149,7 @@ try {
 
 // Get available services
 try {
-    $stmt = $pdo->prepare("SELECT service_id, service_name FROM services WHERE status = 'active' ORDER BY service_name");
+    $stmt = $pdo->prepare("SELECT service_id, name as service_name FROM services ORDER BY name");
     $stmt->execute();
     $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                a.referral_id, a.qr_code_path,
                                p.first_name, p.last_name, p.date_of_birth, p.isSenior, p.isPWD, p.philhealth_id_number,
                                b.barangay_name,
-                               s.service_name,
+                               s.name as service_name,
                                r.referral_reason, r.referred_by
                         FROM appointments a
                         JOIN patients p ON a.patient_id = p.patient_id
@@ -601,8 +601,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // 8. Log the check-in action
                         $stmt = $pdo->prepare("
-                            INSERT INTO appointment_logs (appointment_id, patient_id, action, details, performed_by, created_at)
-                            VALUES (?, ?, 'checked_in', ?, ?, NOW())
+                            INSERT INTO appointment_logs (appointment_id, patient_id, action, reason, created_by_type, created_by_id, created_at)
+                            VALUES (?, ?, 'checked_in', ?, 'employee', ?, NOW())
                         ");
                         $log_details = json_encode([
                             'queue_code' => $queue_code ?? 'N/A',
@@ -660,8 +660,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Insert patient flag
                     $stmt = $pdo->prepare("
-                        INSERT INTO patient_flags (patient_id, appointment_id, flag_type, remarks, created_by, created_at) 
-                        VALUES (?, ?, ?, ?, ?, NOW())
+                        INSERT INTO patient_flags (patient_id, appointment_id, flag_type, remarks, created_by_type, created_by_id, created_at) 
+                        VALUES (?, ?, ?, ?, 'employee', ?, NOW())
                     ");
                     $stmt->execute([$patient_id, $appointment_id, $flag_type, $remarks, $employee_id]);
 
@@ -676,15 +676,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Log the flagging action
                     $stmt = $pdo->prepare("
-                        INSERT INTO appointment_logs (appointment_id, patient_id, action, details, performed_by, created_at) 
-                        VALUES (?, ?, 'flagged', ?, ?, NOW())
+                        INSERT INTO appointment_logs (appointment_id, patient_id, action, reason, notes, created_by_type, created_by_id, created_at) 
+                        VALUES (?, ?, 'updated', ?, ?, 'employee', ?, NOW())
                     ");
-                    $log_details = json_encode([
+                    $log_reason = "Patient flagged: $flag_type";
+                    $log_notes = json_encode([
                         'flag_type' => $flag_type,
                         'remarks' => $remarks,
                         'status_changed_to' => $new_status
                     ]);
-                    $stmt->execute([$appointment_id, $patient_id, $log_details, $employee_id]);
+                    $stmt->execute([$appointment_id, $patient_id, $log_reason, $log_notes, $employee_id]);
 
                     // Remove from queue if patient was already in queue
                     $stmt = $pdo->prepare("
@@ -728,15 +729,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Log cancellation with detailed information
                     $stmt = $pdo->prepare("
-                        INSERT INTO appointment_logs (appointment_id, patient_id, action, details, performed_by, created_at) 
-                        VALUES (?, ?, 'cancelled', ?, ?, NOW())
+                        INSERT INTO appointment_logs (appointment_id, patient_id, action, reason, notes, created_by_type, created_by_id, created_at) 
+                        VALUES (?, ?, 'cancelled', ?, ?, 'employee', ?, NOW())
                     ");
-                    $log_details = json_encode([
-                        'reason' => $cancel_reason,
+                    $log_notes = json_encode([
                         'cancelled_by_role' => $user_role,
                         'cancellation_time' => date('Y-m-d H:i:s')
                     ]);
-                    $stmt->execute([$appointment_id, $patient_id, $log_details, $employee_id]);
+                    $stmt->execute([$appointment_id, $patient_id, $cancel_reason, $log_notes, $employee_id]);
 
                     // Remove from queue if patient was in queue
                     $stmt = $pdo->prepare("
