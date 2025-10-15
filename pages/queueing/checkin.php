@@ -602,7 +602,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // 8. Log the check-in action
                         $stmt = $pdo->prepare("
                             INSERT INTO appointment_logs (appointment_id, patient_id, action, reason, created_by_type, created_by_id, created_at)
-                            VALUES (?, ?, 'checked_in', ?, 'employee', ?, NOW())
+                            VALUES (?, ?, 'updated', ?, 'employee', ?, NOW())
                         ");
                         $log_details = json_encode([
                             'queue_code' => $queue_code ?? 'N/A',
