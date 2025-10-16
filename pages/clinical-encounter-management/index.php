@@ -1039,7 +1039,16 @@ try {
         </div>
 
         <div class="page-header">
-            <h1><i class="fas fa-stethoscope"></i> Clinical Encounter Management</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <h1><i class="fas fa-stethoscope"></i> Clinical Encounter Management</h1>
+                <?php if (in_array($employee_role, ['doctor', 'admin', 'nurse'])): ?>
+                <div class="header-actions">
+                    <a href="new_consultation.php" class="btn btn-primary" style="background: #28a745; border-color: #28a745;">
+                        <i class="fas fa-plus-circle"></i> New Consultation
+                    </a>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
                     
                     <?php
