@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 31.97.106.60:3307
--- Generation Time: Oct 15, 2025 at 11:16 AM
+-- Generation Time: Oct 16, 2025 at 04:18 AM
 -- Server version: 8.4.6
 -- PHP Version: 8.0.30
 
@@ -813,13 +813,28 @@ CREATE TABLE `lab_orders` (
   `patient_id` int UNSIGNED NOT NULL,
   `ordered_by_employee_id` int UNSIGNED DEFAULT NULL,
   `order_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `test_type` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` enum('pending','in_progress','completed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
-  `result` text COLLATE utf8mb4_unicode_ci,
-  `result_date` datetime DEFAULT NULL,
   `remarks` text COLLATE utf8mb4_unicode_ci,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lab_order_items`
+--
+
+CREATE TABLE `lab_order_items` (
+  `item_id` int UNSIGNED NOT NULL,
+  `lab_order_id` int UNSIGNED NOT NULL,
+  `test_type` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('pending','in_progress','completed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
+  `result_file` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `result_date` datetime DEFAULT NULL,
+  `remarks` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -1232,10 +1247,11 @@ CREATE TABLE `queue_settings` (
 --
 
 INSERT INTO `queue_settings` (`setting_id`, `setting_key`, `setting_value`, `enabled`, `created_at`, `updated_at`) VALUES
-(1, 'queue_override_mode', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18'),
-(2, 'ignore_time_constraints', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18'),
-(3, 'testing_mode', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18'),
-(4, 'force_all_stations_open', 'false', 1, '2025-10-15 09:13:18', '2025-10-15 09:13:18');
+(1, 'queue_override_mode', '1', 1, '2025-10-15 09:13:18', '2025-10-15 09:46:41'),
+(2, 'ignore_time_constraints', '1', 1, '2025-10-15 09:13:18', '2025-10-15 09:59:38'),
+(3, 'testing_mode', '1', 1, '2025-10-15 09:13:18', '2025-10-15 23:41:46'),
+(4, 'force_all_stations_open', '1', 1, '2025-10-15 09:13:18', '2025-10-15 09:46:38'),
+(5, 'last_updated', '2025-10-15 23:34:05', 1, '2025-10-15 23:34:05', '2025-10-15 23:34:05');
 
 -- --------------------------------------------------------
 
@@ -1873,6 +1889,15 @@ ALTER TABLE `lab_orders`
   ADD KEY `fk_lab_orders_ordered_by_employee` (`ordered_by_employee_id`);
 
 --
+-- Indexes for table `lab_order_items`
+--
+ALTER TABLE `lab_order_items`
+  ADD PRIMARY KEY (`item_id`),
+  ADD KEY `idx_lab_order_items_lab_order_id` (`lab_order_id`),
+  ADD KEY `idx_lab_order_items_status` (`status`),
+  ADD KEY `idx_lab_order_items_test_type` (`test_type`);
+
+--
 -- Indexes for table `lifestyle_information`
 --
 ALTER TABLE `lifestyle_information`
@@ -2250,6 +2275,12 @@ ALTER TABLE `lab_orders`
   MODIFY `lab_order_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `lab_order_items`
+--
+ALTER TABLE `lab_order_items`
+  MODIFY `item_id` int UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `lifestyle_information`
 --
 ALTER TABLE `lifestyle_information`
@@ -2325,7 +2356,7 @@ ALTER TABLE `queue_logs`
 -- AUTO_INCREMENT for table `queue_settings`
 --
 ALTER TABLE `queue_settings`
-  MODIFY `setting_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `setting_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `receipts`
@@ -2560,6 +2591,12 @@ ALTER TABLE `lab_orders`
   ADD CONSTRAINT `fk_lab_orders_ordered_by_employee` FOREIGN KEY (`ordered_by_employee_id`) REFERENCES `employees` (`employee_id`),
   ADD CONSTRAINT `fk_lab_orders_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`),
   ADD CONSTRAINT `fk_lab_orders_visit` FOREIGN KEY (`visit_id`) REFERENCES `visits` (`visit_id`);
+
+--
+-- Constraints for table `lab_order_items`
+--
+ALTER TABLE `lab_order_items`
+  ADD CONSTRAINT `fk_lab_order_items_lab_order` FOREIGN KEY (`lab_order_id`) REFERENCES `lab_orders` (`lab_order_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `lifestyle_information`

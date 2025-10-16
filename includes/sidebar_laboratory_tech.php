@@ -118,13 +118,17 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
+        <a href="<?= $nav_base ?>laboratory-management/lab_management.php"
+            class="<?= $activePage === 'laboratory_management' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-flask"></i> Laboratory Management
+        </a>
         <a href="<?= $nav_base ?>management/laboratory_tech/test_requests.php"
             class="<?= $activePage === 'test_requests' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-vial"></i> Test Requests
         </a>
         <a href="<?= $nav_base ?>management/laboratory_tech/specimen_collection.php"
             class="<?= $activePage === 'specimen_collection' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-flask"></i> Specimen Collection
+            <i class="fas fa-microscope"></i> Specimen Collection
         </a>
         <a href="<?= $nav_base ?>management/laboratory_tech/test_results.php"
             class="<?= $activePage === 'test_results' ? 'active' : '' ?>" role="menuitem">
