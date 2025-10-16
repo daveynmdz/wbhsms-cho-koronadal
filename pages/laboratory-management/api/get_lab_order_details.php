@@ -21,8 +21,8 @@ if (!$lab_order_id) {
 $canUploadResults = $_SESSION['role'] === 'laboratory_tech' || $_SESSION['role'] === 'admin';
 $canUpdateStatus = $canUploadResults;
 
-// Fetch lab order details
-$orderSql = "SELECT lo.lab_order_id, lo.patient_id, lo.order_date, lo.status, lo.overall_status,
+// Fetch lab order details (using existing schema)
+$orderSql = "SELECT lo.lab_order_id, lo.patient_id, lo.order_date, lo.status, lo.status as overall_status,
                     lo.ordered_by_employee_id, lo.remarks, lo.appointment_id, lo.consultation_id, lo.visit_id,
                     p.first_name, p.last_name, p.middle_name, p.username as patient_id_display,
                     e.first_name as ordered_by_first_name, e.last_name as ordered_by_last_name
@@ -42,13 +42,13 @@ if (!$order) {
     exit('Lab order not found');
 }
 
-// Fetch lab order items
-$itemsSql = "SELECT loi.lab_order_item_id, loi.test_type, loi.status, loi.result,
-                    loi.result_file, loi.result_date, loi.special_instructions, loi.remarks,
-                    loi.uploaded_by_employee_id, loi.created_at, loi.updated_at,
-                    e.first_name as uploaded_by_first_name, e.last_name as uploaded_by_last_name
+// Fetch lab order items (using existing schema)
+$itemsSql = "SELECT loi.item_id as lab_order_item_id, loi.test_type, loi.status, 
+                    '' as result, loi.result_file, loi.result_date, 
+                    loi.remarks as special_instructions, loi.remarks,
+                    0 as uploaded_by_employee_id, loi.created_at, loi.updated_at,
+                    'System' as uploaded_by_first_name, '' as uploaded_by_last_name
              FROM lab_order_items loi
-             LEFT JOIN employees e ON loi.uploaded_by_employee_id = e.employee_id
              WHERE loi.lab_order_id = ?
              ORDER BY loi.created_at ASC";
 

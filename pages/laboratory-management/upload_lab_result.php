@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       SET result = ?, result_file = ?, result_date = NOW(), 
                           uploaded_by_employee_id = ?, remarks = ?, status = 'completed', 
                           updated_at = NOW()
-                      WHERE lab_order_item_id = ?";
+                      WHERE item_id = ?";
         
         $updateStmt = $conn->prepare($updateSql);
         $updateStmt->bind_param("ssisi", $result_text, $result_file, $_SESSION['employee_id'], $remarks, $lab_order_item_id);
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Update overall lab order status
-        $orderSql = "SELECT lab_order_id FROM lab_order_items WHERE lab_order_item_id = ?";
+        $orderSql = "SELECT lab_order_id FROM lab_order_items WHERE item_id = ?";
         $orderStmt = $conn->prepare($orderSql);
         $orderStmt->bind_param("i", $lab_order_item_id);
         $orderStmt->execute();
@@ -107,11 +107,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $overall_status = 'cancelled';
             }
             
-            // Update overall order status
-            $updateOrderSql = "UPDATE lab_orders SET overall_status = ?, updated_at = NOW() WHERE lab_order_id = ?";
-            $updateOrderStmt = $conn->prepare($updateOrderSql);
-            $updateOrderStmt->bind_param("si", $overall_status, $orderData['lab_order_id']);
-            $updateOrderStmt->execute();
+            // Update overall order status (check if column exists first)
+            $columnCheck = $conn->query("SHOW COLUMNS FROM lab_orders LIKE 'overall_status'");
+            if ($columnCheck->num_rows > 0) {
+                $updateOrderSql = "UPDATE lab_orders SET overall_status = ?, updated_at = NOW() WHERE lab_order_id = ?";
+                $updateOrderStmt = $conn->prepare($updateOrderSql);
+                $updateOrderStmt->bind_param("si", $overall_status, $orderData['lab_order_id']);
+                $updateOrderStmt->execute();
+            } else {
+                // Fallback: update basic status column if overall_status doesn't exist
+                $updateOrderSql = "UPDATE lab_orders SET status = ?, updated_at = NOW() WHERE lab_order_id = ?";
+                $updateOrderStmt = $conn->prepare($updateOrderSql);
+                $updateOrderStmt->bind_param("si", $overall_status, $orderData['lab_order_id']);
+                $updateOrderStmt->execute();
+            }
         }
 
         $conn->commit();
@@ -153,13 +162,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch lab order item details
-$itemSql = "SELECT loi.lab_order_item_id, loi.lab_order_id, loi.test_type, loi.status,
+$itemSql = "SELECT loi.item_id as lab_order_item_id, loi.lab_order_id, loi.test_type, loi.status,
                    loi.special_instructions, loi.result, loi.result_file,
                    lo.patient_id, p.first_name, p.last_name, p.middle_name, p.username as patient_id_display
             FROM lab_order_items loi
             LEFT JOIN lab_orders lo ON loi.lab_order_id = lo.lab_order_id
             LEFT JOIN patients p ON lo.patient_id = p.patient_id
-            WHERE loi.lab_order_item_id = ?";
+            WHERE loi.item_id = ?";
 
 $itemStmt = $conn->prepare($itemSql);
 $itemStmt->bind_param("i", $lab_order_item_id);

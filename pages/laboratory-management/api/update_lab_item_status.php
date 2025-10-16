@@ -51,7 +51,7 @@ try {
     // Update lab order item status
     $updateSql = "UPDATE lab_order_items 
                   SET status = ?, remarks = ?, updated_at = NOW()
-                  WHERE lab_order_item_id = ?";
+                  WHERE item_id = ?";
     
     $updateStmt = $conn->prepare($updateSql);
     $updateStmt->bind_param("ssi", $status, $remarks, $lab_order_item_id);
@@ -62,7 +62,7 @@ try {
     }
 
     // Get the lab order ID to update overall status
-    $orderSql = "SELECT lab_order_id FROM lab_order_items WHERE lab_order_item_id = ?";
+    $orderSql = "SELECT lab_order_id FROM lab_order_items WHERE item_id = ?";
     $orderStmt = $conn->prepare($orderSql);
     $orderStmt->bind_param("i", $lab_order_item_id);
     $orderStmt->execute();

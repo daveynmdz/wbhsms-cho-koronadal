@@ -29,15 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $conn->begin_transaction();
 
-        // Create lab order
-        $insertOrderSql = "INSERT INTO lab_orders (patient_id, appointment_id, consultation_id, visit_id, ordered_by_employee_id, remarks, overall_status) VALUES (?, ?, ?, ?, ?, ?, 'pending')";
+        // Create lab order (using existing schema)
+        $insertOrderSql = "INSERT INTO lab_orders (patient_id, appointment_id, consultation_id, visit_id, ordered_by_employee_id, remarks, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')";
         $orderStmt = $conn->prepare($insertOrderSql);
         $orderStmt->bind_param("iiiiss", $patient_id, $appointment_id, $consultation_id, $visit_id, $_SESSION['employee_id'], $remarks);
         $orderStmt->execute();
         $lab_order_id = $conn->insert_id;
 
-        // Create lab order items for each selected test
-        $insertItemSql = "INSERT INTO lab_order_items (lab_order_id, test_type, special_instructions, status) VALUES (?, ?, ?, 'pending')";
+        // Create lab order items for each selected test (using existing schema)
+        $insertItemSql = "INSERT INTO lab_order_items (lab_order_id, test_type, remarks, status) VALUES (?, ?, ?, 'pending')";
         $itemStmt = $conn->prepare($insertItemSql);
 
         // Predefined lab tests with instructions
