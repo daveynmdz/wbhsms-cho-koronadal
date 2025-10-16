@@ -142,10 +142,6 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'laboratory_management' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-flask"></i> Laboratory Management
         </a>
-        <a href="<?= $nav_base ?>management/doctor/laboratory_results.php"
-            class="<?= $activePage === 'laboratory' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-vials"></i> Laboratory Results
-        </a>
         <a href="<?= $nav_base ?>management/doctor/patient_history.php"
             class="<?= $activePage === 'patient_history' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-history"></i> Patient History

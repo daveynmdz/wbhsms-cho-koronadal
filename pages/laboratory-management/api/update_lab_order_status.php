@@ -1,6 +1,6 @@
 <?php
 // Include employee session configuration
-$root_path = dirname(dirname(dirname(dirname(__DIR__))));
+$root_path = dirname(dirname(dirname(__DIR__)));
 require_once $root_path . '/config/session/employee_session.php';
 include $root_path . '/config/db.php';
 

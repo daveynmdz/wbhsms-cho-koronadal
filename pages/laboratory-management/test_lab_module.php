@@ -7,7 +7,7 @@
  */
 
 // Include configuration
-$root_path = dirname(dirname(dirname(__DIR__)));
+$root_path = dirname(dirname(__DIR__));
 require_once $root_path . '/config/db.php';
 
 echo "<h1>Laboratory Management Module Test</h1>\n";
