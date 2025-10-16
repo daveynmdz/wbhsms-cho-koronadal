@@ -2,6 +2,33 @@
 // pages/queueing/dashboard_queue_api.php
 // API endpoint for queue dashboard overview
 
+// Prevent any HTML output from PHP errors
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Set content type first
+header('Content-Type: application/json');
+
+// Register shutdown function to catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        // Clear any output that might have been sent
+        if (ob_get_level()) {
+            ob_clean();
+        }
+        
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Internal server error occurred',
+            'error' => 'Fatal error in dashboard API'
+        ]);
+    }
+});
+
 // Include necessary configurations
 $root_path = dirname(dirname(__DIR__));
 require_once $root_path . '/config/session/employee_session.php';
@@ -9,21 +36,31 @@ require_once $root_path . '/config/session/employee_session.php';
 // Check if request is AJAX
 if (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
     http_response_code(400);
-    exit('Bad Request');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Bad Request - AJAX request required',
+        'error' => 'Invalid request method'
+    ]);
+    exit();
 }
 
 // Check authorization - admin only
 if (!isset($_SESSION['employee_id']) || strtolower($_SESSION['role']) !== 'admin') {
     http_response_code(403);
-    exit('Access Denied');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Access Denied - Admin role required',
+        'error' => 'Insufficient permissions'
+    ]);
+    exit();
 }
+
+// Start output buffering to capture any unwanted output
+ob_start();
 
 require_once $root_path . '/config/db.php';
 require_once $root_path . '/utils/queue_management_service.php';
 require_once $root_path . '/utils/queue_code_formatter.php';
-
-// Set content type
-header('Content-Type: application/json');
 
 try {
     // Initialize queue management service
@@ -105,6 +142,11 @@ try {
         'last_updated' => date('Y-m-d H:i:s')
     ]);
     
+    // Clean any unwanted output
+    if (ob_get_level()) {
+        ob_clean();
+    }
+    
     // Return success response
     echo json_encode([
         'success' => true,
@@ -117,6 +159,11 @@ try {
     
 } catch (Exception $e) {
     error_log("Dashboard Queue API Error: " . $e->getMessage());
+    
+    // Clean any unwanted output
+    if (ob_get_level()) {
+        ob_clean();
+    }
     
     echo json_encode([
         'success' => false,

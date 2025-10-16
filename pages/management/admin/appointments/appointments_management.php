@@ -140,11 +140,13 @@ try {
          p.first_name, p.last_name, p.middle_name, p.username as patient_id,
          p.contact_number, p.date_of_birth, p.sex,
          f.name as facility_name, f.district as facility_district,
-         b.barangay_name
+         b.barangay_name,
+         s.name as service_name
         FROM appointments a
         LEFT JOIN patients p ON a.patient_id = p.patient_id
         LEFT JOIN facilities f ON a.facility_id = f.facility_id
         LEFT JOIN barangay b ON p.barangay_id = b.barangay_id
+        LEFT JOIN services s ON a.service_id = s.service_id
         $where_clause
         ORDER BY a.scheduled_date ASC, a.scheduled_time ASC
         LIMIT ? OFFSET ?

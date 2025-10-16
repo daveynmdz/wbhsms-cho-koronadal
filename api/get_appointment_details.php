@@ -52,7 +52,7 @@ try {
                p.contact_number, p.date_of_birth, p.sex,
                f.name as facility_name, f.district as facility_district,
                b.barangay_name,
-               s.service_name,
+               s.name as service_name,
                TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) as age
         FROM appointments a
         LEFT JOIN patients p ON a.patient_id = p.patient_id
@@ -73,14 +73,19 @@ try {
         exit();
     }
 
-    // Format the data
-    $appointment['patient_name'] = trim($appointment['last_name'] . ', ' . $appointment['first_name'] . ' ' . $appointment['middle_name']);
-    $appointment['appointment_date'] = date('F j, Y', strtotime($appointment['scheduled_date']));
-    $appointment['time_slot'] = date('g:i A', strtotime($appointment['scheduled_time']));
-    $appointment['status'] = ucfirst($appointment['status']);
+    // Format the data with safe null handling
+    $appointment['patient_name'] = trim(($appointment['last_name'] ?? '') . ', ' . ($appointment['first_name'] ?? '') . ' ' . ($appointment['middle_name'] ?? ''));
+    $appointment['appointment_date'] = $appointment['scheduled_date'] ? date('F j, Y', strtotime($appointment['scheduled_date'])) : 'N/A';
+    $appointment['time_slot'] = $appointment['scheduled_time'] ? date('g:i A', strtotime($appointment['scheduled_time'])) : 'N/A';
+    $appointment['status'] = ucfirst($appointment['status'] ?? 'unknown');
+    
+    // Ensure service_name is available, provide fallback
+    if (empty($appointment['service_name'])) {
+        $appointment['service_name'] = 'General Consultation';
+    }
     
     // Format cancellation details if applicable
-    if ($appointment['cancellation_reason']) {
+    if (!empty($appointment['cancellation_reason'])) {
         $appointment['cancel_reason'] = $appointment['cancellation_reason'];
         $appointment['cancelled_at'] = $appointment['updated_at'] ? date('M j, Y g:i A', strtotime($appointment['updated_at'])) : 'N/A';
     }

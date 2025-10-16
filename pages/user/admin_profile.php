@@ -53,9 +53,9 @@ $activePage = 'profile';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Profile - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../assets/css/sidebar.css">
-    <link rel="stylesheet" href="../assets/css/topbar.css">
-    <link rel="stylesheet" href="../assets/css/profile-edit.css">
+    <link rel="stylesheet" href="../../assets/css/sidebar.css">
+    <link rel="stylesheet" href="../../assets/css/topbar.css">
+    <link rel="stylesheet" href="../../assets/css/profile-edit.css">
     <style>
         .profile-container {
             max-width: 800px;
@@ -182,27 +182,27 @@ $activePage = 'profile';
     <?php
     // Include appropriate sidebar based on role
     if ($employee_role === 'admin') {
-        include '../includes/sidebar_admin.php';
+        include '../../includes/sidebar_admin.php';
     } elseif ($employee_role === 'doctor') {
-        include '../includes/sidebar_doctor.php';
+        include '../../includes/sidebar_doctor.php';
     } elseif ($employee_role === 'nurse') {
-        include '../includes/sidebar_nurse.php';
+        include '../../includes/sidebar_nurse.php';
     } elseif ($employee_role === 'bhw') {
-        include '../includes/sidebar_bhw.php';
+        include '../../includes/sidebar_bhw.php';
     } elseif ($employee_role === 'dho') {
-        include '../includes/sidebar_dho.php';
+        include '../../includes/sidebar_dho.php';
     } else {
-        include '../includes/sidebar_admin.php'; // Default fallback
+        include '../../includes/sidebar_admin.php'; // Default fallback
     }
     ?>
 
     <main class="content-wrapper">
         <div class="profile-container">
             <div class="profile-header">
-                <img src="../vendor/photo_controller.php?employee_id=<?= $employee_id ?>" 
+                <img src="../../vendor/photo_controller.php?employee_id=<?= $employee_id ?>" 
                      alt="Profile Photo" 
                      class="profile-photo"
-                     onerror="this.src='../assets/images/user-default.png'">
+                     onerror="this.src='../../assets/images/user-default.png'">
                 <div class="profile-info">
                     <h1><?= htmlspecialchars($full_name ?: 'Employee Profile') ?></h1>
                     <p><i class="fas fa-id-badge"></i> Employee ID: <strong><?= htmlspecialchars($employee_data['employee_number'] ?? 'N/A') ?></strong></p>

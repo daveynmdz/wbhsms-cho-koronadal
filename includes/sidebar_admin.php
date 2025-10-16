@@ -127,6 +127,10 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'appointments' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-calendar-check"></i> Appointments Management
         </a>
+        <a href="<?= $nav_base ?>laboratory-management/lab_management.php"
+            class="<?= $activePage === 'laboratory_management' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-flask"></i> Laboratory Management
+        </a>
         <a href="<?= $nav_base ?>management/admin/user-management/employee_list.php"
             class="<?= $activePage === 'user_management' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-users-cog"></i> Employee Management

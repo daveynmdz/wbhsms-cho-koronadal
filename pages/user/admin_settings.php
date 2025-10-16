@@ -134,9 +134,9 @@ $activePage = 'settings';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Account Settings - CHO Koronadal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="../assets/css/sidebar.css">
-    <link rel="stylesheet" href="../assets/css/topbar.css">
-    <link rel="stylesheet" href="../assets/css/profile-edit.css">
+    <link rel="stylesheet" href="../../assets/css/sidebar.css">
+    <link rel="stylesheet" href="../../assets/css/topbar.css">
+    <link rel="stylesheet" href="../../assets/css/profile-edit.css">
     <style>
         .settings-container {
             max-width: 900px;
@@ -289,17 +289,17 @@ $activePage = 'settings';
     <?php
     // Include appropriate sidebar based on role
     if ($employee_role === 'admin') {
-        include '../includes/sidebar_admin.php';
+        include '../../includes/sidebar_admin.php';
     } elseif ($employee_role === 'doctor') {
-        include '../includes/sidebar_doctor.php';
+        include '../../includes/sidebar_doctor.php';
     } elseif ($employee_role === 'nurse') {
-        include '../includes/sidebar_nurse.php';
+        include '../../includes/sidebar_nurse.php';
     } elseif ($employee_role === 'bhw') {
-        include '../includes/sidebar_bhw.php';
+        include '../../includes/sidebar_bhw.php';
     } elseif ($employee_role === 'dho') {
-        include '../includes/sidebar_dho.php';
+        include '../../includes/sidebar_dho.php';
     } else {
-        include '../includes/sidebar_admin.php'; // Default fallback
+        include '../../includes/sidebar_admin.php'; // Default fallback
     }
     ?>
 
