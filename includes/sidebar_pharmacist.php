@@ -118,9 +118,9 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-home"></i> Dashboard
         </a>
-        <a href="<?= $nav_base ?>management/pharmacist/prescriptions.php"
-            class="<?= $activePage === 'prescriptions' ? 'active' : '' ?>" role="menuitem">
-            <i class="fas fa-prescription"></i> Prescriptions
+        <a href="<?= $nav_base ?>prescription-management/prescription_management.php"
+            class="<?= $activePage === 'prescription_management' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-prescription-bottle-alt"></i> Prescription Management
         </a>
         <a href="<?= $nav_base ?>management/pharmacist/medication_dispensing.php"
             class="<?= $activePage === 'dispensing' ? 'active' : '' ?>" role="menuitem">

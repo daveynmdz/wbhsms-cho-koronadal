@@ -110,6 +110,7 @@ $recentResult = $recentStmt->get_result();
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -118,6 +119,119 @@ $recentResult = $recentStmt->get_result();
     <link rel="stylesheet" href="<?= $assets_path ?>/css/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Content wrapper and page layout */
+        .content-wrapper {
+            margin-left: 300px;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                margin-left: 0;
+                padding: 10px;
+            }
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .page-header h1 {
+            color: #0077b6;
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.total {
+            border-left: 5px solid #6c757d;
+        }
+
+        .stat-card.pending {
+            border-left: 5px solid #ffc107;
+        }
+
+        .stat-card.active {
+            border-left: 5px solid #17a2b8;
+        }
+
+        .stat-card.completed {
+            border-left: 5px solid #28a745;
+        }
+
+        .stat-card.voided {
+            border-left: 5px solid #dc3545;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #03045e;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #0077b6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #005577;
+        }
+
         /* Laboratory Management Specific Styles */
         .lab-management-container {
             display: grid;
@@ -255,6 +369,7 @@ $recentResult = $recentStmt->get_result();
             gap: 10px;
             margin-bottom: 15px;
             flex-wrap: wrap;
+            align-items: stretch;
         }
 
         .filter-input {
@@ -264,6 +379,38 @@ $recentResult = $recentStmt->get_result();
             font-size: 0.9em;
             flex: 1;
             min-width: 150px;
+        }
+
+        .filter-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .search-btn {
+            background-color: #0077b6;
+            color: white;
+        }
+
+        .search-btn:hover {
+            background-color: #005577;
+        }
+
+        .clear-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background-color: #545b62;
         }
 
         .progress-bar {
@@ -327,11 +474,11 @@ $recentResult = $recentStmt->get_result();
             .lab-management-container {
                 grid-template-columns: 1fr;
             }
-            
+
             .search-filters {
                 flex-direction: column;
             }
-            
+
             .filter-input {
                 min-width: 100%;
             }
@@ -373,62 +520,135 @@ $recentResult = $recentStmt->get_result();
         }
     </style>
 </head>
+
 <body>
-    <div class="homepage">
-        <!-- Include Admin Sidebar -->
-        <?php include $root_path . '/includes/sidebar_admin.php'; ?>
+    <!-- Include Admin Sidebar -->
+    <?php include $root_path . '/includes/sidebar_admin.php'; ?>
 
-        <div class="main-content">
+    <section class="content-wrapper">
+        <!-- Breadcrumb Navigation -->
+        <div class="breadcrumb" style="margin-top: 50px;">
+            <a href="../management/admin/dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Laboratory Management</span>
+        </div>
+
+        <div class="page-header">
             <h1><i class="fas fa-flask"></i> Laboratory Management</h1>
-            
-            <!-- Success/Error Messages -->
-            <div id="alertContainer"></div>
+            <?php if ($canCreateOrders): ?>
+                <a href="#" class="btn btn-primary" onclick="openCreateOrderModal(); return false;">
+                    <i class="fas fa-plus"></i> Create Lab Order
+                </a>
+            <?php endif; ?>
+        </div>
 
-            <div class="lab-management-container">
-                <!-- Left Panel: Lab Orders -->
-                <div class="lab-panel">
-                    <div class="panel-header">
-                        <div class="panel-title">
-                            <i class="fas fa-list-alt"></i> Lab Orders
-                        </div>
-                        <?php if ($canCreateOrders): ?>
-                        <button class="create-order-btn" onclick="openCreateOrderModal()">
-                            <i class="fas fa-plus"></i> Create Lab Order
-                        </button>
-                        <?php endif; ?>
+        <!-- Success/Error Messages -->
+        <div id="alertContainer"></div>
+
+        <!-- Laboratory Statistics -->
+        <div class="stats-grid">
+            <?php
+            // Get laboratory statistics
+            $lab_stats = [
+                'total' => 0,
+                'pending' => 0,
+                'in_progress' => 0,
+                'completed' => 0,
+                'cancelled' => 0
+            ];
+
+            try {
+                $stats_sql = "SELECT 
+                                    COUNT(*) as total,
+                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'pending' THEN 1 ELSE 0 END) as pending,
+                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'completed' THEN 1 ELSE 0 END) as completed,
+                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+                                  FROM lab_orders WHERE DATE(order_date) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)";
+
+                $stats_result = $conn->query($stats_sql);
+                if ($stats_result && $row = $stats_result->fetch_assoc()) {
+                    $lab_stats = $row;
+                }
+            } catch (Exception $e) {
+                // Use default values if query fails
+            }
+            ?>
+
+            <div class="stat-card total">
+                <div class="stat-number"><?= number_format($lab_stats['total']) ?></div>
+                <div class="stat-label">Total Orders (30 days)</div>
+            </div>
+
+            <div class="stat-card pending">
+                <div class="stat-number"><?= number_format($lab_stats['pending']) ?></div>
+                <div class="stat-label">Pending Orders</div>
+            </div>
+
+            <div class="stat-card active">
+                <div class="stat-number"><?= number_format($lab_stats['in_progress']) ?></div>
+                <div class="stat-label">In Progress</div>
+            </div>
+
+            <div class="stat-card completed">
+                <div class="stat-number"><?= number_format($lab_stats['completed']) ?></div>
+                <div class="stat-label">Completed</div>
+            </div>
+
+            <div class="stat-card voided">
+                <div class="stat-number"><?= number_format($lab_stats['cancelled']) ?></div>
+                <div class="stat-label">Cancelled</div>
+            </div>
+        </div>
+
+        <div class="lab-management-container">
+            <!-- Left Panel: Lab Orders -->
+            <div class="lab-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fas fa-list-alt"></i> Lab Orders
                     </div>
+                </div>
 
-                    <!-- Search and Filter Controls -->
-                    <div class="search-filters">
-                        <input type="text" class="filter-input" id="searchOrders" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($searchQuery) ?>">
-                        <select class="filter-input" id="statusFilter">
-                            <option value="">All Statuses</option>
-                            <option value="pending" <?= $statusFilter === 'pending' ? 'selected' : '' ?>>Pending</option>
-                            <option value="in_progress" <?= $statusFilter === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
-                            <option value="completed" <?= $statusFilter === 'completed' ? 'selected' : '' ?>>Completed</option>
-                            <option value="partial" <?= $statusFilter === 'partial' ? 'selected' : '' ?>>Partial</option>
-                            <option value="cancelled" <?= $statusFilter === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                        </select>
-                        <input type="date" class="filter-input" id="dateFilter" value="<?= htmlspecialchars($dateFilter) ?>">
-                    </div>
+                <!-- Search and Filter Controls -->
+                <div class="search-filters">
+                    <input type="text" class="filter-input" id="searchOrders" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($searchQuery) ?>">
+                    <select class="filter-input" id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="pending" <?= $statusFilter === 'pending' ? 'selected' : '' ?>>Pending</option>
+                        <option value="in_progress" <?= $statusFilter === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
+                        <option value="completed" <?= $statusFilter === 'completed' ? 'selected' : '' ?>>Completed</option>
+                        <option value="partial" <?= $statusFilter === 'partial' ? 'selected' : '' ?>>Partial</option>
+                        <option value="cancelled" <?= $statusFilter === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                    </select>
+                    <input type="date" class="filter-input" id="dateFilter" value="<?= htmlspecialchars($dateFilter) ?>">
+                </div>
+                <div class="search-filters" style="justify-content: flex-end; margin-top: -10px;">
+                    <button type="button" class="filter-btn search-btn" id="searchBtn" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button type="button" class="filter-btn clear-btn" id="clearBtn" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
 
-                    <!-- Lab Orders Table -->
-                    <table class="lab-table">
-                        <thead>
-                            <tr>
-                                <th>Patient</th>
-                                <th>Order Date</th>
-                                <th>Tests</th>
-                                <th>Progress</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($order = $ordersResult->fetch_assoc()): ?>
+                <!-- Lab Orders Table -->
+                <table class="lab-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Order Date</th>
+                            <th>Tests</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($order = $ordersResult->fetch_assoc()): ?>
                             <?php
-                                $patientName = trim($order['first_name'] . ' ' . $order['middle_name'] . ' ' . $order['last_name']);
-                                $progressPercent = $order['total_tests'] > 0 ? round(($order['completed_tests'] / $order['total_tests']) * 100) : 0;
+                            $patientName = trim($order['first_name'] . ' ' . $order['middle_name'] . ' ' . $order['last_name']);
+                            $progressPercent = $order['total_tests'] > 0 ? round(($order['completed_tests'] / $order['total_tests']) * 100) : 0;
                             ?>
                             <tr>
                                 <td>
@@ -454,34 +674,34 @@ $recentResult = $recentStmt->get_result();
                                     </button>
                                 </td>
                             </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Right Panel: Recent Lab Records -->
+            <div class="lab-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fas fa-history"></i> Recent Lab Records
+                    </div>
                 </div>
 
-                <!-- Right Panel: Recent Lab Records -->
-                <div class="lab-panel">
-                    <div class="panel-header">
-                        <div class="panel-title">
-                            <i class="fas fa-history"></i> Recent Lab Records
-                        </div>
-                    </div>
-
-                    <!-- Recent Records Table -->
-                    <table class="lab-table">
-                        <thead>
-                            <tr>
-                                <th>Patient</th>
-                                <th>Test Type</th>
-                                <th>Status</th>
-                                <th>Result Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($record = $recentResult->fetch_assoc()): ?>
+                <!-- Recent Records Table -->
+                <table class="lab-table">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Test Type</th>
+                            <th>Status</th>
+                            <th>Result Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($record = $recentResult->fetch_assoc()): ?>
                             <?php
-                                $patientName = trim($record['first_name'] . ' ' . $record['last_name']);
+                            $patientName = trim($record['first_name'] . ' ' . $record['last_name']);
                             ?>
                             <tr>
                                 <td>
@@ -499,23 +719,23 @@ $recentResult = $recentStmt->get_result();
                                 </td>
                                 <td>
                                     <?php if ($record['result_file'] && file_exists($root_path . '/uploads/lab_results/' . $record['result_file'])): ?>
-                                    <button class="action-btn btn-download" onclick="downloadResult('<?= $record['result_file'] ?>')">
-                                        <i class="fas fa-download"></i>
-                                    </button>
+                                        <button class="action-btn btn-download" onclick="downloadResult('<?= $record['result_file'] ?>')">
+                                            <i class="fas fa-download"></i>
+                                        </button>
                                     <?php elseif ($canUploadResults && $record['status'] !== 'completed'): ?>
-                                    <button class="action-btn btn-upload" onclick="uploadResult(<?= $record['lab_order_item_id'] ?>)">
-                                        <i class="fas fa-upload"></i>
-                                    </button>
+                                        <button class="action-btn btn-upload" onclick="uploadResult(<?= $record['lab_order_item_id'] ?>)">
+                                            <i class="fas fa-upload"></i>
+                                        </button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
-                </div>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
+    </section>
+
 
     <!-- Order Details Modal -->
     <div id="orderDetailsModal" class="modal">
@@ -558,23 +778,38 @@ $recentResult = $recentStmt->get_result();
 
     <script>
         // Laboratory Management JavaScript Functions
-        
+
         // Search and filter functionality
-        document.getElementById('searchOrders').addEventListener('input', applyFilters);
         document.getElementById('statusFilter').addEventListener('change', applyFilters);
         document.getElementById('dateFilter').addEventListener('change', applyFilters);
-        
+
+        // Allow Enter key to trigger search
+        document.getElementById('searchOrders').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                applyFilters();
+            }
+        });
+
         function applyFilters() {
-            const search = document.getElementById('searchOrders').value;
+            const search = document.getElementById('searchOrders').value.trim();
             const status = document.getElementById('statusFilter').value;
             const date = document.getElementById('dateFilter').value;
-            
+
             const params = new URLSearchParams();
             if (search) params.set('search', search);
             if (status) params.set('status', status);
             if (date) params.set('date', date);
-            
+
             window.location.href = '?' + params.toString();
+        }
+
+        function clearFilters() {
+            document.getElementById('searchOrders').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+
+            // Redirect to page without any filters
+            window.location.href = window.location.pathname;
         }
 
         // Modal functions
@@ -585,7 +820,7 @@ $recentResult = $recentStmt->get_result();
         function viewOrderDetails(labOrderId) {
             document.getElementById('orderDetailsModal').style.display = 'block';
             document.getElementById('modalBody').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-            
+
             fetch(`api/get_lab_order_details.php?lab_order_id=${labOrderId}`)
                 .then(response => response.text())
                 .then(html => {
@@ -599,32 +834,51 @@ $recentResult = $recentStmt->get_result();
         function openCreateOrderModal() {
             document.getElementById('createOrderModal').style.display = 'block';
             document.getElementById('createOrderBody').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-            
+
             fetch('create_lab_order.php')
                 .then(response => response.text())
                 .then(html => {
                     document.getElementById('createOrderBody').innerHTML = html;
+
+                    // Execute any scripts that were loaded with the content
+                    const scripts = document.getElementById('createOrderBody').getElementsByTagName('script');
+                    for (let i = 0; i < scripts.length; i++) {
+                        const script = scripts[i];
+                        const newScript = document.createElement('script');
+
+                        if (script.src) {
+                            newScript.src = script.src;
+                        } else {
+                            newScript.textContent = script.textContent;
+                        }
+
+                        document.head.appendChild(newScript);
+                        script.parentNode.removeChild(script);
+                    }
+
+                    console.log('Create order modal content loaded and scripts executed');
                 })
                 .catch(error => {
+                    console.error('Error loading create order form:', error);
                     document.getElementById('createOrderBody').innerHTML = '<div class="alert alert-error">Error loading create order form.</div>';
                 });
         }
 
         function uploadResult(labOrderItemId) {
             <?php if ($canUploadResults): ?>
-            document.getElementById('uploadResultModal').style.display = 'block';
-            document.getElementById('uploadResultBody').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-            
-            fetch(`upload_lab_result.php?lab_order_item_id=${labOrderItemId}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('uploadResultBody').innerHTML = html;
-                })
-                .catch(error => {
-                    document.getElementById('uploadResultBody').innerHTML = '<div class="alert alert-error">Error loading upload form.</div>';
-                });
+                document.getElementById('uploadResultModal').style.display = 'block';
+                document.getElementById('uploadResultBody').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+
+                fetch(`upload_lab_result.php?lab_order_item_id=${labOrderItemId}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('uploadResultBody').innerHTML = html;
+                    })
+                    .catch(error => {
+                        document.getElementById('uploadResultBody').innerHTML = '<div class="alert alert-error">Error loading upload form.</div>';
+                    });
             <?php else: ?>
-            showAlert('You are not authorized to upload lab results.', 'error');
+                showAlert('You are not authorized to upload lab results.', 'error');
             <?php endif; ?>
         }
 
@@ -641,7 +895,7 @@ $recentResult = $recentStmt->get_result();
                 <button type="button" class="btn-close" onclick="this.parentElement.remove();">&times;</button>
             `;
             alertContainer.appendChild(alertDiv);
-            
+
             // Auto-dismiss after 5 seconds
             setTimeout(() => {
                 if (alertDiv.parentElement) {
@@ -663,11 +917,12 @@ $recentResult = $recentStmt->get_result();
 
         // Handle server-side messages
         <?php if (isset($_SESSION['lab_message'])): ?>
-        showAlert('<?= addslashes($_SESSION['lab_message']) ?>', '<?= $_SESSION['lab_message_type'] ?? 'success' ?>');
-        <?php 
-        unset($_SESSION['lab_message']);
-        unset($_SESSION['lab_message_type']);
+            showAlert('<?= addslashes($_SESSION['lab_message']) ?>', '<?= $_SESSION['lab_message_type'] ?? 'success' ?>');
+        <?php
+            unset($_SESSION['lab_message']);
+            unset($_SESSION['lab_message_type']);
         endif; ?>
     </script>
 </body>
+
 </html>

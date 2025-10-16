@@ -134,6 +134,10 @@ $nav_base = $base_path . 'pages/';
             class="<?= $activePage === 'medications' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-pills"></i> Medications
         </a>
+        <a href="<?= $nav_base ?>prescription-management/prescription_management.php"
+            class="<?= $activePage === 'prescription_management' ? 'active' : '' ?>" role="menuitem">
+            <i class="fas fa-prescription-bottle-alt"></i> Prescription Management
+        </a>
         <a href="<?= $nav_base ?>laboratory-management/lab_management.php"
             class="<?= $activePage === 'laboratory_management' ? 'active' : '' ?>" role="menuitem">
             <i class="fas fa-flask"></i> Laboratory Management

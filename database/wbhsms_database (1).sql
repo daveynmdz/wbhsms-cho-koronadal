@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 31.97.106.60:3307
--- Generation Time: Oct 16, 2025 at 04:18 AM
+-- Generation Time: Oct 16, 2025 at 05:06 AM
 -- Server version: 8.4.6
 -- PHP Version: 8.0.30
 
@@ -830,11 +830,15 @@ CREATE TABLE `lab_order_items` (
   `lab_order_id` int UNSIGNED NOT NULL,
   `test_type` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` enum('pending','in_progress','completed','cancelled') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
+  `started_at` datetime DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
   `result_file` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `result_date` datetime DEFAULT NULL,
   `remarks` text COLLATE utf8mb4_unicode_ci,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `turnaround_time` int DEFAULT NULL COMMENT 'Time in minutes from start to completion',
+  `waiting_time` int DEFAULT NULL COMMENT 'Minutes from order_date to started_at'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------

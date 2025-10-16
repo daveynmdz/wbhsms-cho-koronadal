@@ -37,13 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['result_file']) && $_FILES['result_file']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['result_file'];
             
-            // Validate file type (PDF only)
-            $allowedTypes = ['application/pdf'];
+            // Create storage directory if it doesn't exist
+            $storageDir = $root_path . '/storage/lab_results';
+            if (!file_exists($storageDir)) {
+                mkdir($storageDir, 0755, true);
+            }
+            
+            // Validate file type (PDF, CSV, XLSX)
+            $allowedTypes = ['application/pdf', 'text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+            $allowedExtensions = ['pdf', 'csv', 'xlsx'];
             $fileType = $file['type'];
             $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
             
-            if (!in_array($fileType, $allowedTypes) || $fileExtension !== 'pdf') {
-                throw new Exception('Only PDF files are allowed.');
+            if (!in_array($fileType, $allowedTypes) && !in_array($fileExtension, $allowedExtensions)) {
+                throw new Exception('Only PDF, CSV, and XLSX files are allowed.');
             }
             
             // Validate file size (max 10MB)
@@ -51,20 +58,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('File size must be less than 10MB.');
             }
             
-            // Generate unique filename
-            $result_file = 'lab_result_' . $lab_order_item_id . '_' . time() . '.pdf';
-            $targetPath = $uploadsDir . '/' . $result_file;
+            // Get lab order info for filename generation
+            $orderInfoSql = "SELECT loi.lab_order_id, loi.test_type, lo.patient_id 
+                           FROM lab_order_items loi 
+                           LEFT JOIN lab_orders lo ON loi.lab_order_id = lo.lab_order_id 
+                           WHERE loi.item_id = ?";
+            $orderInfoStmt = $conn->prepare($orderInfoSql);
+            $orderInfoStmt->bind_param("i", $lab_order_item_id);
+            $orderInfoStmt->execute();
+            $orderInfoResult = $orderInfoStmt->get_result();
+            $orderInfo = $orderInfoResult->fetch_assoc();
+            
+            if (!$orderInfo) {
+                throw new Exception('Lab order not found.');
+            }
+            
+            // Generate filename: {lab_order_id}_{item_id}_{test_type}_{timestamp}.{extension}
+            $sanitizedTestType = preg_replace('/[^a-zA-Z0-9_-]/', '_', $orderInfo['test_type']);
+            $timestamp = time();
+            $result_file = "{$orderInfo['lab_order_id']}_{$lab_order_item_id}_{$sanitizedTestType}_{$timestamp}.{$fileExtension}";
+            $targetPath = $storageDir . '/' . $result_file;
             
             if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
                 throw new Exception('Failed to upload file.');
             }
         }
 
-        // Update lab order item
+        // Get current item status for timing calculation
+        $currentSql = "SELECT status, started_at FROM lab_order_items WHERE item_id = ?";
+        $currentStmt = $conn->prepare($currentSql);
+        $currentStmt->bind_param("i", $lab_order_item_id);
+        $currentStmt->execute();
+        $currentResult = $currentStmt->get_result();
+        $currentData = $currentResult->fetch_assoc();
+        
+        // Update lab order item with automatic completion and timing
         $updateSql = "UPDATE lab_order_items 
                       SET result = ?, result_file = ?, result_date = NOW(), 
-                          uploaded_by_employee_id = ?, remarks = ?, status = 'completed', 
-                          updated_at = NOW()
+                          uploaded_by_employee_id = ?, remarks = ?, status = 'completed',";
+        
+        // Add timing logic if started_at exists
+        if ($currentData && $currentData['started_at']) {
+            $updateSql .= " completed_at = NOW(), 
+                           turnaround_time = TIMESTAMPDIFF(MINUTE, started_at, NOW()),";
+        } else {
+            // If not started yet, set both started and completed
+            $updateSql .= " started_at = NOW(), completed_at = NOW(), 
+                           turnaround_time = 0,";
+        }
+        
+        $updateSql .= " updated_at = NOW()
                       WHERE item_id = ?";
         
         $updateStmt = $conn->prepare($updateSql);

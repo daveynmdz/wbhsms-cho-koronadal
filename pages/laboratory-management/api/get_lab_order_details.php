@@ -21,15 +21,28 @@ if (!$lab_order_id) {
 $canUploadResults = $_SESSION['role'] === 'laboratory_tech' || $_SESSION['role'] === 'admin';
 $canUpdateStatus = $canUploadResults;
 
-// Fetch lab order details (using existing schema)
+// Check if timing columns exist
+$timingColumnsSql = "SHOW COLUMNS FROM lab_order_items WHERE Field IN ('started_at', 'completed_at', 'turnaround_time', 'waiting_time')";
+$timingResult = $conn->query($timingColumnsSql);
+$hasTimingColumns = $timingResult->num_rows > 0;
+
+// Fetch lab order details with enhanced timing info
 $orderSql = "SELECT lo.lab_order_id, lo.patient_id, lo.order_date, lo.status, lo.status as overall_status,
-                    lo.ordered_by_employee_id, lo.remarks, lo.appointment_id, lo.consultation_id, lo.visit_id,
-                    p.first_name, p.last_name, p.middle_name, p.username as patient_id_display,
-                    e.first_name as ordered_by_first_name, e.last_name as ordered_by_last_name
-             FROM lab_orders lo
-             LEFT JOIN patients p ON lo.patient_id = p.patient_id
-             LEFT JOIN employees e ON lo.ordered_by_employee_id = e.employee_id
-             WHERE lo.lab_order_id = ?";
+                    lo.ordered_by_employee_id, lo.remarks, lo.appointment_id, lo.visit_id,
+                    p.first_name, p.last_name, p.middle_name, p.date_of_birth, p.gender, p.username as patient_id_display,
+                    e.first_name as ordered_by_first_name, e.last_name as ordered_by_last_name,
+                    TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) as age";
+
+// Add average_tat if column exists
+$avgTatCheck = $conn->query("SHOW COLUMNS FROM lab_orders LIKE 'average_tat'");
+if ($avgTatCheck->num_rows > 0) {
+    $orderSql .= ", lo.average_tat";
+}
+
+$orderSql .= " FROM lab_orders lo
+               LEFT JOIN patients p ON lo.patient_id = p.patient_id
+               LEFT JOIN employees e ON lo.ordered_by_employee_id = e.employee_id
+               WHERE lo.lab_order_id = ?";
 
 $orderStmt = $conn->prepare($orderSql);
 $orderStmt->bind_param("i", $lab_order_id);
@@ -42,15 +55,20 @@ if (!$order) {
     exit('Lab order not found');
 }
 
-// Fetch lab order items (using existing schema)
+// Fetch lab order items with timing info
 $itemsSql = "SELECT loi.item_id as lab_order_item_id, loi.test_type, loi.status, 
-                    '' as result, loi.result_file, loi.result_date, 
-                    loi.remarks as special_instructions, loi.remarks,
-                    0 as uploaded_by_employee_id, loi.created_at, loi.updated_at,
-                    'System' as uploaded_by_first_name, '' as uploaded_by_last_name
-             FROM lab_order_items loi
-             WHERE loi.lab_order_id = ?
-             ORDER BY loi.created_at ASC";
+                    loi.result_file, loi.result_date, loi.remarks, loi.created_at, loi.updated_at";
+
+// Add timing columns if they exist
+if ($hasTimingColumns) {
+    $itemsSql .= ", loi.started_at, loi.completed_at, loi.turnaround_time, loi.waiting_time";
+} else {
+    $itemsSql .= ", NULL as started_at, NULL as completed_at, NULL as turnaround_time, NULL as waiting_time";
+}
+
+$itemsSql .= " FROM lab_order_items loi
+               WHERE loi.lab_order_id = ?
+               ORDER BY loi.created_at ASC";
 
 $itemsStmt = $conn->prepare($itemsSql);
 $itemsStmt->bind_param("i", $lab_order_id);
@@ -233,12 +251,47 @@ $orderedBy = trim($order['ordered_by_first_name'] . ' ' . $order['ordered_by_las
 <div class="order-details">
     <div class="order-header">
         <h4>Lab Order #<?= $order['lab_order_id'] ?></h4>
+        
+        <!-- Patient Summary -->
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <h5 style="margin-top: 0; color: #03045e;"><i class="fas fa-user"></i> Patient Summary</h5>
+            <div class="order-info">
+                <div>
+                    <div class="info-item">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value"><?= htmlspecialchars($patientName) ?></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Patient ID:</span>
+                        <span class="info-value"><?= htmlspecialchars($order['patient_id_display']) ?></span>
+                    </div>
+                    <?php if (isset($order['age'])): ?>
+                    <div class="info-item">
+                        <span class="info-label">Age:</span>
+                        <span class="info-value"><?= $order['age'] ?> years</span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <?php if (isset($order['gender'])): ?>
+                    <div class="info-item">
+                        <span class="info-label">Gender:</span>
+                        <span class="info-value"><?= ucfirst($order['gender']) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (isset($order['date_of_birth'])): ?>
+                    <div class="info-item">
+                        <span class="info-label">DOB:</span>
+                        <span class="info-value"><?= date('M d, Y', strtotime($order['date_of_birth'])) ?></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Information -->
         <div class="order-info">
             <div>
-                <div class="info-item">
-                    <span class="info-label">Patient:</span>
-                    <span class="info-value"><?= htmlspecialchars($patientName) ?> (ID: <?= htmlspecialchars($order['patient_id_display']) ?>)</span>
-                </div>
                 <div class="info-item">
                     <span class="info-label">Order Date:</span>
                     <span class="info-value"><?= date('M d, Y g:i A', strtotime($order['order_date'])) ?></span>
@@ -247,6 +300,12 @@ $orderedBy = trim($order['ordered_by_first_name'] . ' ' . $order['ordered_by_las
                     <span class="info-label">Ordered By:</span>
                     <span class="info-value"><?= htmlspecialchars($orderedBy) ?></span>
                 </div>
+                <?php if (isset($order['average_tat']) && $order['average_tat']): ?>
+                <div class="info-item">
+                    <span class="info-label">Average TAT:</span>
+                    <span class="info-value"><?= number_format($order['average_tat'], 1) ?> minutes</span>
+                </div>
+                <?php endif; ?>
             </div>
             <div>
                 <div class="info-item">
@@ -283,13 +342,13 @@ $orderedBy = trim($order['ordered_by_first_name'] . ' ' . $order['ordered_by_las
     <table class="items-table">
         <thead>
             <tr>
-                <th>Test Type</th>
+                <th>Test Name</th>
                 <th>Status</th>
-                <th>Special Instructions</th>
-                <th>Result</th>
-                <th>Uploaded By</th>
-                <th>Result Date</th>
-                <th>Actions</th>
+                <th>Start Time</th>
+                <th>Completion Time</th>
+                <th>Turnaround Time</th>
+                <th>Upload Result</th>
+                <th>View Result</th>
             </tr>
         </thead>
         <tbody>
@@ -308,33 +367,50 @@ $orderedBy = trim($order['ordered_by_first_name'] . ' ' . $order['ordered_by_las
                         <?= ucfirst(str_replace('_', ' ', $item['status'])) ?>
                     </span>
                 </td>
-                <td class="instructions">
-                    <?= htmlspecialchars($item['special_instructions']) ?>
-                </td>
-                <td class="test-details">
-                    <?= $item['result'] ? htmlspecialchars($item['result']) : 'Pending' ?>
-                </td>
-                <td><?= htmlspecialchars($uploadedBy) ?></td>
                 <td>
-                    <?= $item['result_date'] ? date('M d, Y', strtotime($item['result_date'])) : 'N/A' ?>
+                    <?= $item['started_at'] ? date('M d, Y g:i A', strtotime($item['started_at'])) : 'Not started' ?>
                 </td>
                 <td>
-                    <?php if ($item['result_file'] && file_exists($root_path . '/uploads/lab_results/' . $item['result_file'])): ?>
-                        <button class="action-btn btn-download" onclick="downloadResult('<?= htmlspecialchars($item['result_file']) ?>')">
-                            <i class="fas fa-download"></i> Download
-                        </button>
+                    <?= $item['completed_at'] ? date('M d, Y g:i A', strtotime($item['completed_at'])) : 'Not completed' ?>
+                </td>
+                <td>
+                    <?php if ($item['turnaround_time']): ?>
+                        <span class="timing-badge"><?= $item['turnaround_time'] ?> min</span>
+                        <?php if ($item['waiting_time']): ?>
+                        <br><small style="color: #666;">Wait: <?= $item['waiting_time'] ?> min</small>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        N/A
                     <?php endif; ?>
-                    
+                </td>
+                <td>
                     <?php if ($canUploadResults && $item['status'] !== 'completed'): ?>
                         <button class="action-btn btn-upload" onclick="uploadItemResult(<?= $item['lab_order_item_id'] ?>)">
                             <i class="fas fa-upload"></i> Upload
                         </button>
+                    <?php elseif ($_SESSION['role'] === 'laboratory_tech'): ?>
+                        <span class="text-muted">Lab Tech Only</span>
+                    <?php else: ?>
+                        <span class="text-muted">Not Available</span>
                     <?php endif; ?>
-                    
-                    <?php if ($canUpdateStatus): ?>
-                        <button class="action-btn btn-status" onclick="updateItemStatus(<?= $item['lab_order_item_id'] ?>, '<?= $item['status'] ?>')">
-                            <i class="fas fa-edit"></i> Status
+                </td>
+                <td>
+                    <?php if ($item['result_file']): ?>
+                        <?php 
+                        // Check both storage locations for files
+                        $storageFile = $root_path . '/storage/lab_results/' . $item['result_file'];
+                        $uploadsFile = $root_path . '/uploads/lab_results/' . $item['result_file'];
+                        $fileExists = file_exists($storageFile) || file_exists($uploadsFile);
+                        ?>
+                        <?php if ($fileExists): ?>
+                        <button class="action-btn btn-download" onclick="downloadResult('<?= htmlspecialchars($item['result_file']) ?>')">
+                            <i class="fas fa-download"></i> View
                         </button>
+                        <?php else: ?>
+                        <span class="text-muted">File Missing</span>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <span class="text-muted">No Result</span>
                     <?php endif; ?>
                 </td>
             </tr>
@@ -343,10 +419,30 @@ $orderedBy = trim($order['ordered_by_first_name'] . ' ' . $order['ordered_by_las
     </table>
 
     <div class="order-actions">
-        <button class="btn-secondary" onclick="closeModal('orderDetailsModal')">Close</button>
+        <button class="btn-secondary" onclick="closeModal('orderDetailsModal')">
+            <i class="fas fa-times"></i> Close
+        </button>
+        <?php 
+        // Count completed items for print report button
+        $itemsResult->data_seek(0); // Reset result pointer
+        $completedCount = 0;
+        $totalCount = 0;
+        while ($checkItem = $itemsResult->fetch_assoc()) {
+            $totalCount++;
+            if ($checkItem['status'] === 'completed') {
+                $completedCount++;
+            }
+        }
+        $itemsResult->data_seek(0); // Reset again
+        ?>
+        <?php if ($completedCount > 0): ?>
+        <button class="btn-primary" onclick="printLabReport(<?= $order['lab_order_id'] ?>)">
+            <i class="fas fa-print"></i> Print Lab Report
+        </button>
+        <?php endif; ?>
         <?php if ($canUpdateStatus): ?>
         <button class="btn-primary" onclick="updateOrderStatus(<?= $order['lab_order_id'] ?>, '<?= $order['overall_status'] ?>')">
-            Update Order Status
+            <i class="fas fa-edit"></i> Update Status
         </button>
         <?php endif; ?>
     </div>
@@ -362,6 +458,11 @@ $orderedBy = trim($order['ordered_by_first_name'] . ' ' . $order['ordered_by_las
         setTimeout(() => {
             uploadResult(labOrderItemId);
         }, 100);
+    }
+
+    function printLabReport(labOrderId) {
+        // Open print report in new window
+        window.open(`print_lab_report.php?lab_order_id=${labOrderId}`, '_blank', 'width=800,height=600,scrollbars=yes');
     }
 
     function updateItemStatus(labOrderItemId, currentStatus) {
