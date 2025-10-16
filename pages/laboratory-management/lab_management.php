@@ -560,43 +560,51 @@ $recentResult = $recentStmt->get_result();
             try {
                 $stats_sql = "SELECT 
                                     COUNT(*) as total,
-                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'pending' THEN 1 ELSE 0 END) as pending,
-                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'completed' THEN 1 ELSE 0 END) as completed,
-                                    SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+                                    COALESCE(SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'pending' THEN 1 ELSE 0 END), 0) as pending,
+                                    COALESCE(SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'in_progress' THEN 1 ELSE 0 END), 0) as in_progress,
+                                    COALESCE(SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'completed' THEN 1 ELSE 0 END), 0) as completed,
+                                    COALESCE(SUM(CASE WHEN " . ($hasOverallStatus ? 'overall_status' : 'status') . " = 'cancelled' THEN 1 ELSE 0 END), 0) as cancelled
                                   FROM lab_orders WHERE DATE(order_date) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)";
 
                 $stats_result = $conn->query($stats_sql);
                 if ($stats_result && $row = $stats_result->fetch_assoc()) {
-                    $lab_stats = $row;
+                    // Ensure all values are integers, converting NULL to 0
+                    $lab_stats = [
+                        'total' => intval($row['total'] ?? 0),
+                        'pending' => intval($row['pending'] ?? 0),
+                        'in_progress' => intval($row['in_progress'] ?? 0),
+                        'completed' => intval($row['completed'] ?? 0),
+                        'cancelled' => intval($row['cancelled'] ?? 0)
+                    ];
                 }
             } catch (Exception $e) {
                 // Use default values if query fails
+                error_log("Laboratory statistics query failed: " . $e->getMessage());
             }
             ?>
 
             <div class="stat-card total">
-                <div class="stat-number"><?= number_format($lab_stats['total']) ?></div>
+                <div class="stat-number"><?= number_format($lab_stats['total'] ?? 0) ?></div>
                 <div class="stat-label">Total Orders (30 days)</div>
             </div>
 
             <div class="stat-card pending">
-                <div class="stat-number"><?= number_format($lab_stats['pending']) ?></div>
+                <div class="stat-number"><?= number_format($lab_stats['pending'] ?? 0) ?></div>
                 <div class="stat-label">Pending Orders</div>
             </div>
 
             <div class="stat-card active">
-                <div class="stat-number"><?= number_format($lab_stats['in_progress']) ?></div>
+                <div class="stat-number"><?= number_format($lab_stats['in_progress'] ?? 0) ?></div>
                 <div class="stat-label">In Progress</div>
             </div>
 
             <div class="stat-card completed">
-                <div class="stat-number"><?= number_format($lab_stats['completed']) ?></div>
+                <div class="stat-number"><?= number_format($lab_stats['completed'] ?? 0) ?></div>
                 <div class="stat-label">Completed</div>
             </div>
 
             <div class="stat-card voided">
-                <div class="stat-number"><?= number_format($lab_stats['cancelled']) ?></div>
+                <div class="stat-number"><?= number_format($lab_stats['cancelled'] ?? 0) ?></div>
                 <div class="stat-label">Cancelled</div>
             </div>
         </div>

@@ -348,7 +348,7 @@ $avgTurnaround = $totalItems > 0 ? $avgTurnaround / $totalItems : 0;
                     <div class="stat-label">Completed Tests</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value"><?= number_format($avgTurnaround, 1) ?> min</div>
+                    <div class="stat-value"><?= number_format($avgTurnaround ?? 0, 1) ?> min</div>
                     <div class="stat-label">Average Turnaround Time</div>
                 </div>
                 <div class="stat-item">

@@ -303,7 +303,7 @@ $orderedBy = trim($order['ordered_by_first_name'] . ' ' . $order['ordered_by_las
                 <?php if (isset($order['average_tat']) && $order['average_tat']): ?>
                 <div class="info-item">
                     <span class="info-label">Average TAT:</span>
-                    <span class="info-value"><?= number_format($order['average_tat'], 1) ?> minutes</span>
+                    <span class="info-value"><?= number_format($order['average_tat'] ?? 0, 1) ?> minutes</span>
                 </div>
                 <?php endif; ?>
             </div>
