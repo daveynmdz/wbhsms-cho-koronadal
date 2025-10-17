@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 16, 2025 at 08:10 PM
+-- Generation Time: Oct 17, 2025 at 03:40 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -1088,7 +1088,7 @@ CREATE TABLE `prescribed_medications` (
   `frequency` varchar(64) DEFAULT NULL,
   `duration` varchar(32) DEFAULT NULL,
   `instructions` text DEFAULT NULL,
-  `status` enum('active','dispensed','cancelled') DEFAULT 'active',
+  `status` enum('pending','dispensed','unavailable') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1098,7 +1098,16 @@ CREATE TABLE `prescribed_medications` (
 --
 
 INSERT INTO `prescribed_medications` (`prescribed_medication_id`, `prescription_id`, `medication_name`, `dosage`, `frequency`, `duration`, `instructions`, `status`, `created_at`, `updated_at`) VALUES
-(1, 4, 'Paracetamol', '500 mg', '3x daily', NULL, 'After food', 'active', '2025-10-16 17:18:47', '2025-10-16 17:18:47');
+(1, 4, 'Paracetamol', '500 mg', '3x daily', NULL, 'After food', 'dispensed', '2025-10-16 17:18:47', '2025-10-16 18:13:24'),
+(2, 5, 'Paracetamol', '500 mg', '3x daily', NULL, 'After food', 'dispensed', '2025-10-16 23:52:11', '2025-10-17 00:00:22'),
+(3, 6, 'Paracetamol', '500 mg', '3x daily', NULL, 'After food', 'dispensed', '2025-10-17 00:05:15', '2025-10-17 00:05:23'),
+(4, 6, 'sasa', 'sasa', 'sasa', NULL, 'sasa', 'unavailable', '2025-10-17 00:05:15', '2025-10-17 00:40:55'),
+(5, 7, 'Paracetamol', '500 mg', '3x daily', NULL, 'After food', 'unavailable', '2025-10-17 00:09:44', '2025-10-17 00:41:03'),
+(6, 7, 'sasassasasa', 'sasas', 'aas', NULL, 'asassas', 'dispensed', '2025-10-17 00:09:44', '2025-10-17 00:10:04'),
+(7, 8, 'Paracetamol', '500 mg', '3x daily', NULL, 'After food', 'dispensed', '2025-10-17 00:12:37', '2025-10-17 00:12:42'),
+(8, 8, 'sasasa', 'as', 'sassasa', NULL, 'sasasa', 'unavailable', '2025-10-17 00:12:37', '2025-10-17 00:41:10'),
+(9, 9, 'Paracetamol', '500 mg', '3x daily', NULL, 'After food', 'dispensed', '2025-10-17 01:00:45', '2025-10-17 01:01:05'),
+(10, 9, 'sasasas', 'saswewd', 'ecdc', NULL, 'asasa', 'unavailable', '2025-10-17 01:00:45', '2025-10-17 01:01:05');
 
 -- --------------------------------------------------------
 
@@ -1114,7 +1123,7 @@ CREATE TABLE `prescriptions` (
   `patient_id` int(10) UNSIGNED NOT NULL,
   `prescribed_by_employee_id` int(10) UNSIGNED DEFAULT NULL,
   `prescription_date` datetime NOT NULL DEFAULT current_timestamp(),
-  `status` enum('active','dispensed','cancelled') DEFAULT 'active',
+  `status` enum('active','issued','cancelled','dispensed') DEFAULT 'active',
   `remarks` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -1125,7 +1134,12 @@ CREATE TABLE `prescriptions` (
 --
 
 INSERT INTO `prescriptions` (`prescription_id`, `consultation_id`, `appointment_id`, `visit_id`, `patient_id`, `prescribed_by_employee_id`, `prescription_date`, `status`, `remarks`, `created_at`, `updated_at`) VALUES
-(4, NULL, 37, NULL, 7, 1, '2025-10-17 01:18:47', 'active', 'Prescription created by system', '2025-10-16 17:18:47', '2025-10-16 17:18:47');
+(4, NULL, 37, NULL, 7, 1, '2025-10-17 01:18:47', 'dispensed', 'Prescription created by system', '2025-10-16 17:18:47', '2025-10-16 18:13:24'),
+(5, NULL, 25, 4, 7, 1, '2025-10-17 07:52:11', 'dispensed', 'Prescription created by system', '2025-10-16 23:52:11', '2025-10-17 00:00:22'),
+(6, NULL, 35, 8, 7, 1, '2025-10-17 08:05:15', 'issued', 'Prescription created by system', '2025-10-17 00:05:15', '2025-10-17 00:52:36'),
+(7, NULL, 33, 6, 7, 1, '2025-10-17 08:09:44', 'issued', 'Prescription created by system', '2025-10-17 00:09:44', '2025-10-17 00:52:42'),
+(8, NULL, 35, 9, 7, 1, '2025-10-17 08:12:37', 'issued', 'Prescription created by system', '2025-10-17 00:12:37', '2025-10-17 00:52:49'),
+(9, NULL, 33, 5, 7, 1, '2025-10-17 09:00:45', 'issued', 'Prescription created by system', '2025-10-17 01:00:45', '2025-10-17 01:01:05');
 
 -- --------------------------------------------------------
 
@@ -1151,6 +1165,19 @@ CREATE TABLE `prescription_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `prescription_logs`
+--
+
+INSERT INTO `prescription_logs` (`log_id`, `prescription_id`, `prescribed_medication_id`, `action_type`, `field_changed`, `old_value`, `new_value`, `changed_by_employee_id`, `change_timestamp`, `change_reason`, `session_id`, `ip_address`, `user_agent`, `additional_notes`, `created_at`, `updated_at`) VALUES
+(2, 5, NULL, 'medication_updated', 'medication_statuses', 'pending', '[{\"prescribed_medication_id\":\"2\",\"status\":\"unavailable\"}]', 1, '2025-10-17 00:00:08', 'Medication status updated via prescription management', NULL, NULL, NULL, NULL, '2025-10-17 00:00:08', '2025-10-17 00:00:08'),
+(3, 5, NULL, 'medication_updated', 'medication_statuses', 'pending', '[{\"prescribed_medication_id\":\"2\",\"status\":\"dispensed\"}]', 1, '2025-10-17 00:00:22', 'Medication status updated via prescription management', NULL, NULL, NULL, NULL, '2025-10-17 00:00:22', '2025-10-17 00:00:22'),
+(4, 6, NULL, 'medication_updated', 'medication_statuses', 'pending', '[{\"prescribed_medication_id\":\"3\",\"status\":\"dispensed\"},{\"prescribed_medication_id\":\"4\",\"status\":\"unavailable\"}]', 1, '2025-10-17 00:05:23', 'Medication status updated via prescription management', NULL, NULL, NULL, NULL, '2025-10-17 00:05:23', '2025-10-17 00:05:23'),
+(5, 7, NULL, 'medication_updated', 'medication_statuses', 'pending', '[{\"prescribed_medication_id\":\"5\",\"status\":\"unavailable\"},{\"prescribed_medication_id\":\"6\",\"status\":\"dispensed\"}]', 1, '2025-10-17 00:09:51', 'Medication status updated via prescription management', NULL, NULL, NULL, NULL, '2025-10-17 00:09:51', '2025-10-17 00:09:51'),
+(6, 7, NULL, 'medication_updated', 'medication_statuses', 'pending', '[{\"prescribed_medication_id\":\"5\",\"status\":\"unavailable\"},{\"prescribed_medication_id\":\"6\",\"status\":\"dispensed\"}]', 1, '2025-10-17 00:10:04', 'Medication status updated via prescription management', NULL, NULL, NULL, NULL, '2025-10-17 00:10:04', '2025-10-17 00:10:04'),
+(7, 8, NULL, 'medication_updated', 'medication_statuses', 'pending', '[{\"prescribed_medication_id\":\"7\",\"status\":\"dispensed\"},{\"prescribed_medication_id\":\"8\",\"status\":\"unavailable\"}]', 1, '2025-10-17 00:12:42', 'Medication status updated via prescription management', NULL, NULL, NULL, NULL, '2025-10-17 00:12:42', '2025-10-17 00:12:42'),
+(8, 9, NULL, 'medication_updated', 'medication_statuses', 'pending', '[{\"prescribed_medication_id\":\"9\",\"status\":\"dispensed\"},{\"prescribed_medication_id\":\"10\",\"status\":\"unavailable\"}]', 1, '2025-10-17 01:01:05', 'Medication status updated via prescription management', NULL, NULL, NULL, NULL, '2025-10-17 01:01:05', '2025-10-17 01:01:05');
 
 -- --------------------------------------------------------
 
@@ -2319,19 +2346,19 @@ ALTER TABLE `personal_information`
 -- AUTO_INCREMENT for table `prescribed_medications`
 --
 ALTER TABLE `prescribed_medications`
-  MODIFY `prescribed_medication_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `prescribed_medication_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `prescription_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `prescription_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `prescription_logs`
 --
 ALTER TABLE `prescription_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `queue_counters`

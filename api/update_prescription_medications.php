@@ -4,6 +4,18 @@ $root_path = dirname(__DIR__);
 require_once $root_path . '/config/session/employee_session.php';
 include $root_path . '/config/db.php';
 
+// Function to map status values for database compatibility
+function mapStatusForDatabase($status) {
+    // Map to actual ENUM values: enum('pending','dispensed','unavailable')
+    $statusMap = [
+        'dispensed' => 'dispensed',
+        'unavailable' => 'unavailable',
+        'not yet dispensed' => 'pending'  // Map to the actual ENUM value
+    ];
+    
+    return isset($statusMap[$status]) ? $statusMap[$status] : $status;
+}
+
 // Set JSON content type and error handling
 header('Content-Type: application/json');
 
@@ -59,12 +71,13 @@ try {
     
     try {
         // First, reset all medications for this prescription to 'pending'
-        $resetQuery = "UPDATE prescribed_medications SET status = 'pending', updated_at = NOW() WHERE prescription_id = ?";
+        $resetQuery = "UPDATE prescribed_medications SET status = ?, updated_at = NOW() WHERE prescription_id = ?";
         $resetStmt = $conn->prepare($resetQuery);
         if (!$resetStmt) {
             throw new Exception('Failed to prepare reset query: ' . $conn->error);
         }
-        $resetStmt->bind_param("i", $prescriptionId);
+        $mappedPendingStatus = mapStatusForDatabase('not yet dispensed');
+        $resetStmt->bind_param("si", $mappedPendingStatus, $prescriptionId);
         $resetStmt->execute();
         
         // Update each medication status
@@ -78,6 +91,9 @@ try {
             foreach ($medicationStatuses as $medStatus) {
                 $prescribedMedicationId = intval($medStatus['prescribed_medication_id']);
                 $status = $medStatus['status']; // 'dispensed' or 'unavailable'
+                
+                // Map status for database compatibility
+                $mappedStatus = mapStatusForDatabase($status);
                 
                 // Validate status
                 if (!in_array($status, ['dispensed', 'unavailable'])) {
@@ -102,9 +118,9 @@ try {
                 }
                 
                 // Debug: Log each medication update
-                error_log("Updating medication ID $prescribedMedicationId to status '$status' for prescription $prescriptionId");
+                error_log("Updating medication ID $prescribedMedicationId to status '$mappedStatus' (from '$status') for prescription $prescriptionId");
                 
-                $updateStmt->bind_param("sii", $status, $prescribedMedicationId, $prescriptionId);
+                $updateStmt->bind_param("sii", $mappedStatus, $prescribedMedicationId, $prescriptionId);
                 $result = $updateStmt->execute();
                 
                 if (!$result) {
@@ -121,12 +137,15 @@ try {
         }
         
         // Check if all medications are now processed (dispensed OR unavailable)
+        $mappedDispensed = mapStatusForDatabase('dispensed');
+        $mappedUnavailable = mapStatusForDatabase('unavailable');
+        
         $checkQuery = "
             SELECT 
                 COUNT(*) as total_medications,
-                SUM(CASE WHEN status = 'dispensed' THEN 1 ELSE 0 END) as dispensed_count,
-                SUM(CASE WHEN status = 'unavailable' THEN 1 ELSE 0 END) as unavailable_count,
-                SUM(CASE WHEN status IN ('dispensed', 'unavailable') THEN 1 ELSE 0 END) as completed_count
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as dispensed_count,
+                SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as unavailable_count,
+                SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as completed_count
             FROM prescribed_medications 
             WHERE prescription_id = ?";
         
@@ -134,7 +153,7 @@ try {
         if (!$checkStmt) {
             throw new Exception('Failed to prepare check query: ' . $conn->error);
         }
-        $checkStmt->bind_param("i", $prescriptionId);
+        $checkStmt->bind_param("ssssi", $mappedDispensed, $mappedUnavailable, $mappedDispensed, $mappedUnavailable, $prescriptionId);
         $checkStmt->execute();
         $result = $checkStmt->get_result()->fetch_assoc();
         
