@@ -32,8 +32,9 @@ if (!$employee_details) {
 $employee_role = strtolower($employee_details['role']);
 $employee_name = $employee_details['first_name'] . ' ' . $employee_details['last_name'];
 
-// Check if role is authorized (only doctors can prescribe)
-if ($employee_role !== 'doctor') {
+// Check if role is authorized (doctors, pharmacists, and admins can prescribe)
+$authorized_roles = ['doctor', 'pharmacist', 'admin'];
+if (!in_array($employee_role, $authorized_roles)) {
     header("Location: ../consultation.php?visit_id=" . ($_GET['visit_id'] ?? '') . "&error=unauthorized");
     exit();
 }

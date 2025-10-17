@@ -23,16 +23,21 @@ try {
     $prescriptionQuery = "
         SELECT p.*, 
                pt.first_name, pt.last_name, pt.middle_name, pt.username as patient_id_display, 
-               pt.date_of_birth, pt.sex, pt.address, pt.barangay, pt.contact_number,
+               pt.date_of_birth, pt.sex, pt.contact_number,
+               b.barangay_name as barangay,
                e.first_name as doctor_first_name, e.last_name as doctor_last_name,
-               c.consultation_id, c.consultation_date, c.chief_complaint, c.diagnosis, c.recommendations
+               c.consultation_id, c.consultation_date, c.chief_complaint, c.diagnosis, c.treatment_plan
         FROM prescriptions p
         LEFT JOIN patients pt ON p.patient_id = pt.patient_id  
+        LEFT JOIN barangay b ON pt.barangay_id = b.barangay_id
         LEFT JOIN employees e ON p.prescribed_by_employee_id = e.employee_id
         LEFT JOIN consultations c ON p.consultation_id = c.consultation_id
         WHERE p.prescription_id = ?";
     
     $stmt = $conn->prepare($prescriptionQuery);
+    if (!$stmt) {
+        throw new Exception('Failed to prepare prescription query: ' . $conn->error);
+    }
     $stmt->bind_param("i", $prescription_id);
     $stmt->execute();
     $prescription = $stmt->get_result()->fetch_assoc();
@@ -44,31 +49,43 @@ try {
     
     // Get prescribed medications
     $medicationsQuery = "
-        SELECT pm.*, m.medication_name, m.dosage, m.form
+        SELECT pm.*
         FROM prescribed_medications pm
-        LEFT JOIN medications m ON pm.medication_id = m.medication_id
         WHERE pm.prescription_id = ?
         ORDER BY pm.created_at";
     
     $medStmt = $conn->prepare($medicationsQuery);
+    if (!$medStmt) {
+        throw new Exception('Failed to prepare medications query: ' . $conn->error);
+    }
     $medStmt->bind_param("i", $prescription_id);
     $medStmt->execute();
     $medications = $medStmt->get_result();
     
-    // Get pharmacist details from logs
+    // Get pharmacist details from logs (optional - may not exist)
     $pharmacistQuery = "
         SELECT e.first_name, e.last_name, e.employee_id
         FROM prescription_logs pl
-        LEFT JOIN employees e ON pl.employee_id = e.employee_id
-        WHERE pl.prescription_id = ? AND pl.action = 'medication_status_update'
+        LEFT JOIN employees e ON pl.changed_by_employee_id = e.employee_id
+        WHERE pl.prescription_id = ? AND pl.action_type = 'medication_updated'
         ORDER BY pl.created_at DESC
         LIMIT 1";
     
     $pharmStmt = $conn->prepare($pharmacistQuery);
-    $pharmStmt->bind_param("i", $prescription_id);
-    $pharmStmt->execute();
-    $pharmacistResult = $pharmStmt->get_result();
-    $pharmacist = $pharmacistResult->fetch_assoc();
+    if (!$pharmStmt) {
+        // If prescription_logs table doesn't exist or has issues, continue without pharmacist info
+        $pharmacist = null;
+    } else {
+        try {
+            $pharmStmt->bind_param("i", $prescription_id);
+            $pharmStmt->execute();
+            $pharmacistResult = $pharmStmt->get_result();
+            $pharmacist = $pharmacistResult->fetch_assoc();
+        } catch (Exception $e) {
+            // If there's an error with the logs query, continue without pharmacist info
+            $pharmacist = null;
+        }
+    }
     
     $patientName = trim($prescription['first_name'] . ' ' . $prescription['middle_name'] . ' ' . $prescription['last_name']);
     $doctorName = trim($prescription['doctor_first_name'] . ' ' . $prescription['doctor_last_name']);
@@ -83,7 +100,7 @@ try {
 <div class="print-prescription">
     <!-- Header with CHO Logo and Information -->
     <div class="print-header">
-        <img src="../../../assets/images/cho-logo.png" alt="City Health Office Logo" class="print-logo" onerror="this.style.display='none'">
+        <img src="../../../assets/images/Nav_Logo_Dark.png" alt="City Health Office Logo" class="print-logo" onerror="this.style.display='none'">
         <h2>CITY HEALTH OFFICE - KORONADAL</h2>
         <p>9VP8+8GX, Koronadal, South Cotabato</p>
         <p>Phone: (083) 228-xxxx | Email: cho.koronadal@example.com</p>
@@ -119,14 +136,14 @@ try {
         </table>
     </div>
 
-    <?php if (!empty($prescription['chief_complaint']) || !empty($prescription['recommendations'])): ?>
+    <?php if (!empty($prescription['chief_complaint']) || !empty($prescription['treatment_plan'])): ?>
     <!-- Clinical Information -->
     <div class="clinical-info-print" style="margin-bottom: 25px; border: 1px solid #000; padding: 10px;">
         <?php if (!empty($prescription['chief_complaint'])): ?>
         <p><strong>Chief Complaint:</strong> <?= htmlspecialchars($prescription['chief_complaint']) ?></p>
         <?php endif; ?>
-        <?php if (!empty($prescription['recommendations'])): ?>
-        <p><strong>Clinical Notes:</strong> <?= htmlspecialchars($prescription['recommendations']) ?></p>
+        <?php if (!empty($prescription['treatment_plan'])): ?>
+        <p><strong>Clinical Notes:</strong> <?= htmlspecialchars($prescription['treatment_plan']) ?></p>
         <?php endif; ?>
     </div>
     <?php endif; ?>

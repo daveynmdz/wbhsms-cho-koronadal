@@ -20,7 +20,7 @@ $activePage = 'prescription_management';
 // Define role-based permissions for prescription management
 $canViewPrescriptions = in_array($_SESSION['role'], ['admin', 'doctor', 'nurse', 'pharmacist']);
 $canDispensePrescriptions = $_SESSION['role'] === 'pharmacist' || $_SESSION['role'] === 'admin';
-$canCreatePrescriptions = in_array($_SESSION['role'], ['admin', 'doctor']);
+$canCreatePrescriptions = in_array($_SESSION['role'], ['admin', 'doctor', 'pharmacist']);
 // Role IDs: 1 = Admin, 9 = Pharmacist
 $canUpdateMedications = isset($_SESSION['role_id']) && in_array($_SESSION['role_id'], [1, 9]);
 
@@ -42,17 +42,18 @@ $offset = ($page - 1) * $recordsPerPage;
 // Check if prescriptions table exists, create basic structure assumption
 // Note: This assumes a prescriptions table structure - adjust based on actual database schema
 $prescriptionsSql = "SELECT p.prescription_id, p.patient_id, 
-                     COALESCE(p.prescribed_date, p.prescription_date, p.created_at) as prescribed_date, 
+                     p.prescription_date, 
                      p.status, p.prescribed_by_employee_id, 
-                     COALESCE(p.instructions, p.remarks) as instructions,
+                     p.remarks,
                      pt.first_name, pt.last_name, pt.middle_name, 
                      COALESCE(pt.username, pt.patient_id) as patient_id_display, 
-                     pt.barangay,
+                     b.barangay_name as barangay,
                      e.first_name as prescribed_by_first_name, e.last_name as prescribed_by_last_name
               FROM prescriptions p
               LEFT JOIN patients pt ON p.patient_id = pt.patient_id
+              LEFT JOIN barangay b ON pt.barangay_id = b.barangay_id
               LEFT JOIN employees e ON p.prescribed_by_employee_id = e.employee_id
-              WHERE COALESCE(p.status, 'active') = 'active'";
+              WHERE COALESCE(p.status, 'active') != 'cancelled'";
 
 $params = [];
 $types = "";
@@ -65,24 +66,28 @@ if (!empty($searchQuery)) {
 }
 
 if (!empty($barangayFilter)) {
-    $prescriptionsSql .= " AND pt.barangay = ?";
+    $prescriptionsSql .= " AND b.barangay_name = ?";
     array_push($params, $barangayFilter);
     $types .= "s";
 }
 
-if (!empty($statusFilter) && $statusFilter !== 'active') {
-    $prescriptionsSql .= " AND p.status = ?";
-    array_push($params, $statusFilter);
-    $types .= "s";
+if (!empty($statusFilter)) {
+    if ($statusFilter === 'active') {
+        $prescriptionsSql .= " AND COALESCE(p.status, 'active') = 'active'";
+    } else {
+        $prescriptionsSql .= " AND p.status = ?";
+        array_push($params, $statusFilter);
+        $types .= "s";
+    }
 }
 
 if (!empty($dateFilter)) {
-    $prescriptionsSql .= " AND DATE(COALESCE(p.prescribed_date, p.prescription_date, p.created_at)) = ?";
+    $prescriptionsSql .= " AND DATE(p.prescription_date) = ?";
     array_push($params, $dateFilter);
     $types .= "s";
 }
 
-$prescriptionsSql .= " ORDER BY COALESCE(p.prescribed_date, p.prescription_date, p.created_at) DESC 
+$prescriptionsSql .= " ORDER BY p.prescription_date DESC 
                        LIMIT ? OFFSET ?";
 array_push($params, $recordsPerPage, $offset);
 $types .= "ii";
@@ -95,7 +100,7 @@ try {
         // Query preparation failed - likely table doesn't exist
         throw new Exception("Failed to prepare prescriptions query: " . $conn->error);
     }
-    
+
     if (!empty($types)) {
         $prescriptionsStmt->bind_param($types, ...$params);
     }
@@ -107,10 +112,11 @@ try {
     $prescriptionsResult = null;
 }
 
-// Recently dispensed prescriptions query - prescriptions with status = 'dispensed'
+// Recently dispensed prescriptions query - shows prescriptions with status 'issued' or 'dispensed'
+// (all medications processed: dispensed OR unavailable - ready for printing)
 $recentDispensedSql = "SELECT p.prescription_id, 
-                       COALESCE(p.prescribed_date, p.prescription_date, p.created_at) as prescription_date,
-                       COALESCE(p.updated_at, p.dispensed_date) as dispensed_date,
+                       p.prescription_date,
+                       p.updated_at as dispensed_date,
                        pt.first_name, pt.last_name, pt.middle_name, 
                        COALESCE(pt.username, pt.patient_id) as patient_id_display,
                        e.first_name as doctor_first_name, e.last_name as doctor_last_name,
@@ -118,8 +124,8 @@ $recentDispensedSql = "SELECT p.prescription_id,
                        FROM prescriptions p 
                        LEFT JOIN patients pt ON p.patient_id = pt.patient_id
                        LEFT JOIN employees e ON p.prescribed_by_employee_id = e.employee_id
-                       WHERE COALESCE(p.status, 'active') = 'dispensed'
-                       ORDER BY COALESCE(p.updated_at, p.dispensed_date, p.created_at) DESC
+                       WHERE p.status IN ('issued', 'dispensed')
+                       ORDER BY p.updated_at DESC
                        LIMIT 20";
 
 $recentDispensedResult = null;
@@ -129,7 +135,7 @@ try {
         // Query preparation failed - likely table doesn't exist
         throw new Exception("Failed to prepare recent dispensed query: " . $conn->error);
     }
-    
+
     $recentDispensedStmt->execute();
     $recentDispensedResult = $recentDispensedStmt->get_result();
 } catch (Exception $e) {
@@ -489,6 +495,30 @@ try {
             border-bottom: 1px solid #ddd;
         }
 
+        .modal-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .download-btn {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #005a87;
+        }
+
         .close-btn {
             font-size: 1.5em;
             cursor: pointer;
@@ -521,6 +551,22 @@ try {
 
         .empty-state p {
             margin-bottom: 0;
+        }
+
+        /* Medication Selection Table Enhancements */
+        #medicationsTable tbody tr[onclick] {
+            transition: all 0.2s ease;
+        }
+
+        #medicationsTable tbody tr[onclick]:hover {
+            background-color: #e8f4f8 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #medicationsTable tbody tr[onclick]:active {
+            transform: translateY(0);
+            background-color: #d1ecf1 !important;
         }
 
         @media (max-width: 768px) {
@@ -657,9 +703,9 @@ try {
 <body>
     <!-- Set active page for sidebar highlighting -->
     <?php $activePage = 'prescription_management'; ?>
-    
+
     <!-- Include role-based sidebar -->
-    <?php 
+    <?php
     require_once $root_path . '/includes/dynamic_sidebar_helper.php';
     includeDynamicSidebar($activePage, $root_path);
     ?>
@@ -675,9 +721,9 @@ try {
         <div class="page-header">
             <h1><i class="fas fa-pills"></i> Prescription Management</h1>
             <?php if ($canCreatePrescriptions): ?>
-            <a href="#" class="btn btn-primary" onclick="openCreatePrescriptionModal(); return false;">
-                <i class="fas fa-plus"></i> Create Prescription
-            </a>
+                <a href="#" class="btn btn-primary" onclick="openCreatePrescriptionModal(); return false;">
+                    <i class="fas fa-plus"></i> Create Prescription
+                </a>
             <?php endif; ?>
         </div>
 
@@ -691,7 +737,6 @@ try {
             $prescription_stats = [
                 'total' => 0,
                 'pending' => 0,
-                'dispensing' => 0,
                 'dispensed' => 0,
                 'cancelled' => 0
             ];
@@ -699,12 +744,10 @@ try {
             try {
                 $stats_sql = "SELECT 
                                     COUNT(*) as total,
-                                    SUM(CASE WHEN COALESCE(status, 'active') = 'pending' THEN 1 ELSE 0 END) as pending,
-                                    SUM(CASE WHEN COALESCE(status, 'active') = 'dispensing' THEN 1 ELSE 0 END) as dispensing,
-                                    SUM(CASE WHEN COALESCE(status, 'active') = 'dispensed' THEN 1 ELSE 0 END) as dispensed,
+                                    SUM(CASE WHEN COALESCE(status, 'active') = 'active' THEN 1 ELSE 0 END) as pending,
+                                    SUM(CASE WHEN COALESCE(status, 'active') IN ('issued', 'dispensed') THEN 1 ELSE 0 END) as dispensed,
                                     SUM(CASE WHEN COALESCE(status, 'active') = 'cancelled' THEN 1 ELSE 0 END) as cancelled
-                              FROM prescriptions WHERE DATE(COALESCE(prescribed_date, prescription_date, created_at)) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)";
-
+                              FROM prescriptions WHERE DATE(prescription_date) >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)";
                 $stats_result = $conn->query($stats_sql);
                 if ($stats_result && $row = $stats_result->fetch_assoc()) {
                     $prescription_stats = $row;
@@ -721,17 +764,12 @@ try {
 
             <div class="stat-card pending">
                 <div class="stat-number"><?= number_format($prescription_stats['pending']) ?></div>
-                <div class="stat-label">Pending</div>
-            </div>
-
-            <div class="stat-card active">
-                <div class="stat-number"><?= number_format($prescription_stats['dispensing']) ?></div>
-                <div class="stat-label">Being Dispensed</div>
+                <div class="stat-label">Active</div>
             </div>
 
             <div class="stat-card completed">
                 <div class="stat-number"><?= number_format($prescription_stats['dispensed']) ?></div>
-                <div class="stat-label">Dispensed</div>
+                <div class="stat-label">Issued</div>
             </div>
 
             <div class="stat-card voided">
@@ -745,15 +783,14 @@ try {
             <div class="prescription-panel">
                 <div class="panel-header">
                     <div class="panel-title">
-                        <i class="fas fa-prescription-bottle-alt"></i> All Prescriptions
+                        <i class="fas fa-prescription-bottle-alt"></i> Ordered Prescriptions (Active)
                     </div>
-                </div>
-
-                <!-- View Available Medications Button -->
-                <div style="margin-bottom: 15px;">
-                    <button type="button" class="btn btn-primary" onclick="openMedicationsModal()">
-                        <i class="fas fa-pills"></i> View Available Medications
-                    </button>
+                    <!-- View Available Medications Button -->
+                    <div style="margin-bottom: 15px;">
+                        <button type="button" class="btn btn-primary" onclick="openMedicationsModal()">
+                            <i class="fas fa-pills"></i> View Available Medications
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Search and Filter Controls -->
@@ -762,31 +799,28 @@ try {
                     <select class="filter-input" id="barangayFilter">
                         <option value="">All Barangays</option>
                         <?php
-                        // Get unique barangays from patients table
+                        // Get unique barangays from barangay table
                         try {
-                            $barangayQuery = "SELECT DISTINCT barangay FROM patients WHERE barangay IS NOT NULL AND barangay != '' ORDER BY barangay";
+                            $barangayQuery = "SELECT DISTINCT barangay_name FROM barangay WHERE status = 'active' ORDER BY barangay_name";
                             $barangayResult = $conn->query($barangayQuery);
                             if ($barangayResult) {
                                 while ($barangay = $barangayResult->fetch_assoc()) {
-                                    $selected = $barangayFilter === $barangay['barangay'] ? 'selected' : '';
-                                    echo "<option value='" . htmlspecialchars($barangay['barangay']) . "' $selected>" . htmlspecialchars($barangay['barangay']) . "</option>";
+                                    $selected = $barangayFilter === $barangay['barangay_name'] ? 'selected' : '';
+                                    echo "<option value='" . htmlspecialchars($barangay['barangay_name']) . "' $selected>" . htmlspecialchars($barangay['barangay_name']) . "</option>";
                                 }
                             }
                         } catch (Exception $e) {
-                            // If patients table doesn't exist, show default options
-                            echo "<option value='Poblacion'>Poblacion</option>";
-                            echo "<option value='Zone I'>Zone I</option>";
-                            echo "<option value='Zone II'>Zone II</option>";
-                            echo "<option value='Zone III'>Zone III</option>";
-                            echo "<option value='Zone IV'>Zone IV</option>";
+                            // If barangay table doesn't exist, show default options
+                            echo "<option value='Brgy. Assumption'>Brgy. Assumption</option>";
+                            echo "<option value='Brgy. Carpenter Hill'>Brgy. Carpenter Hill</option>";
+                            echo "<option value='Brgy. Concepcion'>Brgy. Concepcion</option>";
                         }
                         ?>
                     </select>
                     <input type="date" class="filter-input" id="dateFilter" placeholder="Prescribed Date" value="<?= htmlspecialchars($dateFilter) ?>">
                     <select class="filter-input" id="statusFilter">
                         <option value="active" <?= $statusFilter === 'active' ? 'selected' : '' ?>>Active Prescriptions</option>
-                        <option value="dispensed" <?= $statusFilter === 'dispensed' ? 'selected' : '' ?>>Dispensed</option>
-                        <option value="partial" <?= $statusFilter === 'partial' ? 'selected' : '' ?>>Partial</option>
+                        <option value="issued" <?= $statusFilter === 'issued' ? 'selected' : '' ?>>Issued (Ready for Print)</option>
                         <option value="cancelled" <?= $statusFilter === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
                     </select>
                 </div>
@@ -801,55 +835,55 @@ try {
 
                 <!-- Prescriptions Table -->
                 <?php if ($prescriptionsResult && $prescriptionsResult->num_rows > 0): ?>
-                <table class="prescription-table">
-                    <thead>
-                        <tr>
-                            <th>Prescription ID</th>
-                            <th>Patient Name</th>
-                            <th>Prescribing Doctor</th>
-                            <th>Date Prescribed</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while ($prescription = $prescriptionsResult->fetch_assoc()): ?>
-                            <?php
-                            $patientName = trim($prescription['first_name'] . ' ' . $prescription['middle_name'] . ' ' . $prescription['last_name']);
-                            $doctorName = trim($prescription['prescribed_by_first_name'] . ' ' . $prescription['prescribed_by_last_name']);
-                            ?>
+                    <table class="prescription-table">
+                        <thead>
                             <tr>
-                                <td>
-                                    <strong>RX-<?= sprintf('%06d', $prescription['prescription_id']) ?></strong>
-                                </td>
-                                <td>
-                                    <strong><?= htmlspecialchars($patientName) ?></strong><br>
-                                    <small>ID: <?= htmlspecialchars($prescription['patient_id_display']) ?></small>
-                                </td>
-                                <td>
-                                    <strong><?= htmlspecialchars($doctorName ?: 'Unknown') ?></strong>
-                                </td>
-                                <td><?= date('M d, Y', strtotime($prescription['prescribed_date'])) ?></td>
-                                <td>
-                                    <span class="status-badge status-<?= $prescription['status'] ?>">
-                                        <?= ucfirst(str_replace('_', ' ', $prescription['status'])) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <button class="action-btn btn-view" onclick="viewUpdatePrescription(<?= $prescription['prescription_id'] ?>)">
-                                        <i class="fas fa-edit"></i> View / Update
-                                    </button>
-                                </td>
+                                <th>Prescription ID</th>
+                                <th>Patient Name</th>
+                                <th>Prescribing Doctor</th>
+                                <th>Date Prescribed</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php while ($prescription = $prescriptionsResult->fetch_assoc()): ?>
+                                <?php
+                                $patientName = trim($prescription['first_name'] . ' ' . $prescription['middle_name'] . ' ' . $prescription['last_name']);
+                                $doctorName = trim($prescription['prescribed_by_first_name'] . ' ' . $prescription['prescribed_by_last_name']);
+                                ?>
+                                <tr>
+                                    <td>
+                                        <strong>RX-<?= sprintf('%06d', $prescription['prescription_id']) ?></strong>
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($patientName) ?></strong><br>
+                                        <small>ID: <?= htmlspecialchars($prescription['patient_id_display']) ?></small>
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($doctorName ?: 'Unknown') ?></strong>
+                                    </td>
+                                    <td><?= date('M d, Y', strtotime($prescription['prescription_date'])) ?></td>
+                                    <td>
+                                        <span class="status-badge status-<?= $prescription['status'] ?>">
+                                            <?= ucfirst(str_replace('_', ' ', $prescription['status'])) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="action-btn btn-view" onclick="viewUpdatePrescription(<?= $prescription['prescription_id'] ?>)">
+                                            <i class="fas fa-edit"></i> View / Update
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
                 <?php else: ?>
-                <div class="empty-state">
-                    <i class="fas fa-prescription-bottle-alt"></i>
-                    <h3>No Prescriptions Found</h3>
-                    <p>No prescriptions match your current filters or none have been created yet.</p>
-                </div>
+                    <div class="empty-state">
+                        <i class="fas fa-prescription-bottle-alt"></i>
+                        <h3>No Prescriptions Found</h3>
+                        <p>No prescriptions match your current filters or none have been created yet.</p>
+                    </div>
                 <?php endif; ?>
             </div>
 
@@ -863,50 +897,50 @@ try {
 
                 <!-- Recently Dispensed Prescriptions Table -->
                 <?php if ($recentDispensedResult && $recentDispensedResult->num_rows > 0): ?>
-                <table class="prescription-table">
-                    <thead>
-                        <tr>
-                            <th>Prescription ID</th>
-                            <th>Patient Name</th>
-                            <th>Date Dispensed</th>
-                            <th>Pharmacist Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while ($dispensed = $recentDispensedResult->fetch_assoc()): ?>
-                            <?php
-                            $patientName = trim($dispensed['first_name'] . ' ' . $dispensed['middle_name'] . ' ' . $dispensed['last_name']);
-                            $pharmacistName = trim($dispensed['pharmacist_first_name'] . ' ' . $dispensed['pharmacist_last_name']);
-                            ?>
+                    <table class="prescription-table">
+                        <thead>
                             <tr>
-                                <td>
-                                    <strong>RX-<?= sprintf('%06d', $dispensed['prescription_id']) ?></strong>
-                                </td>
-                                <td>
-                                    <strong><?= htmlspecialchars($patientName) ?></strong><br>
-                                    <small>ID: <?= htmlspecialchars($dispensed['patient_id_display']) ?></small>
-                                </td>
-                                <td><?= date('M d, Y', strtotime($dispensed['dispensed_date'])) ?></td>
-                                <td><?= htmlspecialchars($pharmacistName ?: 'System') ?></td>
-                                <td>
-                                    <button class="btn btn-sm btn-primary" onclick="viewDispensedPrescription(<?= $dispensed['prescription_id'] ?>)">
-                                        <i class="fas fa-eye"></i> View
-                                    </button>
-                                    <button class="btn btn-sm btn-success" onclick="printPrescription(<?= $dispensed['prescription_id'] ?>)">
-                                        <i class="fas fa-print"></i> Print
-                                    </button>
-                                </td>
+                                <th>Prescription ID</th>
+                                <th>Patient Name</th>
+                                <th>Date Dispensed</th>
+                                <th>Pharmacist Name</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php while ($dispensed = $recentDispensedResult->fetch_assoc()): ?>
+                                <?php
+                                $patientName = trim($dispensed['first_name'] . ' ' . $dispensed['middle_name'] . ' ' . $dispensed['last_name']);
+                                $pharmacistName = trim($dispensed['pharmacist_first_name'] . ' ' . $dispensed['pharmacist_last_name']);
+                                ?>
+                                <tr>
+                                    <td>
+                                        <strong>RX-<?= sprintf('%06d', $dispensed['prescription_id']) ?></strong>
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($patientName) ?></strong><br>
+                                        <small>ID: <?= htmlspecialchars($dispensed['patient_id_display']) ?></small>
+                                    </td>
+                                    <td><?= date('M d, Y', strtotime($dispensed['dispensed_date'])) ?></td>
+                                    <td><?= htmlspecialchars($pharmacistName ?: 'System') ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="viewDispensedPrescription(<?= $dispensed['prescription_id'] ?>)">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        <button class="btn btn-sm btn-success" onclick="printPrescription(<?= $dispensed['prescription_id'] ?>)">
+                                            <i class="fas fa-print"></i> Print
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
                 <?php else: ?>
-                <div class="empty-state">
-                    <i class="fas fa-prescription-bottle"></i>
-                    <h3>No Recently Dispensed Prescriptions</h3>
-                    <p>No prescriptions have been dispensed recently.</p>
-                </div>
+                    <div class="empty-state">
+                        <i class="fas fa-prescription-bottle"></i>
+                        <h3>No Recently Dispensed Prescriptions</h3>
+                        <p>No prescriptions have been dispensed recently.</p>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
@@ -920,10 +954,15 @@ try {
                 <button class="close-btn" onclick="closeModal('availableMedicationsModal')">&times;</button>
             </div>
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div style="background: #e7f3ff; border: 1px solid #b3d9ff; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
+                    <p style="margin: 0; font-size: 14px; color: #0066cc;">
+                        <i class="fas fa-info-circle"></i> <strong>Instructions:</strong> Click on any medication row to copy its details for easy prescription creation.
+                    </p>
+                </div>
                 <div style="margin-bottom: 15px;">
-                    <input type="text" id="medicationSearch" placeholder="Search medications..." 
-                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                           onkeyup="filterMedications()">
+                    <input type="text" id="medicationSearch" placeholder="Search medications..."
+                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                        onkeyup="filterMedications()">
                 </div>
                 <table class="prescription-table" id="medicationsTable">
                     <thead>
@@ -931,40 +970,191 @@ try {
                             <th>Drug Name</th>
                             <th>Dosage Strength</th>
                             <th>Formulation</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- PhilHealth GAMOT 2025 Medications List -->
-                        <tr><td>Paracetamol</td><td>500mg</td><td>Tablet</td></tr>
-                        <tr><td>Ibuprofen</td><td>400mg</td><td>Tablet</td></tr>
-                        <tr><td>Amoxicillin</td><td>500mg</td><td>Capsule</td></tr>
-                        <tr><td>Cetirizine</td><td>10mg</td><td>Tablet</td></tr>
-                        <tr><td>Losartan</td><td>50mg</td><td>Tablet</td></tr>
-                        <tr><td>Amlodipine</td><td>5mg</td><td>Tablet</td></tr>
-                        <tr><td>Metformin</td><td>500mg</td><td>Tablet</td></tr>
-                        <tr><td>Simvastatin</td><td>20mg</td><td>Tablet</td></tr>
-                        <tr><td>Omeprazole</td><td>20mg</td><td>Capsule</td></tr>
-                        <tr><td>Salbutamol</td><td>2mg</td><td>Tablet</td></tr>
-                        <tr><td>Ferrous Sulfate</td><td>325mg</td><td>Tablet</td></tr>
-                        <tr><td>Mefenamic Acid</td><td>250mg</td><td>Capsule</td></tr>
-                        <tr><td>Co-trimoxazole</td><td>400mg/80mg</td><td>Tablet</td></tr>
-                        <tr><td>Dextromethorphan</td><td>15mg</td><td>Syrup</td></tr>
-                        <tr><td>Multivitamins</td><td>Various</td><td>Tablet</td></tr>
-                        <tr><td>Oral Rehydration Salt</td><td>21.0g</td><td>Powder</td></tr>
-                        <tr><td>Zinc Sulfate</td><td>20mg</td><td>Tablet</td></tr>
-                        <tr><td>Calcium Carbonate</td><td>500mg</td><td>Tablet</td></tr>
-                        <tr><td>Aspirin</td><td>80mg</td><td>Tablet</td></tr>
-                        <tr><td>Atenolol</td><td>50mg</td><td>Tablet</td></tr>
-                        <tr><td>Furosemide</td><td>40mg</td><td>Tablet</td></tr>
-                        <tr><td>Captopril</td><td>25mg</td><td>Tablet</td></tr>
-                        <tr><td>Gliclazide</td><td>80mg</td><td>Tablet</td></tr>
-                        <tr><td>Insulin (NPH)</td><td>100 IU/ml</td><td>Vial</td></tr>
-                        <tr><td>Insulin (Regular)</td><td>100 IU/ml</td><td>Vial</td></tr>
-                        <tr><td>Ranitidine</td><td>150mg</td><td>Tablet</td></tr>
-                        <tr><td>Diclofenac</td><td>50mg</td><td>Tablet</td></tr>
-                        <tr><td>Prednisolone</td><td>5mg</td><td>Tablet</td></tr>
-                        <tr><td>Dexamethasone</td><td>0.5mg</td><td>Tablet</td></tr>
-                        <tr><td>Hydrochlorothiazide</td><td>25mg</td><td>Tablet</td></tr>
+                        <tr onclick="selectMedication('Paracetamol', '500mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Paracetamol</td>
+                            <td>500mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Ibuprofen', '400mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Ibuprofen</td>
+                            <td>400mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Amoxicillin', '500mg', 'Capsule')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Amoxicillin</td>
+                            <td>500mg</td>
+                            <td>Capsule</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Cetirizine', '10mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Cetirizine</td>
+                            <td>10mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Losartan', '50mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Losartan</td>
+                            <td>50mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Amlodipine', '5mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Amlodipine</td>
+                            <td>5mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Metformin', '500mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Metformin</td>
+                            <td>500mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Simvastatin', '20mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Simvastatin</td>
+                            <td>20mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Omeprazole', '20mg', 'Capsule')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Omeprazole</td>
+                            <td>20mg</td>
+                            <td>Capsule</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Salbutamol', '2mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Salbutamol</td>
+                            <td>2mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Ferrous Sulfate', '325mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Ferrous Sulfate</td>
+                            <td>325mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Mefenamic Acid', '250mg', 'Capsule')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Mefenamic Acid</td>
+                            <td>250mg</td>
+                            <td>Capsule</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Co-trimoxazole', '400mg/80mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Co-trimoxazole</td>
+                            <td>400mg/80mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Dextromethorphan', '15mg', 'Syrup')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Dextromethorphan</td>
+                            <td>15mg</td>
+                            <td>Syrup</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Multivitamins', 'Various', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Multivitamins</td>
+                            <td>Various</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Oral Rehydration Salt', '21.0g', 'Powder')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Oral Rehydration Salt</td>
+                            <td>21.0g</td>
+                            <td>Powder</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Zinc Sulfate', '20mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Zinc Sulfate</td>
+                            <td>20mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Calcium Carbonate', '500mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Calcium Carbonate</td>
+                            <td>500mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Aspirin', '80mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Aspirin</td>
+                            <td>80mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Atenolol', '50mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Atenolol</td>
+                            <td>50mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Furosemide', '40mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Furosemide</td>
+                            <td>40mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Captopril', '25mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Captopril</td>
+                            <td>25mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Gliclazide', '80mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Gliclazide</td>
+                            <td>80mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Insulin (NPH)', '100 IU/ml', 'Vial')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Insulin (NPH)</td>
+                            <td>100 IU/ml</td>
+                            <td>Vial</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Insulin (Regular)', '100 IU/ml', 'Vial')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Insulin (Regular)</td>
+                            <td>100 IU/ml</td>
+                            <td>Vial</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Ranitidine', '150mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Ranitidine</td>
+                            <td>150mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Diclofenac', '50mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Diclofenac</td>
+                            <td>50mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Prednisolone', '5mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Prednisolone</td>
+                            <td>5mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Dexamethasone', '0.5mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Dexamethasone</td>
+                            <td>0.5mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
+                        <tr onclick="selectMedication('Hydrochlorothiazide', '25mg', 'Tablet')" style="cursor: pointer;" title="Click to select this medication">
+                            <td>Hydrochlorothiazide</td>
+                            <td>25mg</td>
+                            <td>Tablet</td>
+                            <td><button class="btn btn-sm" style="background: #28a745; color: white; font-size: 12px; padding: 4px 8px;">Select</button></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -976,7 +1166,12 @@ try {
         <div class="modal-content" style="max-width: 95%; max-height: 95%;">
             <div class="modal-header">
                 <h3><i class="fas fa-prescription"></i> View / Update Prescription</h3>
-                <button class="close-btn" onclick="closeModal('viewUpdatePrescriptionModal')">&times;</button>
+                <div class="modal-actions">
+                    <button class="download-btn" onclick="downloadPrescriptionPDF()" title="Download PDF">
+                        <i class="fas fa-download"></i> Download PDF
+                    </button>
+                    <button class="close-btn" onclick="closeModal('viewUpdatePrescriptionModal')">&times;</button>
+                </div>
             </div>
             <div id="viewUpdatePrescriptionBody">
                 <!-- Content will be loaded via AJAX -->
@@ -989,7 +1184,12 @@ try {
         <div class="modal-content" style="max-width: 95%; max-height: 95%;">
             <div class="modal-header">
                 <h3><i class="fas fa-eye"></i> Dispensed Prescription Details</h3>
-                <button class="close-btn" onclick="closeModal('viewDispensedModal')">&times;</button>
+                <div class="modal-actions">
+                    <button class="download-btn" onclick="downloadPrescriptionPDF()" title="Download PDF">
+                        <i class="fas fa-download"></i> Download PDF
+                    </button>
+                    <button class="close-btn" onclick="closeModal('viewDispensedModal')">&times;</button>
+                </div>
             </div>
             <div id="viewDispensedBody">
                 <!-- Content will be loaded via AJAX -->
@@ -1036,6 +1236,12 @@ try {
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Create New Prescription</h3>
+                <!-- View Available Medications Button -->
+                <div style="margin-bottom: 15px;">
+                    <button type="button" class="btn btn-primary" onclick="openMedicationsModal()">
+                        <i class="fas fa-pills"></i> View Available Medications
+                    </button>
+                </div>
                 <button class="close-btn" onclick="closeModal('createPrescriptionModal')">&times;</button>
             </div>
             <div id="createPrescriptionBody">
@@ -1064,7 +1270,7 @@ try {
         document.getElementById('statusFilter').addEventListener('change', applyFilters);
         document.getElementById('barangayFilter').addEventListener('change', applyFilters);
         document.getElementById('dateFilter').addEventListener('change', applyFilters);
-        
+
         // Allow Enter key to trigger search
         document.getElementById('searchPrescriptions').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
@@ -1092,7 +1298,7 @@ try {
             document.getElementById('barangayFilter').value = '';
             document.getElementById('statusFilter').value = 'active'; // Default to active
             document.getElementById('dateFilter').value = '';
-            
+
             // Redirect to page without any filters
             window.location.href = window.location.pathname;
         }
@@ -1128,19 +1334,33 @@ try {
 
                         // Execute any scripts that were loaded with the content
                         const scripts = document.getElementById('createPrescriptionBody').getElementsByTagName('script');
-                        for (let i = 0; i < scripts.length; i++) {
-                            const script = scripts[i];
-                            const newScript = document.createElement('script');
+                        const scriptArray = Array.from(scripts); // Convert to array to avoid live collection issues
 
-                            if (script.src) {
-                                newScript.src = script.src;
-                            } else {
-                                newScript.textContent = script.textContent;
+                        scriptArray.forEach(script => {
+                            try {
+                                if (script.src) {
+                                    // External script - create and append to document head
+                                    const newScript = document.createElement('script');
+                                    newScript.src = script.src;
+                                    newScript.onload = function() {
+                                        console.log('External script loaded:', script.src);
+                                    };
+                                    document.head.appendChild(newScript);
+                                } else {
+                                    // Inline script - execute in global context immediately
+                                    const scriptContent = script.textContent;
+
+                                    // Use eval to execute immediately in global scope
+                                    window.eval(scriptContent);
+                                    console.log('Inline script executed successfully in global scope');
+                                }
+
+                                // Remove the original script tag
+                                script.parentNode.removeChild(script);
+                            } catch (e) {
+                                console.error('Error handling script:', e);
                             }
-
-                            document.head.appendChild(newScript);
-                            script.parentNode.removeChild(script);
-                        }
+                        });
 
                         console.log('Create prescription modal content loaded and scripts executed');
                     })
@@ -1152,6 +1372,22 @@ try {
                 showAlert('You are not authorized to create prescriptions.', 'error');
             <?php endif; ?>
         }
+
+        function closeCreatePrescriptionModal() {
+            document.getElementById('createPrescriptionModal').style.display = 'none';
+            document.getElementById('createPrescriptionBody').innerHTML = '';
+        }
+
+        function loadPrescriptions() {
+            // Refresh the prescription list by reloading the page
+            // In a more sophisticated implementation, this could use AJAX to reload just the prescription data
+            window.location.reload();
+        }
+
+        // Make functions available globally for modal content
+        window.closeCreatePrescriptionModal = closeCreatePrescriptionModal;
+        window.loadPrescriptions = loadPrescriptions;
+        window.showAlert = showAlert;
 
         function dispensePrescription(prescriptionId) {
             <?php if ($canDispensePrescriptions): ?>
@@ -1173,11 +1409,25 @@ try {
 
         // New functions for prescription management
         function openMedicationsModal() {
-            document.getElementById('availableMedicationsModal').style.display = 'block';
+            // Set higher z-index to appear above other modals
+            const medicationsModal = document.getElementById('availableMedicationsModal');
+            medicationsModal.style.display = 'block';
+            medicationsModal.style.zIndex = '1100'; // Higher than default modal z-index
+            
+            // Focus on the search input for better UX
+            setTimeout(() => {
+                const searchInput = document.getElementById('medicationSearch');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }, 100);
         }
 
         // View dispensed prescription function
         function viewDispensedPrescription(prescriptionId) {
+            // Set current prescription ID for PDF download
+            updateCurrentPrescriptionId(prescriptionId);
+
             document.getElementById('viewDispensedModal').style.display = 'block';
             document.getElementById('viewDispensedBody').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
@@ -1214,19 +1464,22 @@ try {
             for (let i = 0; i < rows.length; i++) {
                 const cells = rows[i].getElementsByTagName('td');
                 let match = false;
-                
+
                 for (let j = 0; j < cells.length; j++) {
                     if (cells[j].textContent.toLowerCase().includes(searchTerm)) {
                         match = true;
                         break;
                     }
                 }
-                
+
                 rows[i].style.display = match ? '' : 'none';
             }
         }
 
         function viewUpdatePrescription(prescriptionId) {
+            // Set current prescription ID for PDF download
+            updateCurrentPrescriptionId(prescriptionId);
+
             document.getElementById('viewUpdatePrescriptionModal').style.display = 'block';
             document.getElementById('viewUpdatePrescriptionBody').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
@@ -1269,6 +1522,258 @@ try {
                 }
             });
         });
+
+        // Medication Status Update Functions (Global Scope)
+        window.updateMedicationStatus = function(medicationId, statusType, isChecked) {
+            console.log('updateMedicationStatus called:', medicationId, statusType, isChecked);
+
+            try {
+                // Prevent both dispensed and unavailable from being checked at the same time
+                if (isChecked) {
+                    const otherType = statusType === 'dispensed' ? 'unavailable' : 'dispensed';
+                    const otherCheckbox = document.getElementById(otherType + '_' + medicationId);
+                    if (otherCheckbox && otherCheckbox.checked) {
+                        otherCheckbox.checked = false;
+                    }
+                }
+
+                // Update the status display
+                const statusElement = document.getElementById('status_' + medicationId);
+                if (statusElement) {
+                    if (isChecked) {
+                        statusElement.textContent = statusType === 'dispensed' ? 'Dispensed' : 'Unavailable';
+                        statusElement.className = 'status-' + statusType;
+                    } else {
+                        // Check if the other status is checked
+                        const otherType = statusType === 'dispensed' ? 'unavailable' : 'dispensed';
+                        const otherCheckbox = document.getElementById(otherType + '_' + medicationId);
+                        if (otherCheckbox && otherCheckbox.checked) {
+                            statusElement.textContent = otherType === 'dispensed' ? 'Dispensed' : 'Unavailable';
+                            statusElement.className = 'status-' + otherType;
+                        } else {
+                            statusElement.textContent = 'Pending';
+                            statusElement.className = 'status-pending';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error in updateMedicationStatus:', error);
+                showAlert('Error updating medication status: ' + error.message, 'error');
+            }
+        };
+
+        window.updateMedicationStatuses = function(event) {
+            console.log('updateMedicationStatuses called');
+
+            try {
+                event.preventDefault();
+
+                const formData = new FormData(event.target);
+                const prescriptionId = formData.get('prescription_id');
+
+                if (!prescriptionId) {
+                    showAlert('Error: Prescription ID not found', 'error');
+                    return;
+                }
+
+                // Collect all medication statuses
+                const medicationStatuses = [];
+                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+                checkboxes.forEach(checkbox => {
+                    const parts = checkbox.id.split('_');
+                    const statusType = parts[0];
+                    const prescribedMedicationId = parts[1];
+
+                    if (checkbox.checked && (statusType === 'dispensed' || statusType === 'unavailable')) {
+                        medicationStatuses.push({
+                            prescribed_medication_id: prescribedMedicationId,
+                            status: statusType
+                        });
+                    }
+                });
+
+                console.log('Sending medication statuses:', medicationStatuses);
+
+                // Send update request
+                fetch('../../api/update_prescription_medications.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            prescription_id: prescriptionId,
+                            medication_statuses: medicationStatuses
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('API response:', data);
+
+                        if (data.success) {
+                            showAlert(data.message, 'success');
+
+                            // Debug: Log prescription status update info
+                            console.log('Prescription status updated:', data.prescription_status_updated);
+                            console.log('New status:', data.new_status);
+                            console.log('Details:', data.details);
+
+                            // If prescription status was updated (completed), refresh the page
+                            if (data.prescription_status_updated && data.new_status === 'issued') {
+                                showAlert('Prescription completed! Moving to recently dispensed...', 'info');
+
+                                // Close modal and refresh immediately
+                                setTimeout(() => {
+                                    closeModal('viewUpdatePrescriptionModal');
+                                    window.location.reload();
+                                }, 1500);
+                            } else if (data.new_status === 'in_progress') {
+                                // Prescription is still in progress - just close modal, no page refresh needed
+                                showAlert('Prescription status updated. Some medications still pending.', 'info');
+                                setTimeout(() => {
+                                    closeModal('viewUpdatePrescriptionModal');
+                                }, 1500);
+                            } else {
+                                // Fallback: Always refresh after any medication update to ensure UI is current
+                                setTimeout(() => {
+                                    closeModal('viewUpdatePrescriptionModal');
+                                    window.location.reload();
+                                }, 1500);
+                            }
+                        } else {
+                            showAlert('Error updating medication statuses: ' + data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        showAlert('Error updating medication statuses: ' + error.message, 'error');
+                    });
+
+            } catch (error) {
+                console.error('Error in updateMedicationStatuses:', error);
+                showAlert('Error updating medication statuses: ' + error.message, 'error');
+            }
+        };
+
+        // PDF Download Functionality
+        let currentPrescriptionId = null;
+
+        // Update the current prescription ID when viewing a prescription
+        function updateCurrentPrescriptionId(prescriptionId) {
+            currentPrescriptionId = prescriptionId;
+        }
+
+        window.downloadPrescriptionPDF = function() {
+            if (!currentPrescriptionId) {
+                showAlert('No prescription selected for download', 'error');
+                return;
+            }
+
+            try {
+                // Open the prescription in a new window optimized for printing/PDF saving
+                const printWindow = window.open(
+                    `api/get_prescription_pdf.php?prescription_id=${currentPrescriptionId}`,
+                    '_blank',
+                    'width=900,height=700,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
+                );
+
+                if (printWindow) {
+                    // Focus the new window
+                    printWindow.focus();
+                    showAlert('Prescription opened in new window. Use Ctrl+P to print or save as PDF.', 'success');
+                } else {
+                    showAlert('Please allow popups to download prescription PDF', 'error');
+                }
+
+            } catch (error) {
+                showAlert('Error opening prescription PDF: ' + error.message, 'error');
+            }
+        };
+
+        // Medication Selection Function
+        window.selectMedication = function(drugName, dosage, formulation) {
+            // Create medication selection data
+            const medicationData = {
+                name: drugName,
+                dosage: dosage,
+                formulation: formulation
+            };
+
+            // Show confirmation and copy to clipboard
+            const medicationText = `${drugName} ${dosage} ${formulation}`;
+            
+            // Try to copy to clipboard
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(medicationText).then(() => {
+                    showAlert(`Selected: ${medicationText} (copied to clipboard)`, 'success');
+                }).catch(() => {
+                    showAlert(`Selected: ${medicationText}`, 'success');
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = medicationText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showAlert(`Selected: ${medicationText} (copied to clipboard)`, 'success');
+                } catch (err) {
+                    showAlert(`Selected: ${medicationText}`, 'success');
+                }
+                document.body.removeChild(textArea);
+            }
+
+            // Try to auto-fill prescription form if it exists
+            try {
+                // Look for medication name input field in the create prescription form
+                const medicationNameField = document.querySelector('#createPrescriptionBody input[name*="medication_name"], #createPrescriptionBody input[placeholder*="medication"], #createPrescriptionBody input[placeholder*="drug"]');
+                const dosageField = document.querySelector('#createPrescriptionBody input[name*="dosage"], #createPrescriptionBody input[placeholder*="dosage"]');
+                
+                if (medicationNameField) {
+                    medicationNameField.value = medicationData.name;
+                    medicationNameField.dispatchEvent(new Event('input', { bubbles: true }));
+                    medicationNameField.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                
+                if (dosageField) {
+                    dosageField.value = medicationData.dosage;
+                    dosageField.dispatchEvent(new Event('input', { bubbles: true }));
+                    dosageField.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                // If fields were auto-filled, show additional message
+                if (medicationNameField || dosageField) {
+                    setTimeout(() => {
+                        showAlert('Medication details auto-filled in prescription form!', 'info');
+                    }, 1000);
+                }
+            } catch (error) {
+                console.log('Could not auto-fill form fields:', error);
+            }
+
+            // Close the medications modal after selection
+            setTimeout(() => {
+                closeModal('availableMedicationsModal');
+            }, 1500);
+        };
+
+        // Enhanced close modal function to handle z-index reset
+        const originalCloseModal = window.closeModal || closeModal;
+        window.closeModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+                // Reset z-index for medications modal
+                if (modalId === 'availableMedicationsModal') {
+                    modal.style.zIndex = '';
+                }
+            }
+            // Call original function if it exists
+            if (originalCloseModal && originalCloseModal !== window.closeModal) {
+                originalCloseModal(modalId);
+            }
+        };
 
         // Handle server-side messages
         <?php if (isset($_SESSION['prescription_message'])): ?>

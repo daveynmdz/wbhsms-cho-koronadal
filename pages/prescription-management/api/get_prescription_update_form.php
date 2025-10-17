@@ -26,16 +26,21 @@ try {
     $prescriptionQuery = "
         SELECT p.*, 
                pt.first_name, pt.last_name, pt.middle_name, pt.username as patient_id_display, 
-               pt.date_of_birth, pt.sex, pt.address, pt.barangay, pt.contact_number,
+               pt.date_of_birth, pt.sex, pt.contact_number,
+               b.barangay_name as barangay,
                e.first_name as doctor_first_name, e.last_name as doctor_last_name,
-               c.consultation_id, c.consultation_date, c.chief_complaint, c.diagnosis, c.recommendations
+               c.consultation_id, c.consultation_date, c.chief_complaint, c.diagnosis, c.treatment_plan
         FROM prescriptions p
         LEFT JOIN patients pt ON p.patient_id = pt.patient_id  
+        LEFT JOIN barangay b ON pt.barangay_id = b.barangay_id
         LEFT JOIN employees e ON p.prescribed_by_employee_id = e.employee_id
         LEFT JOIN consultations c ON p.consultation_id = c.consultation_id
         WHERE p.prescription_id = ?";
     
     $stmt = $conn->prepare($prescriptionQuery);
+    if (!$stmt) {
+        throw new Exception('Failed to prepare prescription query: ' . $conn->error);
+    }
     $stmt->bind_param("i", $prescription_id);
     $stmt->execute();
     $prescription = $stmt->get_result()->fetch_assoc();
@@ -47,16 +52,29 @@ try {
     
     // Get prescribed medications
     $medicationsQuery = "
-        SELECT pm.*, m.medication_name, m.dosage, m.form
-        FROM prescribed_medications pm
-        LEFT JOIN medications m ON pm.medication_id = m.medication_id
-        WHERE pm.prescription_id = ?
-        ORDER BY pm.created_at";
+        SELECT prescribed_medication_id, prescription_id, medication_name, dosage, frequency, duration, instructions, status
+        FROM prescribed_medications 
+        WHERE prescription_id = ?
+        ORDER BY created_at";
     
     $medStmt = $conn->prepare($medicationsQuery);
+    if (!$medStmt) {
+        throw new Exception('Failed to prepare medications query: ' . $conn->error);
+    }
     $medStmt->bind_param("i", $prescription_id);
     $medStmt->execute();
     $medications = $medStmt->get_result();
+    
+    // Debug: Log what medications are found for this prescription
+    $medCount = $medications->num_rows;
+    error_log("Found $medCount medications for prescription $prescription_id");
+    
+    // Store medications in array for reuse
+    $medicationsArray = [];
+    while ($med = $medications->fetch_assoc()) {
+        $medicationsArray[] = $med;
+        error_log("Medication found: ID {$med['prescribed_medication_id']} - {$med['medication_name']} - Status: {$med['status']}");
+    }
     
     $patientName = trim($prescription['first_name'] . ' ' . $prescription['middle_name'] . ' ' . $prescription['last_name']);
     $doctorName = trim($prescription['doctor_first_name'] . ' ' . $prescription['doctor_last_name']);
@@ -265,10 +283,10 @@ input:disabled + .slider {
                 <div class="info-value"><?= htmlspecialchars($prescription['diagnosis'] ?? 'Not specified') ?></div>
             </div>
         </div>
-        <?php if (!empty($prescription['recommendations'])): ?>
+        <?php if (!empty($prescription['treatment_plan'])): ?>
         <div class="info-item" style="margin-top: 10px;">
-            <div class="info-label">Recommendations</div>
-            <div class="info-value"><?= htmlspecialchars($prescription['recommendations']) ?></div>
+            <div class="info-label">Treatment Plan</div>
+            <div class="info-value"><?= htmlspecialchars($prescription['treatment_plan']) ?></div>
         </div>
         <?php endif; ?>
     </div>
@@ -284,7 +302,7 @@ input:disabled + .slider {
             </div>
             <div class="info-item">
                 <div class="info-label">Date Prescribed</div>
-                <div class="info-value"><?= date('M d, Y', strtotime($prescription['prescribed_date'])) ?></div>
+                <div class="info-value"><?= date('M d, Y', strtotime($prescription['prescription_date'])) ?></div>
             </div>
             <div class="info-item">
                 <div class="info-label">Status</div>
@@ -309,7 +327,7 @@ input:disabled + .slider {
         <form id="updateMedicationsForm" onsubmit="updateMedicationStatuses(event)">
             <input type="hidden" name="prescription_id" value="<?= $prescription_id ?>">
             
-            <?php if ($medications && $medications->num_rows > 0): ?>
+            <?php if (!empty($medicationsArray)): ?>
             <table class="medications-table">
                 <thead>
                     <tr>
@@ -326,7 +344,7 @@ input:disabled + .slider {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($med = $medications->fetch_assoc()): ?>
+                    <?php foreach ($medicationsArray as $med): ?>
                     <tr>
                         <td>
                             <strong><?= htmlspecialchars($med['medication_name'] ?? 'Custom Medication') ?></strong>
@@ -376,7 +394,7 @@ input:disabled + .slider {
                         </td>
                         <?php endif; ?>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
             
@@ -403,7 +421,7 @@ input:disabled + .slider {
 </div>
 
 <script>
-function updateMedicationStatus(medicationId, statusType, isChecked) {
+window.updateMedicationStatus = function(medicationId, statusType, isChecked) {
     // Prevent both dispensed and unavailable from being checked at the same time
     if (isChecked) {
         const otherType = statusType === 'dispensed' ? 'unavailable' : 'dispensed';
@@ -430,9 +448,9 @@ function updateMedicationStatus(medicationId, statusType, isChecked) {
             statusElement.className = 'status-pending';
         }
     }
-}
+};
 
-function updateMedicationStatuses(event) {
+window.updateMedicationStatuses = function(event) {
     event.preventDefault();
     
     const formData = new FormData(event.target);
@@ -445,11 +463,11 @@ function updateMedicationStatuses(event) {
     checkboxes.forEach(checkbox => {
         const parts = checkbox.id.split('_');
         const statusType = parts[0];
-        const medicationId = parts[1];
+        const prescribedMedicationId = parts[1];
         
         if (checkbox.checked) {
             medicationStatuses.push({
-                medication_id: medicationId,
+                prescribed_medication_id: prescribedMedicationId,
                 status: statusType
             });
         }
@@ -488,5 +506,5 @@ function updateMedicationStatuses(event) {
     .catch(error => {
         showAlert('Error updating medication statuses: ' + error.message, 'error');
     });
-}
+};
 </script>

@@ -1,24 +1,55 @@
 <?php
-// Search Patients API
-session_start();
+// Search Patients API for Prescription Management
 
 // Root path for includes
 $root_path = dirname(__DIR__);
 
-// Check if user is logged in as employee
+// Include session configuration - this will start session if needed
 require_once $root_path . '/config/session/employee_session.php';
 
+// Include database connection
+require_once $root_path . '/config/db.php';
+
+// Set content type
+header('Content-Type: application/json');
+
 if (!is_employee_logged_in()) {
+    // Debug information - remove in production
+    error_log("Search API Auth Debug - Session ID: " . session_id());
+    error_log("Search API Auth Debug - Employee ID: " . (isset($_SESSION['employee_id']) ? $_SESSION['employee_id'] : 'NOT SET'));
+    error_log("Search API Auth Debug - Session data: " . print_r($_SESSION, true));
+    
     http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Authentication required']);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Authentication required',
+        'debug' => [
+            'session_id' => session_id(),
+            'employee_id_set' => isset($_SESSION['employee_id']),
+            'session_started' => session_status() === PHP_SESSION_ACTIVE
+        ]
+    ]);
     exit();
 }
 
-// Check if user has cashier or admin role
-$employee_role = get_employee_session('role_name');
-if (!in_array($employee_role, ['cashier', 'admin'])) {
+// Check if user has prescription creation privileges
+$employee_role = get_employee_session('role');
+$authorized_roles = ['doctor', 'pharmacist', 'admin', 'cashier'];
+
+// Debug logging - remove in production
+error_log("Search API Role Debug - Employee Role: " . ($employee_role ?: 'NOT SET'));
+error_log("Search API Role Debug - Authorized Roles: " . implode(', ', $authorized_roles));
+
+if (!$employee_role || !in_array(strtolower($employee_role), array_map('strtolower', $authorized_roles))) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Access denied. Cashier or admin role required.']);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Access denied. Authorized roles only.',
+        'debug' => [
+            'current_role' => $employee_role,
+            'authorized_roles' => $authorized_roles
+        ]
+    ]);
     exit();
 }
 
@@ -28,142 +59,153 @@ require_once $root_path . '/config/db.php';
 // Set content type
 header('Content-Type: application/json');
 
-// Check request method
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+// Check request method - allow both GET and POST for flexibility
+if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST'])) {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit();
 }
 
-// Get JSON input
-$input = json_decode(file_get_contents('php://input'), true);
+// Get search parameters
+$patient_id = $_GET['patient_id'] ?? $_POST['patient_id'] ?? '';
+$first_name = $_GET['first_name'] ?? $_POST['first_name'] ?? '';
+$last_name = $_GET['last_name'] ?? $_POST['last_name'] ?? '';
+$barangay = $_GET['barangay'] ?? $_POST['barangay'] ?? '';
 
-if (!isset($input['query']) || empty(trim($input['query']))) {
+// Validate that at least one search parameter is provided
+if (empty($patient_id) && empty($first_name) && empty($last_name) && empty($barangay)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Search query is required']);
-    exit();
-}
-
-$query = trim($input['query']);
-
-// Validate query length
-if (strlen($query) < 2) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Search query must be at least 2 characters']);
+    echo json_encode(['success' => false, 'message' => 'At least one search parameter is required']);
     exit();
 }
 
 try {
-    // Search patients by name, phone, or ID
-    $search_sql = "
-        SELECT 
-            id,
-            first_name,
-            last_name,
-            middle_name,
-            contact_number,
-            email,
-            DATE(created_at) as registration_date
-        FROM patients 
-        WHERE 
-            (CONCAT(first_name, ' ', COALESCE(middle_name, ''), ' ', last_name) LIKE :name_query)
-            OR (contact_number LIKE :phone_query)
-            OR (id = :id_query)
-            OR (first_name LIKE :first_name_query)
-            OR (last_name LIKE :last_name_query)
-        ORDER BY 
-            CASE 
-                WHEN id = :exact_id THEN 1
-                WHEN CONCAT(first_name, ' ', last_name) LIKE :exact_name THEN 2
-                WHEN first_name LIKE :starts_first_name THEN 3
-                WHEN last_name LIKE :starts_last_name THEN 4
-                ELSE 5
-            END,
-            last_name, first_name
-        LIMIT 20
+    $results = [];
+    $search_conditions = [];
+    $params = [];
+    $param_types = "";
+    
+    // Build search query - ONLY return patients with visits (visit_id is required)
+    // Use a simpler approach first to ensure it works
+    $base_sql = "
+        SELECT DISTINCT
+            p.patient_id,
+            p.first_name,
+            p.last_name,
+            p.middle_name,
+            p.username as patient_code,
+            b.barangay_name as barangay,
+            v.visit_id,
+            v.visit_date,
+            'General Visit' as service_name
+        FROM patients p
+        INNER JOIN barangay b ON p.barangay_id = b.barangay_id
+        INNER JOIN appointments a ON p.patient_id = a.patient_id
+        INNER JOIN visits v ON a.appointment_id = v.appointment_id
+        WHERE p.status = 'active' 
+        AND v.visit_id IS NOT NULL
+        AND v.visit_status IN ('ongoing', 'completed')
     ";
-
-    $stmt = $pdo->prepare($search_sql);
     
-    // Prepare search parameters
-    $name_pattern = "%{$query}%";
-    $phone_pattern = "%{$query}%";
-    $first_name_pattern = "%{$query}%";
-    $last_name_pattern = "%{$query}%";
-    $exact_name_pattern = "{$query}%";
-    $starts_first_pattern = "{$query}%";
-    $starts_last_pattern = "{$query}%";
-    
-    // Handle numeric ID search
-    $id_value = is_numeric($query) ? intval($query) : 0;
-    
-    $stmt->bindParam(':name_query', $name_pattern);
-    $stmt->bindParam(':phone_query', $phone_pattern);
-    $stmt->bindParam(':id_query', $id_value, PDO::PARAM_INT);
-    $stmt->bindParam(':first_name_query', $first_name_pattern);
-    $stmt->bindParam(':last_name_query', $last_name_pattern);
-    $stmt->bindParam(':exact_id', $id_value, PDO::PARAM_INT);
-    $stmt->bindParam(':exact_name', $exact_name_pattern);
-    $stmt->bindParam(':starts_first_name', $starts_first_pattern);
-    $stmt->bindParam(':starts_last_name', $starts_last_pattern);
-    
-    $stmt->execute();
-    $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Format patient data
-    $formatted_patients = array_map(function($patient) {
-        return [
-            'id' => $patient['id'],
-            'first_name' => $patient['first_name'],
-            'last_name' => $patient['last_name'],
-            'middle_name' => $patient['middle_name'],
-            'full_name' => trim($patient['first_name'] . ' ' . ($patient['middle_name'] ? $patient['middle_name'] . ' ' : '') . $patient['last_name']),
-            'contact_number' => $patient['contact_number'],
-            'email' => $patient['email'],
-            'registration_date' => $patient['registration_date']
-        ];
-    }, $patients);
-    
-    // Log search activity - using existing audit system
-    $employee_id = get_employee_session('employee_id');
-    try {
-        $log_sql = "
-            INSERT INTO user_activity_logs (admin_id, employee_id, action_type, description, created_at) 
-            VALUES (?, ?, 'update', ?, NOW())
-        ";
-        $log_stmt = $pdo->prepare($log_sql);
-        $log_details = json_encode([
-            'action' => 'patient_search',
-            'query' => $query,
-            'results_count' => count($formatted_patients),
-            'searched_by' => get_employee_session('first_name') . ' ' . get_employee_session('last_name')
-        ]);
-        $log_stmt->execute([$employee_id, $employee_id, "Patient Search: {$query} ({" . count($formatted_patients) . " results)"]);
-    } catch (PDOException $e) {
-        // Log error but don't fail the request
-        error_log("Activity log error: " . $e->getMessage());
+    // Add search conditions based on provided filters
+    if (!empty($patient_id)) {
+        $search_conditions[] = "(p.patient_id = ? OR p.username LIKE ?)";
+        $params[] = (int)$patient_id;
+        $params[] = "%{$patient_id}%";
+        $param_types .= "is";
     }
+    
+    if (!empty($first_name)) {
+        $search_conditions[] = "p.first_name LIKE ?";
+        $params[] = "%{$first_name}%";
+        $param_types .= "s";
+    }
+    
+    if (!empty($last_name)) {
+        $search_conditions[] = "p.last_name LIKE ?";
+        $params[] = "%{$last_name}%";
+        $param_types .= "s";
+    }
+    
+    if (!empty($barangay)) {
+        $search_conditions[] = "b.barangay_name LIKE ?";
+        $params[] = "%{$barangay}%";
+        $param_types .= "s";
+    }
+    
+    // Combine conditions with AND logic (all must match)
+    if (!empty($search_conditions)) {
+        $base_sql .= " AND (" . implode(" AND ", $search_conditions) . ")";
+    }
+    
+    $base_sql .= " ORDER BY v.visit_date DESC LIMIT 20";
+    
+    // Execute the search using MySQLi for compatibility
+    if ($stmt = $conn->prepare($base_sql)) {
+        if (!empty($params)) {
+            $stmt->bind_param($param_types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $full_name = trim($row['first_name'] . ' ' . ($row['middle_name'] ? $row['middle_name'] . ' ' : '') . $row['last_name']);
+            
+            $results[] = [
+                'patient_id' => $row['patient_id'],
+                'full_name' => $full_name,
+                'patient_code' => $row['patient_code'],
+                'barangay' => $row['barangay'] ?: 'Not specified',
+                'visit_id' => $row['visit_id'],
+                'visit_date' => $row['visit_date'] ? date('M j, Y', strtotime($row['visit_date'])) : 'N/A',
+                'service_name' => $row['service_name']
+            ];
+        }
+        
+        $stmt->close();
+    } else {
+        throw new Exception('Failed to prepare search query: ' . $conn->error);
+    }
+    
+    // Log search activity
+    $employee_id = get_employee_session('employee_id');
+    $search_params = [];
+    if (!empty($patient_id)) $search_params[] = "Patient ID: {$patient_id}";
+    if (!empty($first_name)) $search_params[] = "First Name: {$first_name}";
+    if (!empty($last_name)) $search_params[] = "Last Name: {$last_name}";
+    if (!empty($barangay)) $search_params[] = "Barangay: {$barangay}";
+    $search_description = "Prescription Patient Search (with visits) - " . implode(", ", $search_params) . " (" . count($results) . " results)";
     
     echo json_encode([
         'success' => true,
-        'patients' => $formatted_patients,
-        'total_results' => count($formatted_patients),
-        'query' => $query
+        'results' => $results,
+        'total_results' => count($results),
+        'search_parameters' => [
+            'patient_id' => $patient_id,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'barangay' => $barangay
+        ]
     ]);
     
-} catch (PDOException $e) {
-    error_log("Patient Search Error: " . $e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        'success' => false, 
-        'message' => 'Database error occurred while searching patients'
-    ]);
 } catch (Exception $e) {
-    error_log("Patient Search Error: " . $e->getMessage());
+    error_log("Prescription Patient Search Error: " . $e->getMessage());
+    error_log("Search parameters: " . json_encode([
+        'patient_id' => $patient_id,
+        'first_name' => $first_name, 
+        'last_name' => $last_name,
+        'barangay' => $barangay
+    ]));
+    
     http_response_code(500);
     echo json_encode([
         'success' => false, 
-        'message' => 'An unexpected error occurred'
+        'message' => 'Database error occurred while searching: ' . $e->getMessage(),
+        'debug' => [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]
     ]);
 }
 ?>

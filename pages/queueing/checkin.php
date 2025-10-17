@@ -4039,7 +4039,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('CHO Koronadal - Check-In', {
                         body: message,
-                        icon: '../../assets/images/cho-logo.png',
+                        icon: '../../assets/images/Nav_Logo_Dark.png',
                         tag: 'checkin-sync',
                         silent: false
                     });

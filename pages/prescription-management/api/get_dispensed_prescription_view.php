@@ -23,16 +23,21 @@ try {
     $prescriptionQuery = "
         SELECT p.*, 
                pt.first_name, pt.last_name, pt.middle_name, pt.username as patient_id_display, 
-               pt.date_of_birth, pt.sex, pt.address, pt.barangay, pt.contact_number,
+               pt.date_of_birth, pt.sex, pt.contact_number,
+               b.barangay_name as barangay,
                e.first_name as doctor_first_name, e.last_name as doctor_last_name,
-               c.consultation_id, c.consultation_date, c.chief_complaint, c.diagnosis, c.recommendations
+               c.consultation_id, c.consultation_date, c.chief_complaint, c.diagnosis, c.treatment_plan
         FROM prescriptions p
         LEFT JOIN patients pt ON p.patient_id = pt.patient_id  
+        LEFT JOIN barangay b ON pt.barangay_id = b.barangay_id
         LEFT JOIN employees e ON p.prescribed_by_employee_id = e.employee_id
         LEFT JOIN consultations c ON p.consultation_id = c.consultation_id
-        WHERE p.prescription_id = ? AND p.status = 'dispensed'";
+        WHERE p.prescription_id = ? AND p.status IN ('dispensed', 'issued')";
     
     $stmt = $conn->prepare($prescriptionQuery);
+    if (!$stmt) {
+        throw new Exception('Failed to prepare prescription query: ' . $conn->error);
+    }
     $stmt->bind_param("i", $prescription_id);
     $stmt->execute();
     $prescription = $stmt->get_result()->fetch_assoc();
@@ -44,13 +49,15 @@ try {
     
     // Get prescribed medications
     $medicationsQuery = "
-        SELECT pm.*, m.medication_name, m.dosage, m.form
+        SELECT pm.*
         FROM prescribed_medications pm
-        LEFT JOIN medications m ON pm.medication_id = m.medication_id
         WHERE pm.prescription_id = ?
         ORDER BY pm.created_at";
     
     $medStmt = $conn->prepare($medicationsQuery);
+    if (!$medStmt) {
+        throw new Exception('Failed to prepare medications query: ' . $conn->error);
+    }
     $medStmt->bind_param("i", $prescription_id);
     $medStmt->execute();
     $medications = $medStmt->get_result();
@@ -222,10 +229,10 @@ try {
             </div>
             <?php endif; ?>
         </div>
-        <?php if (!empty($prescription['recommendations'])): ?>
+        <?php if (!empty($prescription['treatment_plan'])): ?>
         <div class="info-item" style="margin-top: 10px;">
-            <div class="info-label">Recommendations</div>
-            <div class="info-value"><?= htmlspecialchars($prescription['recommendations']) ?></div>
+            <div class="info-label">Treatment Plan</div>
+            <div class="info-value"><?= htmlspecialchars($prescription['treatment_plan']) ?></div>
         </div>
         <?php endif; ?>
     </div>

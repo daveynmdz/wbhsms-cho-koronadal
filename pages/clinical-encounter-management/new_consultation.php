@@ -25,8 +25,8 @@ if (!isset($_SESSION['employee_id']) || !isset($_SESSION['role'])) {
     exit();
 }
 
-// Allow admin, doctor, and nurse roles
-$authorized_roles = ['admin', 'doctor', 'nurse'];
+// Allow admin, doctor, nurse, and pharmacist roles
+$authorized_roles = ['admin', 'doctor', 'nurse', 'pharmacist'];
 if (!in_array(strtolower($_SESSION['role']), $authorized_roles)) {
     header('Location: ../management/' . strtolower($_SESSION['role']) . '/dashboard.php');
     exit();
@@ -684,6 +684,93 @@ try {
             margin-bottom: 1.5rem;
         }
 
+        .consultation-actions-section {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #17a2b8;
+            opacity: 0.5;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .consultation-actions-section.enabled {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .consultation-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn-action {
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+            min-height: 80px;
+            justify-content: center;
+        }
+
+        .btn-action i {
+            font-size: 1.2em;
+        }
+
+        .btn-lab {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+        }
+
+        .btn-lab:hover:not(:disabled) {
+            background: linear-gradient(135deg, #138496, #117a8b);
+            transform: translateY(-2px);
+        }
+
+        .btn-prescription {
+            background: linear-gradient(135deg, #fd7e14, #e8681c);
+            color: white;
+        }
+
+        .btn-prescription:hover:not(:disabled) {
+            background: linear-gradient(135deg, #e8681c, #d4561e);
+            transform: translateY(-2px);
+        }
+
+        .btn-followup {
+            background: linear-gradient(135deg, #6f42c1, #5a359a);
+            color: white;
+        }
+
+        .btn-followup:hover:not(:disabled) {
+            background: linear-gradient(135deg, #5a359a, #4e2f87);
+            transform: translateY(-2px);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .text-muted {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+        }
+
         @media (max-width: 768px) {
             .search-grid {
                 grid-template-columns: 1fr;
@@ -703,6 +790,15 @@ try {
             
             .patient-card-details {
                 grid-template-columns: 1fr;
+            }
+
+            .consultation-actions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-action {
+                min-height: 60px;
+                padding: 0.75rem;
             }
         }
     </style>
@@ -743,6 +839,10 @@ try {
                     <?php if (strtolower($employee_role) === 'nurse'): ?>
                         <li>As a nurse, you can record patient vital signs for triage purposes.</li>
                         <li>Consultation notes can be added by doctors after vital signs are recorded.</li>
+                    <?php elseif (strtolower($employee_role) === 'pharmacist'): ?>
+                        <li>As a pharmacist, you can record patient vital signs and complete consultation notes.</li>
+                        <li>You can create prescriptions and manage medication orders for patients.</li>
+                        <li>Search for checked-in patients to begin their consultation.</li>
                     <?php else: ?>
                         <li>You can record patient vital signs and complete consultation notes.</li>
                         <li>Search for checked-in patients to begin their consultation.</li>
@@ -1093,6 +1193,9 @@ try {
                         consultationForm.classList.remove('enabled');
                         submitBtn.disabled = true;
                         
+                        // Disable consultation actions
+                        disableConsultationActions();
+                        
                         // Clear form
                         clearConsultationForm();
                     }
@@ -1271,6 +1374,9 @@ try {
                 document.getElementById('consultationForm').classList.add('enabled');
                 document.querySelector('#consultationForm button[type="submit"]').disabled = false;
                 
+                // Enable consultation actions for non-nurse roles
+                enableConsultationActions(checkbox.value);
+                
                 // Load patient data
                 loadPatientData(checkbox.value);
             }
@@ -1305,6 +1411,126 @@ try {
 
         function showSuccess(message) {
             alert(message);
+        }
+
+        // Consultation Actions Functions
+        let currentVisitId = null;
+
+        function enableConsultationActions(visitId) {
+            currentVisitId = visitId;
+            const actionsSection = document.getElementById('consultationActionsSection');
+            const actionButtons = document.querySelectorAll('#orderLabTestBtn, #issuePrescriptionBtn, #orderFollowupBtn');
+            
+            if (actionsSection) {
+                actionsSection.style.display = 'block';
+                actionsSection.classList.add('enabled');
+            }
+            
+            actionButtons.forEach(button => {
+                button.disabled = false;
+            });
+        }
+
+        function disableConsultationActions() {
+            currentVisitId = null;
+            const actionsSection = document.getElementById('consultationActionsSection');
+            const actionButtons = document.querySelectorAll('#orderLabTestBtn, #issuePrescriptionBtn, #orderFollowupBtn');
+            
+            if (actionsSection) {
+                actionsSection.style.display = 'none';
+                actionsSection.classList.remove('enabled');
+            }
+            
+            actionButtons.forEach(button => {
+                button.disabled = true;
+            });
+        }
+
+        function openLabTestWindow() {
+            if (!currentVisitId) {
+                showError('Please select a patient first.');
+                return;
+            }
+            
+            const url = `consultation_actions/order_lab_test.php?visit_id=${currentVisitId}`;
+            const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
+            
+            const popup = window.open(url, 'OrderLabTest', windowFeatures);
+            
+            if (!popup) {
+                showError('Popup blocked. Please allow popups for this site.');
+                return;
+            }
+            
+            // Focus on the popup window
+            popup.focus();
+            
+            // Optional: Listen for popup close to refresh data
+            const checkClosed = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(checkClosed);
+                    // Optionally refresh patient data or show success message
+                    console.log('Lab test window closed');
+                }
+            }, 1000);
+        }
+
+        function openPrescriptionWindow() {
+            if (!currentVisitId) {
+                showError('Please select a patient first.');
+                return;
+            }
+            
+            const url = `consultation_actions/issue_prescription.php?visit_id=${currentVisitId}`;
+            const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
+            
+            const popup = window.open(url, 'IssuePrescription', windowFeatures);
+            
+            if (!popup) {
+                showError('Popup blocked. Please allow popups for this site.');
+                return;
+            }
+            
+            // Focus on the popup window
+            popup.focus();
+            
+            // Optional: Listen for popup close to refresh data
+            const checkClosed = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(checkClosed);
+                    // Optionally refresh patient data or show success message
+                    console.log('Prescription window closed');
+                }
+            }, 1000);
+        }
+
+        function openFollowupWindow() {
+            if (!currentVisitId) {
+                showError('Please select a patient first.');
+                return;
+            }
+            
+            const url = `consultation_actions/order_followup.php?visit_id=${currentVisitId}`;
+            const windowFeatures = 'width=1000,height=700,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no';
+            
+            const popup = window.open(url, 'OrderFollowup', windowFeatures);
+            
+            if (!popup) {
+                showError('Popup blocked. Please allow popups for this site.');
+                return;
+            }
+            
+            // Focus on the popup window
+            popup.focus();
+            
+            // Optional: Listen for popup close to refresh data
+            const checkClosed = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(checkClosed);
+                    // Optionally refresh patient data or show success message
+                    console.log('Follow-up window closed');
+                }
+            }, 1000);
         }
     </script>
 </body>
